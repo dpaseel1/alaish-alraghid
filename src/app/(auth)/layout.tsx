@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/session";
+import { getSiteSettings } from "@/lib/settings";
 import { redirect } from "next/navigation";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -10,6 +11,8 @@ export default async function AuthLayout({
   const user = await getCurrentUser();
   if (user) redirect("/");
 
+  const settings = await getSiteSettings();
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-brand-light via-slate-50 to-slate-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 px-4 py-10 relative">
       <div className="absolute top-4 left-4">
@@ -17,9 +20,18 @@ export default async function AuthLayout({
       </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-white text-2xl font-bold shadow-lg">
-            ق
-          </div>
+          {settings?.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={settings.logoUrl}
+              alt="شعار الموقع"
+              className="mx-auto mb-4 h-16 w-16 rounded-2xl object-cover shadow-lg"
+            />
+          ) : (
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-white text-2xl font-bold shadow-lg">
+              ق
+            </div>
+          )}
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
             العيش الرغيد
           </h1>

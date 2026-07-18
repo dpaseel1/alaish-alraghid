@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PrintButton } from "@/components/reports/PrintButton";
+import { TrophyIcon } from "@/components/icons";
 import type { Prisma } from "@/generated/prisma/client";
 
 function toDateInputValue(d: Date) {
@@ -146,7 +147,7 @@ export default async function HonorBoardPage({
 
       <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/30 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-amber-200 dark:border-amber-900/50 flex items-center gap-2">
-          <span className="text-2xl">🏆</span>
+          <TrophyIcon className="h-6 w-6 text-amber-700 dark:text-amber-400" />
           <h2 className="font-semibold text-amber-800">
             متميزات الحضور ({achievers.length}) — من {toDateInputValue(fromDate)} إلى{" "}
             {toDateInputValue(toDate)}

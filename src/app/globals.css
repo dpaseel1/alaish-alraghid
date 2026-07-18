@@ -6,17 +6,21 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
-  --brand: #0f766e;
-  --brand-dark: #115e59;
-  --brand-light: #ccfbf1;
+  --brand: #4b6b3a;
+  --brand-dark: #374f2a;
+  --brand-light: #e4ebdd;
+  --accent-gold: #c79a2a;
+  --accent-gold-tint: #f7edd1;
 }
 
 .dark {
   --background: #0b1220;
   --foreground: #e2e8f0;
-  --brand: #2dd4bf;
-  --brand-dark: #14b8a6;
-  --brand-light: #134e4a;
+  --brand: #84ac64;
+  --brand-dark: #9fc17f;
+  --brand-light: #26301e;
+  --accent-gold: #dfba55;
+  --accent-gold-tint: #2e2818;
 }
 
 @theme inline {
@@ -25,12 +29,20 @@
   --color-brand: var(--brand);
   --color-brand-dark: var(--brand-dark);
   --color-brand-light: var(--brand-light);
-  --font-sans: var(--font-cairo);
+  --color-accent-gold: var(--accent-gold);
+  --color-accent-gold-tint: var(--accent-gold-tint);
+  --font-sans: var(--font-plex-arabic);
+  --font-display: var(--font-markazi);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* الخط الزخرفي للعناوين، مطابقًا لهوية المقرأة البصرية */
+h1, h2, h3 {
+  font-family: var(--font-display), var(--font-plex-arabic), sans-serif;
 }
 
 /* تحسين طباعة الشهادات والتقارير: تبقى بالألوان الفاتحة دائمًا بغض النظر عن الوضع */

@@ -32,6 +32,7 @@ export default async function DeveloperEditUserPage({
         <UpdateUserForm
           userId={user.id}
           name={user.name}
+          avatarUrl={user.avatarUrl}
           nationalId={nationalId}
           phone={user.phone}
           role={user.role}

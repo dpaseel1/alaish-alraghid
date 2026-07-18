@@ -1,16 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   updateProfileAction,
   type SettingsActionState,
 } from "@/app/actions/settings";
+import { Avatar } from "@/components/ui/Avatar";
 
 const initialState: SettingsActionState = {};
 
 export function UpdateProfileForm({
   name,
   phone,
+  avatarUrl,
   isTeacher,
   nationality,
   age,
@@ -20,6 +22,7 @@ export function UpdateProfileForm({
 }: {
   name: string;
   phone: string | null;
+  avatarUrl?: string | null;
   isTeacher?: boolean;
   nationality?: string | null;
   age?: number | null;
@@ -31,6 +34,7 @@ export function UpdateProfileForm({
     updateProfileAction,
     initialState
   );
+  const [preview, setPreview] = useState<string | null>(null);
 
   return (
     <form action={formAction} className="space-y-4 max-w-md">
@@ -44,6 +48,36 @@ export function UpdateProfileForm({
           {state.success}
         </div>
       )}
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          الصورة الشخصية
+        </label>
+        <div className="flex items-center gap-4">
+          <Avatar name={name} avatarUrl={preview ?? avatarUrl} size={56} />
+          <div className="flex-1">
+            <input
+              name="avatar"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) {
+                  setPreview(null);
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => setPreview(reader.result as string);
+                reader.readAsDataURL(file);
+              }}
+              className="w-full text-sm text-slate-600 dark:text-slate-300 file:me-3 file:rounded-lg file:border-0 file:bg-brand-light dark:file:bg-brand-dark/30 file:text-brand-dark dark:file:text-brand file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-brand/20"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              PNG أو JPG أو WEBP، بحد أقصى 1.5 ميجابايت (اختياري)
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">

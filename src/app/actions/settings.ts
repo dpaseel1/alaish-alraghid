@@ -3,10 +3,11 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireRole } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { passwordSchema, nameSchema, teacherProfileFields } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
+import { fileToAvatarDataUrl } from "@/lib/avatar";
 
 export type SettingsActionState = { error?: string; success?: string };
 
@@ -36,11 +37,17 @@ export async function updateProfileAction(
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
+  const { dataUrl: avatarUrl, error: avatarError } = await fileToAvatarDataUrl(
+    formData.get("avatar")
+  );
+  if (avatarError) return { error: avatarError };
+
   await db.user.update({
     where: { id: user.id },
     data: {
       name: parsed.data.name,
       phone: parsed.data.phone || null,
+      ...(avatarUrl ? { avatarUrl } : {}),
       ...(user.role === "TEACHER"
         ? {
             nationality: parsed.data.nationality || null,
@@ -102,4 +109,59 @@ export async function changePasswordAction(
   });
 
   return { success: "تم تغيير كلمة المرور بنجاح" };
+}
+
+export async function updateLogoAction(
+  _prev: SettingsActionState | undefined,
+  formData: FormData
+): Promise<SettingsActionState> {
+  const actor = await requireRole("ADMIN");
+
+  const file = formData.get("logo");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "الرجاء اختيار صورة للشعار" };
+  }
+
+  const { dataUrl, error } = await fileToAvatarDataUrl(file);
+  if (error) return { error };
+  if (!dataUrl) return { error: "الرجاء اختيار صورة للشعار" };
+
+  await db.appSettings.upsert({
+    where: { id: "main" },
+    create: { id: "main", logoUrl: dataUrl },
+    update: { logoUrl: dataUrl },
+  });
+
+  await logAudit({
+    actor,
+    action: "APP_LOGO_UPDATE",
+    targetType: "AppSettings",
+    targetId: "main",
+    targetLabel: "شعار الموقع",
+    message: "حدّثت شعار الموقع",
+  });
+
+  revalidatePath("/", "layout");
+  return { success: "تم تحديث شعار الموقع بنجاح" };
+}
+
+export async function removeLogoAction() {
+  const actor = await requireRole("ADMIN");
+
+  await db.appSettings.upsert({
+    where: { id: "main" },
+    create: { id: "main", logoUrl: null },
+    update: { logoUrl: null },
+  });
+
+  await logAudit({
+    actor,
+    action: "APP_LOGO_REMOVE",
+    targetType: "AppSettings",
+    targetId: "main",
+    targetLabel: "شعار الموقع",
+    message: "أزالت شعار الموقع",
+  });
+
+  revalidatePath("/", "layout");
 }

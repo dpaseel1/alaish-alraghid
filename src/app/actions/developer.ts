@@ -12,6 +12,7 @@ import {
 } from "@/lib/crypto";
 import { nameSchema, nationalIdSchema, passwordSchema, teacherProfileFields } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
+import { fileToAvatarDataUrl } from "@/lib/avatar";
 import type { Role, UserStatus } from "@/generated/prisma/client";
 
 export type DeveloperActionState = { error?: string; success?: string };
@@ -77,6 +78,11 @@ export async function updateUserByDeveloperAction(
     return { error: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف" };
   }
 
+  const { dataUrl: avatarUrl, error: avatarError } = await fileToAvatarDataUrl(
+    formData.get("avatar")
+  );
+  if (avatarError) return { error: avatarError };
+
   const nationalIdHash = hashNationalId(nationalId);
   const existing = await db.user.findUnique({ where: { nationalIdHash } });
   if (existing && existing.id !== userId) {
@@ -101,6 +107,7 @@ export async function updateUserByDeveloperAction(
       educationLevel: educationLevel || null,
       residence: residence || null,
       memorizedAmount: memorizedAmount || null,
+      ...(avatarUrl ? { avatarUrl } : {}),
       ...(newPassword ? { passwordHash: await hashPassword(newPassword) } : {}),
     },
   });
@@ -163,6 +170,11 @@ export async function createUserByDeveloperAction(
     memorizedAmount,
   } = parsed.data;
 
+  const { dataUrl: avatarUrl, error: avatarError } = await fileToAvatarDataUrl(
+    formData.get("avatar")
+  );
+  if (avatarError) return { error: avatarError };
+
   const nationalIdHash = hashNationalId(nationalId);
   const existing = await db.user.findUnique({ where: { nationalIdHash } });
   if (existing) return { error: "يوجد حساب مسجّل مسبقًا بهذا الرقم" };
@@ -182,6 +194,7 @@ export async function createUserByDeveloperAction(
       educationLevel: educationLevel || null,
       residence: residence || null,
       memorizedAmount: memorizedAmount || null,
+      ...(avatarUrl ? { avatarUrl } : {}),
     },
   });
 

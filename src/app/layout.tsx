@@ -1,10 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo } from "next/font/google";
+import { IBM_Plex_Sans_Arabic, Markazi_Text } from "next/font/google";
 import "./globals.css";
 
-const cairo = Cairo({
+const plexArabic = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
-  variable: "--font-cairo",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-plex-arabic",
+});
+
+const markazi = Markazi_Text({
+  subsets: ["arabic", "latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-markazi",
 });
 
 export const metadata: Metadata = {
@@ -44,7 +51,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" className={`${cairo.variable} h-full`} suppressHydrationWarning>
+    <html
+      lang="ar"
+      dir="rtl"
+      className={`${plexArabic.variable} ${markazi.variable} h-full`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

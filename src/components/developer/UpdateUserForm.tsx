@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   updateUserByDeveloperAction,
   type DeveloperActionState,
 } from "@/app/actions/developer";
 import type { Role, UserStatus } from "@/generated/prisma/client";
+import { Avatar } from "@/components/ui/Avatar";
 
 const initialState: DeveloperActionState = {};
 
@@ -27,6 +28,7 @@ const STATUS_OPTIONS: { value: UserStatus; label: string }[] = [
 export function UpdateUserForm({
   userId,
   name,
+  avatarUrl,
   nationalId,
   phone,
   role,
@@ -39,6 +41,7 @@ export function UpdateUserForm({
 }: {
   userId: string;
   name: string;
+  avatarUrl?: string | null;
   nationalId: string;
   phone: string | null;
   role: Role;
@@ -51,6 +54,7 @@ export function UpdateUserForm({
 }) {
   const boundAction = updateUserByDeveloperAction.bind(null, userId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
+  const [preview, setPreview] = useState<string | null>(null);
 
   return (
     <form action={formAction} className="space-y-4 max-w-lg">
@@ -75,6 +79,31 @@ export function UpdateUserForm({
           defaultValue={name}
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          الصورة الشخصية
+        </label>
+        <div className="flex items-center gap-4">
+          <Avatar name={name} avatarUrl={preview ?? avatarUrl} size={48} />
+          <input
+            name="avatar"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) {
+                setPreview(null);
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => setPreview(reader.result as string);
+              reader.readAsDataURL(file);
+            }}
+            className="flex-1 text-sm text-slate-600 dark:text-slate-300 file:me-3 file:rounded-lg file:border-0 file:bg-brand-light dark:file:bg-brand-dark/30 file:text-brand-dark dark:file:text-brand file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-brand/20"
+          />
+        </div>
       </div>
 
       <div>

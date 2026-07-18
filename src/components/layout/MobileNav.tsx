@@ -18,13 +18,14 @@ export function MobileNav({ role }: { role: Role }) {
           <Link
             key={item.href}
             href={item.href}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+            className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
               active
                 ? "bg-brand text-white"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
             }`}
           >
-            {item.icon} {item.label}
+            <item.icon className="h-3.5 w-3.5 shrink-0" />
+            {item.label}
           </Link>
         );
       })}

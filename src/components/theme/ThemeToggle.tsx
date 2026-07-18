@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SunIcon, MoonIcon } from "@/components/icons";
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const [isDark, setIsDark] = useState(false);
@@ -35,7 +36,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       title={isDark ? "الوضع الفاتح" : "الوضع الداكن"}
       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition ${className}`}
     >
-      <span className="text-base leading-none">{isDark ? "☀️" : "🌙"}</span>
+      {isDark ? <SunIcon className="h-[18px] w-[18px]" /> : <MoonIcon className="h-[18px] w-[18px]" />}
     </button>
   );
 }

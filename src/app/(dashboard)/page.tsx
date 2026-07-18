@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/session";
+import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { MosqueIcon, BookIcon, TeacherIcon, CompassIcon, DotIcon, PenIcon } from "@/components/icons";
+import { DeleteTrackButton } from "@/components/tracks/DeleteTrackButton";
 
 const ONLINE_THRESHOLD_MINUTES = 15;
 
@@ -12,13 +14,20 @@ export default async function HomePage() {
     return <TeacherHome teacherId={user.id} />;
   }
 
-  return <AdminOrSupervisorHome supervisorId={user.role === "SUPERVISOR" ? user.id : undefined} />;
+  return (
+    <AdminOrSupervisorHome
+      supervisorId={user.role === "SUPERVISOR" ? user.id : undefined}
+      isAdmin={isAdminRole(user.role)}
+    />
+  );
 }
 
 async function AdminOrSupervisorHome({
   supervisorId,
+  isAdmin,
 }: {
   supervisorId?: string;
+  isAdmin: boolean;
 }) {
   const halaqaWhere = supervisorId ? { supervisorId } : {};
   const onlineSince = new Date(Date.now() - ONLINE_THRESHOLD_MINUTES * 60 * 1000);
@@ -124,21 +133,28 @@ async function AdminOrSupervisorHome({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="عدد الحلقات النشطة" value={activeHalaqatCount} icon="🕌" />
-        <StatCard label="إجمالي عدد الطالبات" value={totalStudents} icon="📚" />
+        <StatCard label="عدد الحلقات النشطة" value={activeHalaqatCount} icon={<MosqueIcon className="h-6 w-6" />} />
+        <StatCard label="إجمالي عدد الطالبات" value={totalStudents} icon={<BookIcon className="h-6 w-6" />} />
         <StatCard
           label="معلمات متصلات حاليًا"
           value={onlineTeachers}
-          icon="🟢"
+          icon={<DotIcon className="h-3.5 w-3.5 text-emerald-500" />}
         />
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100">المسارات</h2>
-          <Link href="/halaqat" className="text-sm text-brand font-medium hover:underline">
-            عرض كل الحلقات
-          </Link>
+          <div className="flex items-center gap-4">
+            {isAdmin && (
+              <Link href="/tracks/new" className="text-sm text-brand font-medium hover:underline">
+                + إضافة مسار
+              </Link>
+            )}
+            <Link href="/halaqat" className="text-sm text-brand font-medium hover:underline">
+              عرض كل الحلقات
+            </Link>
+          </div>
         </div>
 
         {orderedStats.length === 0 && (
@@ -149,25 +165,38 @@ async function AdminOrSupervisorHome({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {orderedStats.map((t) => (
-            <Link
+            <div
               key={t.id ?? "unassigned"}
-              href={`/tracks/${t.id ?? "unassigned"}`}
-              className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm hover:shadow-md hover:border-brand transition"
+              className="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-md hover:border-brand transition"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light text-xl">
-                  🧭
+              <Link href={`/tracks/${t.id ?? "unassigned"}`} className="block p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light dark:bg-brand-dark/30 text-brand-dark dark:text-brand">
+                    <CompassIcon className="h-6 w-6" />
+                  </div>
+                  <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 pl-14">{t.name}</h3>
                 </div>
-                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{t.name}</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
-                <p>🕌 {t.halaqatCount} حلقة</p>
-                <p>📚 {t.studentsCount} طالبة</p>
-                <p>👩‍🏫 {t.teachersCount} معلمة</p>
-                <p>🧭 {t.supervisorsCount} مشرفة</p>
-                <p className="col-span-2">📖 {t.memorizedTotal} وجه محفوظ</p>
-              </div>
-            </Link>
+                <div className="grid grid-cols-2 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
+                  <p className="flex items-center gap-1.5"><MosqueIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.halaqatCount} حلقة</p>
+                  <p className="flex items-center gap-1.5"><BookIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.studentsCount} طالبة</p>
+                  <p className="flex items-center gap-1.5"><TeacherIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.teachersCount} معلمة</p>
+                  <p className="flex items-center gap-1.5"><CompassIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.supervisorsCount} مشرفة</p>
+                  <p className="col-span-2 flex items-center gap-1.5"><BookIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.memorizedTotal} وجه محفوظ</p>
+                </div>
+              </Link>
+              {isAdmin && t.id && (
+                <div className="absolute top-4 left-4 flex items-center gap-3">
+                  <Link href={`/tracks/${t.id}/edit`} className="text-xs text-slate-400 hover:text-brand hover:underline">
+                    تعديل
+                  </Link>
+                  <DeleteTrackButton
+                    trackId={t.id}
+                    name={t.name}
+                    className="text-xs text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:underline"
+                  />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
@@ -203,12 +232,12 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <StatCard label="عدد الطالبات" value={halaqa.students.length} icon="📚" />
+        <StatCard label="عدد الطالبات" value={halaqa.students.length} icon={<BookIcon className="h-6 w-6" />} />
         <Link
           href="/students"
           className="rounded-2xl border border-brand bg-brand text-white p-5 flex items-center justify-center gap-2 font-medium shadow-sm hover:bg-brand-dark transition"
         >
-          ✏️ تسجيل بيانات اليوم
+          <PenIcon className="h-4 w-4" /> تسجيل بيانات اليوم
         </Link>
       </div>
 

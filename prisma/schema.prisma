@@ -36,6 +36,7 @@ model User {
   role                Role
   status              UserStatus @default(PENDING)
   phone               String?
+  avatarUrl           String? // صورة الحساب (اختيارية) - تُخزَّن كـ data URL مصغّرة
   lastSeenAt          DateTime?
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
@@ -176,6 +177,15 @@ model StudentAttendance {
   present         Boolean       @default(true)
 
   @@unique([attendanceLogId, studentId])
+}
+
+// ============ إعدادات الموقع العامة (صف وحيد) ============
+// تُستخدم حاليًا لتخزين شعار الموقع القابل للتعديل من لوحة الإعدادات
+
+model AppSettings {
+  id        String   @id @default("main")
+  logoUrl   String? // شعار الموقع (اختياري) - يُخزَّن كـ data URL، وإلا يُعرض الشعار الافتراضي
+  updatedAt DateTime @updatedAt
 }
 
 // ============ سجل الحركات (Audit Log) ============

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import { RevealNationalId } from "@/components/teachers/RevealNationalId";
+import { Avatar } from "@/components/ui/Avatar";
 
 export default async function HalaqaDetailPage({
   params,
@@ -18,6 +19,7 @@ export default async function HalaqaDetailPage({
       teacher: {
         select: {
           name: true,
+          avatarUrl: true,
           phone: true,
           nationality: true,
           nationalIdLastFour: true,
@@ -27,7 +29,7 @@ export default async function HalaqaDetailPage({
           memorizedAmount: true,
         },
       },
-      supervisor: { select: { name: true, phone: true } },
+      supervisor: { select: { name: true, avatarUrl: true, phone: true } },
       track: { select: { id: true, name: true } },
       students: { where: { isActive: true }, orderBy: { name: "asc" } },
     },
@@ -90,9 +92,12 @@ export default async function HalaqaDetailPage({
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">بيانات المعلمة</h2>
           {halaqa.teacher ? (
-            <dl className="grid grid-cols-2 gap-y-2 text-sm">
-              <dt className="text-slate-400 dark:text-slate-500">الاسم</dt>
-              <dd className="text-slate-700 dark:text-slate-200">{halaqa.teacher.name}</dd>
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <Avatar name={halaqa.teacher.name} avatarUrl={halaqa.teacher.avatarUrl} size={48} />
+                <span className="font-medium text-slate-800 dark:text-slate-100">{halaqa.teacher.name}</span>
+              </div>
+              <dl className="grid grid-cols-2 gap-y-2 text-sm">
 
               <dt className="text-slate-400 dark:text-slate-500">رقم الجوال</dt>
               <dd dir="ltr" className="text-slate-700 dark:text-slate-200 text-right">
@@ -124,7 +129,8 @@ export default async function HalaqaDetailPage({
 
               <dt className="text-slate-400 dark:text-slate-500">مقدار الحفظ</dt>
               <dd className="text-slate-700 dark:text-slate-200">{halaqa.teacher.memorizedAmount ?? "—"}</dd>
-            </dl>
+              </dl>
+            </>
           ) : (
             <p className="text-sm text-slate-400 dark:text-slate-500">لم يتم تعيين معلمة لهذه الحلقة بعد</p>
           )}
@@ -133,15 +139,18 @@ export default async function HalaqaDetailPage({
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">بيانات المشرفة</h2>
           {halaqa.supervisor ? (
-            <dl className="grid grid-cols-2 gap-y-2 text-sm">
-              <dt className="text-slate-400 dark:text-slate-500">الاسم</dt>
-              <dd className="text-slate-700 dark:text-slate-200">{halaqa.supervisor.name}</dd>
-
-              <dt className="text-slate-400 dark:text-slate-500">رقم الجوال</dt>
-              <dd dir="ltr" className="text-slate-700 dark:text-slate-200 text-right">
-                {halaqa.supervisor.phone ?? "—"}
-              </dd>
-            </dl>
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <Avatar name={halaqa.supervisor.name} avatarUrl={halaqa.supervisor.avatarUrl} size={48} />
+                <span className="font-medium text-slate-800 dark:text-slate-100">{halaqa.supervisor.name}</span>
+              </div>
+              <dl className="grid grid-cols-2 gap-y-2 text-sm">
+                <dt className="text-slate-400 dark:text-slate-500">رقم الجوال</dt>
+                <dd dir="ltr" className="text-slate-700 dark:text-slate-200 text-right">
+                  {halaqa.supervisor.phone ?? "—"}
+                </dd>
+              </dl>
+            </>
           ) : (
             <p className="text-sm text-slate-400 dark:text-slate-500">لم يتم تعيين مشرفة لهذه الحلقة بعد</p>
           )}

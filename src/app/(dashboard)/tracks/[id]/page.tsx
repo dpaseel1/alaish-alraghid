@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { MosqueIcon, TeacherIcon, CompassIcon, BookIcon } from "@/components/icons";
 
 export default async function TrackDetailPage({
   params,
@@ -57,13 +58,13 @@ export default async function TrackDetailPage({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard label="عدد الحلقات" value={halaqat.length} icon="🕌" />
-        <StatCard label="عدد المعلمات" value={teachersCount} icon="👩‍🏫" />
-        <StatCard label="عدد المشرفات" value={supervisorsCount} icon="🧭" />
-        <StatCard label="عدد الطالبات" value={studentsCount} icon="📚" />
+        <StatCard label="عدد الحلقات" value={halaqat.length} icon={<MosqueIcon className="h-6 w-6" />} />
+        <StatCard label="عدد المعلمات" value={teachersCount} icon={<TeacherIcon className="h-6 w-6" />} />
+        <StatCard label="عدد المشرفات" value={supervisorsCount} icon={<CompassIcon className="h-6 w-6" />} />
+        <StatCard label="عدد الطالبات" value={studentsCount} icon={<BookIcon className="h-6 w-6" />} />
       </div>
 
-      <StatCard label="إجمالي الأوجه المحفوظة" value={memorizedTotal} icon="📖" />
+      <StatCard label="إجمالي الأوجه المحفوظة" value={memorizedTotal} icon={<BookIcon className="h-6 w-6" />} />
 
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
