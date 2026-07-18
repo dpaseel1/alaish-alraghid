@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/session";
 import { db } from "@/lib/db";
+import { riyadhToday } from "@/lib/timezone";
 import { MemorizationChart } from "@/components/reports/MemorizationChart";
 import { PrintButton } from "@/components/reports/PrintButton";
 
@@ -17,8 +18,8 @@ export default async function ReportsPage({
 
   const halaqaScope = user.role === "SUPERVISOR" ? { supervisorId: user.id } : {};
 
-  const defaultTo = new Date();
-  const defaultFrom = new Date();
+  const defaultTo = riyadhToday();
+  const defaultFrom = riyadhToday();
   defaultFrom.setDate(defaultFrom.getDate() - 30);
 
   const fromDate = params.from ? new Date(params.from) : defaultFrom;

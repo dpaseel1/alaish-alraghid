@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
+import { riyadhToday } from "@/lib/timezone";
 
 export type StudentActionState = { error?: string; success?: string };
 
@@ -153,8 +154,7 @@ export async function submitDailyDataAction(
   });
   if (!halaqa) return { error: "لا توجد حلقة مرتبطة بحسابك" };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = riyadhToday();
 
   const attendanceLog = await db.attendanceLog.upsert({
     where: { halaqaId_date: { halaqaId: halaqa.id, date: today } },

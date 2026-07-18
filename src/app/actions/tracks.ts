@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
+import { fileToAvatarDataUrl } from "@/lib/avatar";
 
 export type TrackActionState = { error?: string; success?: string };
 
@@ -27,7 +28,12 @@ export async function createTrackAction(
   const existing = await db.track.findUnique({ where: { name: parsed.data.name } });
   if (existing) return { error: "يوجد مسار آخر بنفس الاسم" };
 
-  const track = await db.track.create({ data: { name: parsed.data.name } });
+  const { dataUrl: imageUrl, error: imageError } = await fileToAvatarDataUrl(formData.get("image"));
+  if (imageError) return { error: imageError };
+
+  const track = await db.track.create({
+    data: { name: parsed.data.name, ...(imageUrl ? { imageUrl } : {}) },
+  });
 
   await logAudit({
     actor,
@@ -60,7 +66,13 @@ export async function updateTrackAction(
   const existing = await db.track.findUnique({ where: { name: parsed.data.name } });
   if (existing && existing.id !== trackId) return { error: "يوجد مسار آخر بنفس الاسم" };
 
-  await db.track.update({ where: { id: trackId }, data: { name: parsed.data.name } });
+  const { dataUrl: imageUrl, error: imageError } = await fileToAvatarDataUrl(formData.get("image"));
+  if (imageError) return { error: imageError };
+
+  await db.track.update({
+    where: { id: trackId },
+    data: { name: parsed.data.name, ...(imageUrl ? { imageUrl } : {}) },
+  });
 
   await logAudit({
     actor,

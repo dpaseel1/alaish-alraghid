@@ -72,9 +72,24 @@ model Session {
 model Track {
   id        String   @id @default(cuid())
   name      String   @unique
+  imageUrl  String? // صورة المسار (اختيارية) - تُخزَّن كـ data URL مصغّرة
   createdAt DateTime @default(now())
 
   halaqat Halaqa[]
+}
+
+// ============ البرامج (سجل الإنجازات) ============
+// سجل مستقل بالبرامج التي تنفذها المقرأة (منفصل عن الحلقات والطالبات)
+
+model Program {
+  id             String   @id @default(cuid())
+  name           String
+  duration       String // مدة البرنامج (نص حر، مثل: 3 أشهر)
+  academicYear   String // العام الدراسي، مثال: 1447هـ
+  reportUrl      String? // ملف التقرير الختامي (PDF أو صورة) - يُخزَّن كـ data URL
+  reportFileName String? // اسم الملف الأصلي، لعرضه عند التحميل
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // ============ الحلقات ============

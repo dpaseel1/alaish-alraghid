@@ -1,20 +1,12 @@
 import { requireRole } from "@/lib/session";
 import { db } from "@/lib/db";
+import { riyadhToday } from "@/lib/timezone";
+import { formatRiyadhDateTime } from "@/lib/dateFormat";
 import { ROLE_LABELS } from "@/components/layout/nav-items";
 import type { Prisma, Role } from "@/generated/prisma/client";
 
 function toDateInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
-}
-
-function formatDateTime(d: Date) {
-  return d.toLocaleString("ar-SA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export default async function AuditLogPage({
@@ -25,8 +17,8 @@ export default async function AuditLogPage({
   await requireRole("ADMIN");
   const params = await searchParams;
 
-  const defaultTo = new Date();
-  const defaultFrom = new Date();
+  const defaultTo = riyadhToday();
+  const defaultFrom = riyadhToday();
   defaultFrom.setDate(defaultFrom.getDate() - 30);
 
   const fromDate = params.from ? new Date(params.from) : defaultFrom;
@@ -149,7 +141,7 @@ export default async function AuditLogPage({
               {entries.map((e) => (
                 <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                   <td className="px-5 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap" dir="ltr">
-                    {formatDateTime(e.createdAt)}
+                    {formatRiyadhDateTime(e.createdAt)}
                   </td>
                   <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100 whitespace-nowrap">
                     {e.actorName}

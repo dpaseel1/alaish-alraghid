@@ -1,17 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans_Arabic, Markazi_Text } from "next/font/google";
+import { Noto_Naskh_Arabic, Aref_Ruqaa } from "next/font/google";
+import { NumeralNormalizer } from "@/components/NumeralNormalizer";
 import "./globals.css";
 
-const plexArabic = IBM_Plex_Sans_Arabic({
+const notoNaskh = Noto_Naskh_Arabic({
   subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-plex-arabic",
+  variable: "--font-naskh",
 });
 
-const markazi = Markazi_Text({
+const arefRuqaa = Aref_Ruqaa({
   subsets: ["arabic", "latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-markazi",
+  weight: ["400", "700"],
+  variable: "--font-ruqaa",
 });
 
 export const metadata: Metadata = {
@@ -54,13 +55,14 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`${plexArabic.variable} ${markazi.variable} h-full`}
+      className={`${notoNaskh.variable} ${arefRuqaa.variable} h-full`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full bg-background text-foreground antialiased font-sans transition-colors duration-200">
+        <NumeralNormalizer />
         {children}
       </body>
     </html>

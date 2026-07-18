@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { TrackActionState } from "@/app/actions/tracks";
 
@@ -9,6 +9,7 @@ const initialState: TrackActionState = {};
 export function TrackForm({
   action,
   defaultName,
+  defaultImageUrl,
   cancelHref,
   submitLabel,
 }: {
@@ -17,10 +18,12 @@ export function TrackForm({
     formData: FormData
   ) => Promise<TrackActionState>;
   defaultName?: string;
+  defaultImageUrl?: string | null;
   cancelHref: string;
   submitLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
+  const [preview, setPreview] = useState<string | null>(null);
 
   return (
     <form action={formAction} className="space-y-4 max-w-md">
@@ -43,6 +46,42 @@ export function TrackForm({
           placeholder="مثال: مسار الجمان"
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          صورة المسار <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري)</span>
+        </label>
+        <div className="flex items-center gap-4">
+          {(preview ?? defaultImageUrl) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={preview ?? defaultImageUrl ?? ""}
+              alt="صورة المسار"
+              className="h-14 w-14 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+            />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-brand-light dark:bg-brand-dark/30 text-brand-dark dark:text-brand shrink-0 text-xs">
+              بلا صورة
+            </div>
+          )}
+          <input
+            name="image"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) {
+                setPreview(null);
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => setPreview(reader.result as string);
+              reader.readAsDataURL(file);
+            }}
+            className="flex-1 text-sm text-slate-600 dark:text-slate-300 file:me-3 file:rounded-lg file:border-0 file:bg-brand-light dark:file:bg-brand-dark/30 file:text-brand-dark dark:file:text-brand file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-brand/20"
+          />
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

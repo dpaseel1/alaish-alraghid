@@ -2,7 +2,9 @@ import Link from "next/link";
 import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { MosqueIcon, BookIcon, TeacherIcon, CompassIcon, DotIcon, PenIcon } from "@/components/icons";
+import { CircularProgress } from "@/components/dashboard/CircularProgress";
+import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
+import { MosqueIcon, BookIcon, TeacherIcon, CompassIcon, DotIcon, PenIcon, AwardIcon } from "@/components/icons";
 import { DeleteTrackButton } from "@/components/tracks/DeleteTrackButton";
 
 const ONLINE_THRESHOLD_MINUTES = 15;
@@ -64,6 +66,7 @@ async function AdminOrSupervisorHome({
   type TrackStats = {
     id: string | null;
     name: string;
+    imageUrl: string | null;
     halaqatCount: number;
     teachersCount: number;
     supervisorsCount: number;
@@ -76,6 +79,7 @@ async function AdminOrSupervisorHome({
     statsByTrack.set(t.id, {
       id: t.id,
       name: t.name,
+      imageUrl: t.imageUrl,
       halaqatCount: 0,
       teachersCount: 0,
       supervisorsCount: 0,
@@ -93,6 +97,7 @@ async function AdminOrSupervisorHome({
       statsByTrack.set(key, {
         id: key,
         name: "حلقات غير مصنّفة ضمن مسار",
+        imageUrl: null,
         halaqatCount: 0,
         teachersCount: 0,
         supervisorsCount: 0,
@@ -171,9 +176,18 @@ async function AdminOrSupervisorHome({
             >
               <Link href={`/tracks/${t.id ?? "unassigned"}`} className="block p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light dark:bg-brand-dark/30 text-brand-dark dark:text-brand">
-                    <CompassIcon className="h-6 w-6" />
-                  </div>
+                  {t.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={t.imageUrl}
+                      alt={t.name}
+                      className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light dark:bg-brand-dark/30 text-brand-dark dark:text-brand">
+                      <CompassIcon className="h-6 w-6" />
+                    </div>
+                  )}
                   <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 pl-14">{t.name}</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
@@ -222,13 +236,50 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
     );
   }
 
+  const [attendanceDays, pagesAgg] = await Promise.all([
+    db.attendanceLog.count({ where: { halaqaId: halaqa.id, teacherPresent: true } }),
+    db.memorizationRecord.aggregate({
+      _sum: { pagesMemorized: true },
+      where: { student: { halaqaId: halaqa.id } },
+    }),
+  ]);
+
+  const volunteerHours = attendanceDays * 1;
+  const pagesRead = pagesAgg._sum.pagesMemorized ?? 0;
+
   return (
     <div className="space-y-6">
+      <WelcomeBanner />
+
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{halaqa.name}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {halaqa.time} · المشرفة: {halaqa.supervisor?.name ?? "—"}
         </p>
+      </div>
+
+      <div>
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">مؤشرات الإنجاز</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <CircularProgress
+            label="ساعات التطوع"
+            value={volunteerHours}
+            unit="ساعة"
+            milestone={50}
+            colorClass="stroke-emerald-500"
+            trackClass="stroke-emerald-100 dark:stroke-emerald-950/40"
+            icon={<AwardIcon className="h-5 w-5 text-emerald-500" />}
+          />
+          <CircularProgress
+            label="الأوجه المقروءة"
+            value={pagesRead}
+            unit="وجه"
+            milestone={604}
+            colorClass="stroke-amber-500"
+            trackClass="stroke-amber-100 dark:stroke-amber-950/40"
+            icon={<BookIcon className="h-5 w-5 text-amber-500" />}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
+import { riyadhToday } from "@/lib/timezone";
 import { PrintButton } from "@/components/reports/PrintButton";
 import { TrophyIcon } from "@/components/icons";
 import type { Prisma } from "@/generated/prisma/client";
@@ -16,8 +17,8 @@ export default async function HonorBoardPage({
   const user = await requireUser();
   const params = await searchParams;
 
-  const defaultTo = new Date();
-  const defaultFrom = new Date();
+  const defaultTo = riyadhToday();
+  const defaultFrom = riyadhToday();
   defaultFrom.setDate(defaultFrom.getDate() - 30);
 
   const fromDate = params.from ? new Date(params.from) : defaultFrom;

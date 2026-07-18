@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
+import { riyadhToday } from "@/lib/timezone";
 import { updateStudentAction, deleteStudentAction } from "@/app/actions/students";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
 import { StudentRow } from "@/components/students/StudentRow";
@@ -28,8 +29,7 @@ export default async function StudentsPage({
       );
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = riyadhToday();
 
     const attendanceLog = await db.attendanceLog.findUnique({
       where: { halaqaId_date: { halaqaId: halaqa.id, date: today } },

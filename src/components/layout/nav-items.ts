@@ -10,6 +10,7 @@ import {
   ChartIcon,
   AwardIcon,
   ArchiveIcon,
+  TrophyIcon,
   LogIcon,
   SettingsIcon,
 } from "@/components/icons";
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/reports", label: "التقارير والإحصائيات", icon: ChartIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR"] },
   { href: "/honor-board", label: "لوحة الشرف", icon: AwardIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
   { href: "/certificates", label: "الأرشيف والشهادات", icon: ArchiveIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
+  { href: "/achievements", label: "سجل الإنجازات", icon: TrophyIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
   { href: "/audit-log", label: "سجل الحركات", icon: LogIcon, roles: ["DEVELOPER", "ADMIN"] },
   { href: "/settings", label: "الإعدادات", icon: SettingsIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
 ];

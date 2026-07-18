@@ -28,6 +28,7 @@ export default async function EditTrackPage({
         <TrackForm
           action={boundAction}
           defaultName={track.name}
+          defaultImageUrl={track.imageUrl}
           cancelHref={`/tracks/${track.id}`}
           submitLabel="حفظ التعديلات"
         />

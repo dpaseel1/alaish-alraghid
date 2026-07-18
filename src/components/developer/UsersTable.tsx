@@ -6,6 +6,7 @@ import { ROLE_LABELS } from "@/components/layout/nav-items";
 import { DeleteUserButton } from "@/components/developer/DeleteUserButton";
 import { startImpersonationAction } from "@/app/actions/impersonate";
 import { Avatar } from "@/components/ui/Avatar";
+import { formatRiyadhDateTime } from "@/lib/dateFormat";
 
 type UserRow = {
   id: string;
@@ -101,12 +102,7 @@ export function UsersTable({ users, actorId }: { users: UserRow[]; actorId: stri
                     {u.phone ?? "—"}
                   </td>
                   <td className="px-5 py-3 text-slate-500 dark:text-slate-400 text-xs">
-                    {u.lastSeenAt
-                      ? new Date(u.lastSeenAt).toLocaleString("ar-SA", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })
-                      : "—"}
+                    {u.lastSeenAt ? formatRiyadhDateTime(u.lastSeenAt) : "—"}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3 flex-wrap">

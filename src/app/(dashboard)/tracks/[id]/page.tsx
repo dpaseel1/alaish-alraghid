@@ -30,7 +30,7 @@ export default async function TrackDetailPage({
       supervisor: { select: { name: true } },
       students: { where: { isActive: true }, select: { memorizedPagesTotal: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "asc" },
   });
 
   const teachersCount = new Set(halaqat.filter((h) => h.teacherId).map((h) => h.teacherId)).size;
@@ -44,13 +44,27 @@ export default async function TrackDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-            {track?.name ?? "حلقات غير مصنّفة ضمن مسار"}
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {halaqat.length} حلقة ضمن هذا المسار
-          </p>
+        <div className="flex items-center gap-3">
+          {track?.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={track.imageUrl}
+              alt={track.name}
+              className="h-14 w-14 rounded-xl object-cover shrink-0"
+            />
+          ) : (
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-brand-light dark:bg-brand-dark/30 text-brand-dark dark:text-brand">
+              <CompassIcon className="h-7 w-7" />
+            </div>
+          )}
+          <div>
+            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+              {track?.name ?? "حلقات غير مصنّفة ضمن مسار"}
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              {halaqat.length} حلقة ضمن هذا المسار
+            </p>
+          </div>
         </div>
         <Link href="/" className="text-sm text-brand font-medium hover:underline">
           الرجوع للرئيسية

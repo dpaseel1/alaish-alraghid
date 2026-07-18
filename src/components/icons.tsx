@@ -171,6 +171,16 @@ export function PenIcon(props: IconProps) {
   );
 }
 
+export function FileIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z" />
+      <path d="M14 3.5V8h4.5" />
+      <path d="M9 13h6M9 16.5h6" />
+    </svg>
+  );
+}
+
 export function DotIcon(props: IconProps) {
   return (
     <svg {...base} fill="currentColor" {...props}>
