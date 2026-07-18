@@ -1,0 +1,177 @@
+// نظام إدارة حلقات تحفيظ القرآن الكريم
+// schema.prisma
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============ المستخدمون والأدوار ============
+
+enum Role {
+  ADMIN // المديرة
+  SUPERVISOR // المشرفة
+  TEACHER // المعلمة
+}
+
+enum UserStatus {
+  PENDING // بانتظار موافقة المديرة
+  ACTIVE // مفعّل
+  REJECTED // مرفوض
+  SUSPENDED // موقوف
+}
+
+model User {
+  id                  String     @id @default(cuid())
+  name                String
+  nationalIdHash      String     @unique // بصمة SHA-256 للسجل المدني (للتحقق من التكرار وتسجيل الدخول)
+  nationalIdEncrypted String // السجل المدني مشفّر (AES-256-GCM) - تراه المديرة فقط
+  nationalIdLastFour  String // آخر 4 أرقام تُعرض بدون فك تشفير
+  passwordHash        String
+  role                Role
+  status              UserStatus @default(PENDING)
+  phone               String?
+  lastSeenAt          DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  teacherHalaqa     Halaqa?   @relation("TeacherHalaqa")
+  supervisedHalaqat Halaqa[]  @relation("SupervisorHalaqat")
+  sessions          Session[]
+
+  @@index([role, status])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ============ الحلقات ============
+
+model Halaqa {
+  id           String   @id @default(cuid())
+  name         String
+  time         String // وقت الحلقة (نص حر، مثل: بعد صلاة العصر)
+  isActive     Boolean  @default(true)
+  teacherId    String?  @unique
+  teacher      User?    @relation("TeacherHalaqa", fields: [teacherId], references: [id])
+  supervisorId String?
+  supervisor   User?    @relation("SupervisorHalaqat", fields: [supervisorId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  students       Student[]
+  attendanceLogs AttendanceLog[]
+
+  @@index([supervisorId])
+}
+
+// ============ الطالبات ============
+
+model Student {
+  id                  String   @id @default(cuid())
+  name                String
+  nationality         String
+  halaqaId            String
+  halaqa              Halaqa   @relation(fields: [halaqaId], references: [id])
+  memorizedPagesTotal Int      @default(0) // إجمالي عدد الأوجه المحفوظة
+  currentQuota        String? // نصاب الحفظ الحالي
+  notes               String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  memorizationRecords MemorizationRecord[]
+  examGrades          ExamGrade[]
+  attendanceRecords   StudentAttendance[]
+
+  @@index([halaqaId])
+}
+
+// سجل يومي لتقدم الحفظ (يُبنى منه الأرشيف والشهادات)
+model MemorizationRecord {
+  id             String   @id @default(cuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id])
+  date           DateTime
+  pagesMemorized Int // عدد الأوجه المحفوظة في هذا التسجيل
+  quota          String? // النصاب المحدد لهذا اليوم
+  enteredById    String // المعلمة التي أدخلت البيانات
+  createdAt      DateTime @default(now())
+
+  @@index([studentId, date])
+}
+
+// درجات الاختبارات (تُستخدم للأرشفة والشهادات)
+model ExamGrade {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  quota       String // النصاب المختبر فيه
+  grade       Float
+  maxGrade    Float    @default(100)
+  examDate    DateTime
+  enteredById String
+  createdAt   DateTime @default(now())
+
+  @@index([studentId])
+}
+
+// سجل حضور الحلقة اليومي (يُستخدم لتنبيهات عدم التسجيل ولوحة الشرف)
+model AttendanceLog {
+  id             String    @id @default(cuid())
+  halaqaId       String
+  halaqa         Halaqa    @relation(fields: [halaqaId], references: [id])
+  date           DateTime
+  teacherPresent Boolean   @default(true)
+  dataSubmitted  Boolean   @default(false)
+  submittedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  studentAttendance StudentAttendance[]
+
+  @@unique([halaqaId, date])
+  @@index([date])
+}
+
+model StudentAttendance {
+  id              String        @id @default(cuid())
+  attendanceLogId String
+  attendanceLog   AttendanceLog @relation(fields: [attendanceLogId], references: [id])
+  studentId       String
+  student         Student       @relation(fields: [studentId], references: [id])
+  present         Boolean       @default(true)
+
+  @@unique([attendanceLogId, studentId])
+}
+
+// ============ سجل الحركات (Audit Log) ============
+// يسجّل كل عملية إضافة/تعديل/حذف يقوم بها المستخدمون لمراجعتها من قبل المديرة
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String
+  actorName   String
+  actorRole   Role
+  action      String // مفتاح العملية، مثال: STUDENT_UPDATE
+  targetType  String // نوع الهدف، مثال: Student, Halaqa, User
+  targetId    String?
+  targetLabel String // اسم مقروء للهدف، مثال: اسم الطالبة
+  message     String // وصف العملية بصيغة عربية، مثال: "عدّلت بيانات الطالبة"
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([targetType, targetId])
+}
