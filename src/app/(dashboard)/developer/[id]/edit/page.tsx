@@ -24,7 +24,7 @@ export default async function DeveloperEditUserPage({
           تعديل حساب: {user.name}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          تعديل البيانات الكاملة للحساب، بما فيها السجل المدني والصفة وكلمة المرور
+          تعديل البيانات الكاملة للحساب، بما فيها رقم الهوية/الإقامة والصفة وكلمة المرور
         </p>
       </div>
 
@@ -36,6 +36,11 @@ export default async function DeveloperEditUserPage({
           phone={user.phone}
           role={user.role}
           status={user.status}
+          nationality={user.nationality}
+          age={user.age}
+          educationLevel={user.educationLevel}
+          residence={user.residence}
+          memorizedAmount={user.memorizedAmount}
         />
       </div>
     </div>

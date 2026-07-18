@@ -12,6 +12,7 @@ const halaqaSchema = z.object({
   time: z.string().trim().min(1, "الرجاء تحديد وقت الحلقة"),
   teacherId: z.string().optional().nullable(),
   supervisorId: z.string().optional().nullable(),
+  trackId: z.string().optional().nullable(),
 });
 
 export type HalaqaActionState = { error?: string; success?: string };
@@ -27,13 +28,14 @@ export async function createHalaqaAction(
     time: formData.get("time"),
     teacherId: formData.get("teacherId") || null,
     supervisorId: formData.get("supervisorId") || null,
+    trackId: formData.get("trackId") || null,
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
-  const { name, time, teacherId } = parsed.data;
+  const { name, time, teacherId, trackId } = parsed.data;
   // المشرفة تُنشئ حلقات تحت إشرافها تلقائيًا، المديرة تختار المشرفة
   const supervisorId =
     user.role === "SUPERVISOR" ? user.id : parsed.data.supervisorId || null;
@@ -46,7 +48,7 @@ export async function createHalaqaAction(
   }
 
   const halaqa = await db.halaqa.create({
-    data: { name, time, teacherId: teacherId || null, supervisorId },
+    data: { name, time, teacherId: teacherId || null, supervisorId, trackId: trackId || null },
   });
 
   await logAudit({
@@ -75,6 +77,7 @@ export async function updateHalaqaAction(
     time: formData.get("time"),
     teacherId: formData.get("teacherId") || null,
     supervisorId: formData.get("supervisorId") || null,
+    trackId: formData.get("trackId") || null,
   });
 
   if (!parsed.success) {
@@ -87,7 +90,7 @@ export async function updateHalaqaAction(
     return { error: "لا تملكين صلاحية تعديل هذه الحلقة" };
   }
 
-  const { name, time, teacherId } = parsed.data;
+  const { name, time, teacherId, trackId } = parsed.data;
 
   if (teacherId) {
     const existing = await db.halaqa.findUnique({ where: { teacherId } });
@@ -101,7 +104,7 @@ export async function updateHalaqaAction(
 
   await db.halaqa.update({
     where: { id: halaqaId },
-    data: { name, time, teacherId: teacherId || null, supervisorId },
+    data: { name, time, teacherId: teacherId || null, supervisorId, trackId: trackId || null },
   });
 
   await logAudit({

@@ -60,7 +60,7 @@ export default async function TeachersPage() {
               <thead>
                 <tr className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-right">
                   <th className="px-5 py-3 font-medium">الاسم</th>
-                  <th className="px-5 py-3 font-medium">السجل المدني</th>
+                  <th className="px-5 py-3 font-medium">رقم الهوية/الإقامة</th>
                   <th className="px-5 py-3 font-medium">الجوال</th>
                   <th className="px-5 py-3 font-medium">إجراءات</th>
                 </tr>
@@ -108,7 +108,7 @@ export default async function TeachersPage() {
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-5 py-3 font-medium">الاسم</th>
-                <th className="px-5 py-3 font-medium">السجل المدني</th>
+                <th className="px-5 py-3 font-medium">رقم الهوية/الإقامة</th>
                 <th className="px-5 py-3 font-medium">الحلقة</th>
                 <th className="px-5 py-3 font-medium">الحالة</th>
                 <th className="px-5 py-3 font-medium">إجراءات</th>

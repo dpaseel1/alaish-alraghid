@@ -74,7 +74,7 @@ export async function reactivateTeacherAction(userId: string) {
   revalidatePath("/teachers");
 }
 
-/** المديرة فقط تقدر تكشف السجل المدني الكامل - يُستخدم عند الحاجة فقط (مثل التوثيق) */
+/** المديرة فقط تقدر تكشف رقم الهوية/الإقامة الكامل - يُستخدم عند الحاجة فقط (مثل التوثيق) */
 export async function revealNationalIdAction(
   userId: string
 ): Promise<{ nationalId: string } | { error: string }> {
@@ -84,6 +84,6 @@ export async function revealNationalIdAction(
   try {
     return { nationalId: decryptNationalId(user.nationalIdEncrypted) };
   } catch {
-    return { error: "تعذّر فك تشفير السجل المدني" };
+    return { error: "تعذّر فك تشفير رقم الهوية/الإقامة" };
   }
 }

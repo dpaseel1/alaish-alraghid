@@ -50,7 +50,7 @@ export function RegisterForm() {
 
       <div>
         <label htmlFor="nationalId" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-          السجل المدني
+          رقم الهوية/الإقامة
         </label>
         <input
           id="nationalId"
@@ -76,6 +76,78 @@ export function RegisterForm() {
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="05XXXXXXXX"
         />
+      </div>
+
+      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+          بيانات إضافية <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري، تظهر في صفحة الحلقة)</span>
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="nationality" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              الجنسية
+            </label>
+            <input
+              id="nationality"
+              name="nationality"
+              type="text"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="age" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              العمر
+            </label>
+            <input
+              id="age"
+              name="age"
+              type="number"
+              min={5}
+              max={100}
+              dir="ltr"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="educationLevel" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              المؤهل الدراسي
+            </label>
+            <input
+              id="educationLevel"
+              name="educationLevel"
+              type="text"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="residence" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              مقر الإقامة
+            </label>
+            <input
+              id="residence"
+              name="residence"
+              type="text"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label htmlFor="memorizedAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+            مقدار الحفظ من القرآن الكريم
+          </label>
+          <input
+            id="memorizedAmount"
+            name="memorizedAmount"
+            type="text"
+            placeholder="مثال: حافظة كاملة / 15 جزءًا"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          />
+        </div>
       </div>
 
       <div>

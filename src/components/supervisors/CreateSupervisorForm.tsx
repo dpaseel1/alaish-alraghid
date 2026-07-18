@@ -46,7 +46,7 @@ export function CreateSupervisorForm() {
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-          السجل المدني
+          رقم الهوية/الإقامة
         </label>
         <input
           name="nationalId"

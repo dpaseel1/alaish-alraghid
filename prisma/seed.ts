@@ -48,7 +48,23 @@ async function seedAccount({
   console.log("   ⚠️  غيّري كلمة المرور بعد أول تسجيل دخول.");
 }
 
+const TRACK_NAMES = ["مسار الجمان", "مسار الرواء", "مسار رواس"];
+
+async function seedTracks() {
+  for (const name of TRACK_NAMES) {
+    const existing = await db.track.findUnique({ where: { name } });
+    if (existing) {
+      console.log(`✅ ${name} موجود مسبقًا.`);
+      continue;
+    }
+    await db.track.create({ data: { name } });
+    console.log(`✅ تم إنشاء ${name}.`);
+  }
+}
+
 async function main() {
+  await seedTracks();
+
   await seedAccount({
     nationalId: process.env.SEED_ADMIN_NATIONAL_ID ?? "1000000000",
     password: process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!",

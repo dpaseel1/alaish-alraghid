@@ -19,7 +19,16 @@ export default async function SettingsPage() {
           <span className="text-slate-400 dark:text-slate-500">الصفة: </span>
           {ROLE_LABELS[user.role]}
         </p>
-        <UpdateProfileForm name={user.name} phone={user.phone} />
+        <UpdateProfileForm
+          name={user.name}
+          phone={user.phone}
+          isTeacher={user.role === "TEACHER"}
+          nationality={user.nationality}
+          age={user.age}
+          educationLevel={user.educationLevel}
+          residence={user.residence}
+          memorizedAmount={user.memorizedAmount}
+        />
       </div>
 
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">

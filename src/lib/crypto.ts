@@ -13,18 +13,18 @@ function getEncryptionKey(): Buffer {
   return Buffer.from(key, "hex");
 }
 
-/** تجزئة السجل المدني (باتجاه واحد) - تُستخدم لتسجيل الدخول والتأكد من عدم التكرار */
+/** تجزئة رقم الهوية/الإقامة (باتجاه واحد) - تُستخدم لتسجيل الدخول والتأكد من عدم التكرار */
 export function hashNationalId(nationalId: string): string {
   return crypto.createHash("sha256").update(nationalId.trim()).digest("hex");
 }
 
-/** آخر 4 أرقام من السجل المدني تُعرض في الواجهات بدون فك تشفير */
+/** آخر 4 أرقام من رقم الهوية/الإقامة تُعرض في الواجهات بدون فك تشفير */
 export function lastFourOf(nationalId: string): string {
   const trimmed = nationalId.trim();
   return trimmed.slice(-4);
 }
 
-/** تشفير السجل المدني بشكل قابل للاسترجاع - تراه المديرة فقط عند الحاجة */
+/** تشفير رقم الهوية/الإقامة بشكل قابل للاسترجاع - تراه المديرة فقط عند الحاجة */
 export function encryptNationalId(nationalId: string): string {
   const key = getEncryptionKey();
   const iv = crypto.randomBytes(12);
@@ -38,7 +38,7 @@ export function encryptNationalId(nationalId: string): string {
   return Buffer.concat([iv, authTag, encrypted]).toString("base64");
 }
 
-/** فك تشفير السجل المدني - يُستخدم فقط من صفحات المديرة */
+/** فك تشفير رقم الهوية/الإقامة - يُستخدم فقط من صفحات المديرة */
 export function decryptNationalId(payload: string): string {
   const key = getEncryptionKey();
   const buf = Buffer.from(payload, "base64");

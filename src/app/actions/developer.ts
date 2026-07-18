@@ -10,7 +10,7 @@ import {
   encryptNationalId,
   lastFourOf,
 } from "@/lib/crypto";
-import { nameSchema, nationalIdSchema, passwordSchema } from "@/lib/validation";
+import { nameSchema, nationalIdSchema, passwordSchema, teacherProfileFields } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import type { Role, UserStatus } from "@/generated/prisma/client";
 
@@ -26,6 +26,7 @@ const updateSchema = z.object({
   role: z.enum(ROLES as [Role, ...Role[]]),
   status: z.enum(STATUSES as [UserStatus, ...UserStatus[]]),
   newPassword: z.string().optional().or(z.literal("")),
+  ...teacherProfileFields,
 });
 
 export async function updateUserByDeveloperAction(
@@ -42,13 +43,30 @@ export async function updateUserByDeveloperAction(
     role: formData.get("role"),
     status: formData.get("status"),
     newPassword: formData.get("newPassword"),
+    nationality: formData.get("nationality"),
+    age: formData.get("age"),
+    educationLevel: formData.get("educationLevel"),
+    residence: formData.get("residence"),
+    memorizedAmount: formData.get("memorizedAmount"),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
-  const { name, nationalId, phone, role, status, newPassword } = parsed.data;
+  const {
+    name,
+    nationalId,
+    phone,
+    role,
+    status,
+    newPassword,
+    nationality,
+    age,
+    educationLevel,
+    residence,
+    memorizedAmount,
+  } = parsed.data;
 
   // منع المطورة من تغيير صفتها الخاصة عن طريق الخطأ (تفادي فقدان الوصول)
   if (userId === actor.id && role !== "DEVELOPER") {
@@ -62,7 +80,7 @@ export async function updateUserByDeveloperAction(
   const nationalIdHash = hashNationalId(nationalId);
   const existing = await db.user.findUnique({ where: { nationalIdHash } });
   if (existing && existing.id !== userId) {
-    return { error: "يوجد حساب آخر مسجّل بهذا السجل المدني" };
+    return { error: "يوجد حساب آخر مسجّل بهذا الرقم" };
   }
 
   const target = await db.user.findUnique({ where: { id: userId } });
@@ -78,6 +96,11 @@ export async function updateUserByDeveloperAction(
       nationalIdHash,
       nationalIdEncrypted: encryptNationalId(nationalId),
       nationalIdLastFour: lastFourOf(nationalId),
+      nationality: nationality || null,
+      age: age ?? null,
+      educationLevel: educationLevel || null,
+      residence: residence || null,
+      memorizedAmount: memorizedAmount || null,
       ...(newPassword ? { passwordHash: await hashPassword(newPassword) } : {}),
     },
   });
@@ -101,6 +124,7 @@ const createSchema = z.object({
   password: passwordSchema,
   role: z.enum(ROLES as [Role, ...Role[]]),
   phone: z.string().trim().optional().or(z.literal("")),
+  ...teacherProfileFields,
 });
 
 export async function createUserByDeveloperAction(
@@ -115,17 +139,33 @@ export async function createUserByDeveloperAction(
     password: formData.get("password"),
     role: formData.get("role"),
     phone: formData.get("phone"),
+    nationality: formData.get("nationality"),
+    age: formData.get("age"),
+    educationLevel: formData.get("educationLevel"),
+    residence: formData.get("residence"),
+    memorizedAmount: formData.get("memorizedAmount"),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
-  const { name, nationalId, password, role, phone } = parsed.data;
+  const {
+    name,
+    nationalId,
+    password,
+    role,
+    phone,
+    nationality,
+    age,
+    educationLevel,
+    residence,
+    memorizedAmount,
+  } = parsed.data;
 
   const nationalIdHash = hashNationalId(nationalId);
   const existing = await db.user.findUnique({ where: { nationalIdHash } });
-  if (existing) return { error: "يوجد حساب مسجّل مسبقًا بهذا السجل المدني" };
+  if (existing) return { error: "يوجد حساب مسجّل مسبقًا بهذا الرقم" };
 
   const created = await db.user.create({
     data: {
@@ -137,6 +177,11 @@ export async function createUserByDeveloperAction(
       role,
       status: "ACTIVE",
       phone: phone || null,
+      nationality: nationality || null,
+      age: age ?? null,
+      educationLevel: educationLevel || null,
+      residence: residence || null,
+      memorizedAmount: memorizedAmount || null,
     },
   });
 

@@ -29,8 +29,8 @@ enum UserStatus {
 model User {
   id                  String     @id @default(cuid())
   name                String
-  nationalIdHash      String     @unique // بصمة SHA-256 للسجل المدني (للتحقق من التكرار وتسجيل الدخول)
-  nationalIdEncrypted String // السجل المدني مشفّر (AES-256-GCM) - تراه المديرة فقط
+  nationalIdHash      String     @unique // بصمة SHA-256 لرقم الهوية/الإقامة (للتحقق من التكرار وتسجيل الدخول)
+  nationalIdEncrypted String // رقم الهوية/الإقامة مشفّر (AES-256-GCM) - تراه المديرة فقط
   nationalIdLastFour  String // آخر 4 أرقام تُعرض بدون فك تشفير
   passwordHash        String
   role                Role
@@ -39,6 +39,13 @@ model User {
   lastSeenAt          DateTime?
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
+
+  // بيانات إضافية خاصة بالمعلمة (اختيارية) - تُستخدم في صفحة تفاصيل الحلقة
+  nationality     String? // الجنسية
+  age             Int? // العمر
+  educationLevel  String? // المؤهل الدراسي
+  residence       String? // مقر الإقامة
+  memorizedAmount String? // مقدار حفظها من القرآن الكريم
 
   teacherHalaqa     Halaqa?   @relation("TeacherHalaqa")
   supervisedHalaqat Halaqa[]  @relation("SupervisorHalaqat")
@@ -58,6 +65,17 @@ model Session {
   @@index([userId])
 }
 
+// ============ المسارات ============
+// تجميع الحلقات ضمن مسارات كبرى (مثال: مسار الجمان، مسار الرواء، مسار رواس)
+
+model Track {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  halaqat Halaqa[]
+}
+
 // ============ الحلقات ============
 
 model Halaqa {
@@ -69,6 +87,8 @@ model Halaqa {
   teacher      User?    @relation("TeacherHalaqa", fields: [teacherId], references: [id])
   supervisorId String?
   supervisor   User?    @relation("SupervisorHalaqat", fields: [supervisorId], references: [id])
+  trackId      String?
+  track        Track?   @relation(fields: [trackId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -76,6 +96,7 @@ model Halaqa {
   attendanceLogs AttendanceLog[]
 
   @@index([supervisorId])
+  @@index([trackId])
 }
 
 // ============ الطالبات ============

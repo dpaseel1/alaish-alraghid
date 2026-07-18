@@ -9,6 +9,7 @@ export function HalaqaForm({
   action,
   teachers,
   supervisors,
+  tracks,
   isAdmin,
   initial,
 }: {
@@ -18,12 +19,14 @@ export function HalaqaForm({
   ) => Promise<HalaqaActionState>;
   teachers: Option[];
   supervisors: Option[];
+  tracks: Option[];
   isAdmin: boolean;
   initial?: {
     name: string;
     time: string;
     teacherId: string | null;
     supervisorId: string | null;
+    trackId?: string | null;
   };
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -73,6 +76,24 @@ export function HalaqaForm({
         >
           <option value="">بدون تعيين حاليًا</option>
           {teachers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          المسار
+        </label>
+        <select
+          name="trackId"
+          defaultValue={initial?.trackId ?? ""}
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+        >
+          <option value="">بدون مسار حاليًا</option>
+          {tracks.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>

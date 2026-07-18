@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
+import { RevealNationalId } from "@/components/teachers/RevealNationalId";
 
 export default async function HalaqaDetailPage({
   params,
@@ -14,8 +15,20 @@ export default async function HalaqaDetailPage({
   const halaqa = await db.halaqa.findUnique({
     where: { id },
     include: {
-      teacher: { select: { name: true } },
-      supervisor: { select: { name: true } },
+      teacher: {
+        select: {
+          name: true,
+          phone: true,
+          nationality: true,
+          nationalIdLastFour: true,
+          age: true,
+          educationLevel: true,
+          residence: true,
+          memorizedAmount: true,
+        },
+      },
+      supervisor: { select: { name: true, phone: true } },
+      track: { select: { id: true, name: true } },
       students: { where: { isActive: true }, orderBy: { name: "asc" } },
     },
   });
@@ -51,8 +64,16 @@ export default async function HalaqaDetailPage({
         <div>
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{halaqa.name}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {halaqa.time} · المعلمة: {halaqa.teacher?.name ?? "—"} · المشرفة:{" "}
-            {halaqa.supervisor?.name ?? "—"}
+            {halaqa.time}
+            {halaqa.track && (
+              <>
+                {" "}
+                ·{" "}
+                <Link href={`/tracks/${halaqa.track.id}`} className="text-brand hover:underline">
+                  {halaqa.track.name}
+                </Link>
+              </>
+            )}
           </p>
         </div>
         {canManage && (isAdminRole(user.role) || user.role === "SUPERVISOR") && (
@@ -63,6 +84,68 @@ export default async function HalaqaDetailPage({
             تعديل الحلقة
           </Link>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">بيانات المعلمة</h2>
+          {halaqa.teacher ? (
+            <dl className="grid grid-cols-2 gap-y-2 text-sm">
+              <dt className="text-slate-400 dark:text-slate-500">الاسم</dt>
+              <dd className="text-slate-700 dark:text-slate-200">{halaqa.teacher.name}</dd>
+
+              <dt className="text-slate-400 dark:text-slate-500">رقم الجوال</dt>
+              <dd dir="ltr" className="text-slate-700 dark:text-slate-200 text-right">
+                {halaqa.teacher.phone ?? "—"}
+              </dd>
+
+              <dt className="text-slate-400 dark:text-slate-500">الجنسية</dt>
+              <dd className="text-slate-700 dark:text-slate-200">{halaqa.teacher.nationality ?? "—"}</dd>
+
+              <dt className="text-slate-400 dark:text-slate-500">رقم الهوية/الإقامة</dt>
+              <dd>
+                {isAdminRole(user.role) && halaqa.teacherId ? (
+                  <RevealNationalId userId={halaqa.teacherId} lastFour={halaqa.teacher.nationalIdLastFour} />
+                ) : (
+                  <span dir="ltr" className="font-mono text-slate-400 dark:text-slate-500">
+                    •••••{halaqa.teacher.nationalIdLastFour}
+                  </span>
+                )}
+              </dd>
+
+              <dt className="text-slate-400 dark:text-slate-500">العمر</dt>
+              <dd className="text-slate-700 dark:text-slate-200">{halaqa.teacher.age ?? "—"}</dd>
+
+              <dt className="text-slate-400 dark:text-slate-500">المؤهل الدراسي</dt>
+              <dd className="text-slate-700 dark:text-slate-200">{halaqa.teacher.educationLevel ?? "—"}</dd>
+
+              <dt className="text-slate-400 dark:text-slate-500">مقر الإقامة</dt>
+              <dd className="text-slate-700 dark:text-slate-200">{halaqa.teacher.residence ?? "—"}</dd>
+
+              <dt className="text-slate-400 dark:text-slate-500">مقدار الحفظ</dt>
+              <dd className="text-slate-700 dark:text-slate-200">{halaqa.teacher.memorizedAmount ?? "—"}</dd>
+            </dl>
+          ) : (
+            <p className="text-sm text-slate-400 dark:text-slate-500">لم يتم تعيين معلمة لهذه الحلقة بعد</p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">بيانات المشرفة</h2>
+          {halaqa.supervisor ? (
+            <dl className="grid grid-cols-2 gap-y-2 text-sm">
+              <dt className="text-slate-400 dark:text-slate-500">الاسم</dt>
+              <dd className="text-slate-700 dark:text-slate-200">{halaqa.supervisor.name}</dd>
+
+              <dt className="text-slate-400 dark:text-slate-500">رقم الجوال</dt>
+              <dd dir="ltr" className="text-slate-700 dark:text-slate-200 text-right">
+                {halaqa.supervisor.phone ?? "—"}
+              </dd>
+            </dl>
+          ) : (
+            <p className="text-sm text-slate-400 dark:text-slate-500">لم يتم تعيين مشرفة لهذه الحلقة بعد</p>
+          )}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">

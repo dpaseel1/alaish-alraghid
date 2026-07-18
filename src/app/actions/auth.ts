@@ -37,12 +37,12 @@ export async function loginAction(
   });
 
   if (!user) {
-    return { error: "السجل المدني أو كلمة المرور غير صحيحة" };
+    return { error: "رقم الهوية/الإقامة أو كلمة المرور غير صحيحة" };
   }
 
   const passwordOk = await verifyPassword(password, user.passwordHash);
   if (!passwordOk) {
-    return { error: "السجل المدني أو كلمة المرور غير صحيحة" };
+    return { error: "رقم الهوية/الإقامة أو كلمة المرور غير صحيحة" };
   }
 
   if (user.status === "PENDING") {
@@ -69,18 +69,33 @@ export async function registerAction(
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
     phone: formData.get("phone"),
+    nationality: formData.get("nationality"),
+    age: formData.get("age"),
+    educationLevel: formData.get("educationLevel"),
+    residence: formData.get("residence"),
+    memorizedAmount: formData.get("memorizedAmount"),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
-  const { name, nationalId, password, phone } = parsed.data;
+  const {
+    name,
+    nationalId,
+    password,
+    phone,
+    nationality,
+    age,
+    educationLevel,
+    residence,
+    memorizedAmount,
+  } = parsed.data;
   const nationalIdHash = hashNationalId(nationalId);
 
   const existing = await db.user.findUnique({ where: { nationalIdHash } });
   if (existing) {
-    return { error: "يوجد حساب مسجّل مسبقًا بهذا السجل المدني" };
+    return { error: "يوجد حساب مسجّل مسبقًا بهذا الرقم" };
   }
 
   await db.user.create({
@@ -93,6 +108,11 @@ export async function registerAction(
       role: "TEACHER",
       status: "PENDING",
       phone: phone || null,
+      nationality: nationality || null,
+      age: age ?? null,
+      educationLevel: educationLevel || null,
+      residence: residence || null,
+      memorizedAmount: memorizedAmount || null,
     },
   });
 

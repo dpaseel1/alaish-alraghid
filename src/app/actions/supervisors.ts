@@ -42,7 +42,7 @@ export async function createSupervisorAction(
 
   const nationalIdHash = hashNationalId(parsed.nationalId);
   const existing = await db.user.findUnique({ where: { nationalIdHash } });
-  if (existing) return { error: "يوجد حساب مسجّل مسبقًا بهذا السجل المدني" };
+  if (existing) return { error: "يوجد حساب مسجّل مسبقًا بهذا الرقم" };
 
   const supervisor = await db.user.create({
     data: {

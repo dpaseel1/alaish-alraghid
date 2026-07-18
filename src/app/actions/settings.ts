@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
-import { passwordSchema, nameSchema } from "@/lib/validation";
+import { passwordSchema, nameSchema, teacherProfileFields } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 
 export type SettingsActionState = { error?: string; success?: string };
@@ -13,6 +13,7 @@ export type SettingsActionState = { error?: string; success?: string };
 const profileSchema = z.object({
   name: nameSchema,
   phone: z.string().trim().optional().or(z.literal("")),
+  ...teacherProfileFields,
 });
 
 export async function updateProfileAction(
@@ -24,6 +25,11 @@ export async function updateProfileAction(
   const parsed = profileSchema.safeParse({
     name: formData.get("name"),
     phone: formData.get("phone"),
+    nationality: formData.get("nationality"),
+    age: formData.get("age"),
+    educationLevel: formData.get("educationLevel"),
+    residence: formData.get("residence"),
+    memorizedAmount: formData.get("memorizedAmount"),
   });
 
   if (!parsed.success) {
@@ -35,6 +41,15 @@ export async function updateProfileAction(
     data: {
       name: parsed.data.name,
       phone: parsed.data.phone || null,
+      ...(user.role === "TEACHER"
+        ? {
+            nationality: parsed.data.nationality || null,
+            age: parsed.data.age ?? null,
+            educationLevel: parsed.data.educationLevel || null,
+            residence: parsed.data.residence || null,
+            memorizedAmount: parsed.data.memorizedAmount || null,
+          }
+        : {}),
     },
   });
 

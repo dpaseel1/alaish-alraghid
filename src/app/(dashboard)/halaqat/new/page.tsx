@@ -6,7 +6,7 @@ import { HalaqaForm } from "@/components/halaqat/HalaqaForm";
 export default async function NewHalaqaPage() {
   const user = await requireRole("ADMIN", "SUPERVISOR");
 
-  const [teachers, supervisors] = await Promise.all([
+  const [teachers, supervisors, tracks] = await Promise.all([
     db.user.findMany({
       where: { role: "TEACHER", status: "ACTIVE", teacherHalaqa: null },
       select: { id: true, name: true },
@@ -19,6 +19,7 @@ export default async function NewHalaqaPage() {
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
+    db.track.findMany({ select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
   ]);
 
   return (
@@ -35,6 +36,7 @@ export default async function NewHalaqaPage() {
           action={createHalaqaAction}
           teachers={teachers}
           supervisors={supervisors}
+          tracks={tracks}
           isAdmin={isAdminRole(user.role)}
         />
       </div>

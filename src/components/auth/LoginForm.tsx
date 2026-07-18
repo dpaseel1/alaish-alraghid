@@ -25,7 +25,7 @@ export function LoginForm() {
           htmlFor="nationalId"
           className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1"
         >
-          السجل المدني
+          رقم الهوية/الإقامة
         </label>
         <input
           id="nationalId"

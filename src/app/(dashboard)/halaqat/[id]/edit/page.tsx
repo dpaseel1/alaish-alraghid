@@ -22,7 +22,7 @@ export default async function EditHalaqaPage({
     );
   }
 
-  const [teachers, supervisors] = await Promise.all([
+  const [teachers, supervisors, tracks] = await Promise.all([
     db.user.findMany({
       where: {
         role: "TEACHER",
@@ -39,6 +39,7 @@ export default async function EditHalaqaPage({
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
+    db.track.findMany({ select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
   ]);
 
   const boundAction = updateHalaqaAction.bind(null, halaqa.id);
@@ -54,12 +55,14 @@ export default async function EditHalaqaPage({
           action={boundAction}
           teachers={teachers}
           supervisors={supervisors}
+          tracks={tracks}
           isAdmin={isAdminRole(user.role)}
           initial={{
             name: halaqa.name,
             time: halaqa.time,
             teacherId: halaqa.teacherId,
             supervisorId: halaqa.supervisorId,
+            trackId: halaqa.trackId,
           }}
         />
       </div>

@@ -23,7 +23,7 @@ async function AdminOrSupervisorHome({
   const halaqaWhere = supervisorId ? { supervisorId } : {};
   const onlineSince = new Date(Date.now() - ONLINE_THRESHOLD_MINUTES * 60 * 1000);
 
-  const [activeHalaqatCount, totalStudents, onlineTeachers, halaqat] =
+  const [activeHalaqatCount, totalStudents, onlineTeachers, tracks, halaqat] =
     await Promise.all([
       db.halaqa.count({ where: { ...halaqaWhere, isActive: true } }),
       db.student.count({
@@ -39,22 +39,88 @@ async function AdminOrSupervisorHome({
             : {}),
         },
       }),
+      db.track.findMany({ orderBy: { createdAt: "asc" } }),
       db.halaqa.findMany({
         where: halaqaWhere,
-        include: {
-          teacher: { select: { name: true } },
-          supervisor: { select: { name: true } },
-          _count: { select: { students: true } },
+        select: {
+          id: true,
+          trackId: true,
+          teacherId: true,
+          supervisorId: true,
+          students: { where: { isActive: true }, select: { memorizedPagesTotal: true } },
         },
-        orderBy: { createdAt: "desc" },
       }),
     ]);
+
+  type TrackStats = {
+    id: string | null;
+    name: string;
+    halaqatCount: number;
+    teachersCount: number;
+    supervisorsCount: number;
+    studentsCount: number;
+    memorizedTotal: number;
+  };
+
+  const statsByTrack = new Map<string | null, TrackStats>();
+  for (const t of tracks) {
+    statsByTrack.set(t.id, {
+      id: t.id,
+      name: t.name,
+      halaqatCount: 0,
+      teachersCount: 0,
+      supervisorsCount: 0,
+      studentsCount: 0,
+      memorizedTotal: 0,
+    });
+  }
+
+  const teacherSets = new Map<string | null, Set<string>>();
+  const supervisorSets = new Map<string | null, Set<string>>();
+
+  for (const h of halaqat) {
+    const key = h.trackId ?? null;
+    if (!statsByTrack.has(key)) {
+      statsByTrack.set(key, {
+        id: key,
+        name: "حلقات غير مصنّفة ضمن مسار",
+        halaqatCount: 0,
+        teachersCount: 0,
+        supervisorsCount: 0,
+        studentsCount: 0,
+        memorizedTotal: 0,
+      });
+    }
+    const stats = statsByTrack.get(key)!;
+    stats.halaqatCount += 1;
+    stats.studentsCount += h.students.length;
+    stats.memorizedTotal += h.students.reduce((sum, s) => sum + s.memorizedPagesTotal, 0);
+
+    if (h.teacherId) {
+      if (!teacherSets.has(key)) teacherSets.set(key, new Set());
+      teacherSets.get(key)!.add(h.teacherId);
+    }
+    if (h.supervisorId) {
+      if (!supervisorSets.has(key)) supervisorSets.set(key, new Set());
+      supervisorSets.get(key)!.add(h.supervisorId);
+    }
+  }
+
+  for (const [key, stats] of statsByTrack) {
+    stats.teachersCount = teacherSets.get(key)?.size ?? 0;
+    stats.supervisorsCount = supervisorSets.get(key)?.size ?? 0;
+  }
+
+  const orderedStats = [
+    ...tracks.map((t) => statsByTrack.get(t.id)!),
+    ...(statsByTrack.has(null) ? [statsByTrack.get(null)!] : []),
+  ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">الرئيسية</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">نظرة عامة على الحلقات والطالبات</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">نظرة عامة على المسارات والحلقات والطالبات</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -67,61 +133,42 @@ async function AdminOrSupervisorHome({
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800 dark:text-slate-100">الحلقات</h2>
-          <Link
-            href="/halaqat"
-            className="text-sm text-brand font-medium hover:underline"
-          >
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100">المسارات</h2>
+          <Link href="/halaqat" className="text-sm text-brand font-medium hover:underline">
             عرض كل الحلقات
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
-                <th className="px-5 py-3 font-medium">اسم الحلقة</th>
-                <th className="px-5 py-3 font-medium">المعلمة</th>
-                <th className="px-5 py-3 font-medium">المشرفة</th>
-                <th className="px-5 py-3 font-medium">عدد الطالبات</th>
-                <th className="px-5 py-3 font-medium">وقت الحلقة</th>
-                <th className="px-5 py-3 font-medium">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {halaqat.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
-                    لا توجد حلقات مضافة بعد
-                  </td>
-                </tr>
-              )}
-              {halaqat.map((h) => (
-                <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{h.name}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.teacher?.name ?? "—"}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.supervisor?.name ?? "—"}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h._count.students}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.time}</td>
-                  <td className="px-5 py-3">
-                    <Link
-                      href={`/halaqat/${h.id}`}
-                      className="text-brand hover:underline ml-3"
-                    >
-                      عرض
-                    </Link>
-                    <Link
-                      href={`/halaqat/${h.id}/edit`}
-                      className="text-slate-500 dark:text-slate-400 hover:underline"
-                    >
-                      تعديل
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+        {orderedStats.length === 0 && (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-slate-400 dark:text-slate-500">
+            لا توجد مسارات أو حلقات مضافة بعد
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {orderedStats.map((t) => (
+            <Link
+              key={t.id ?? "unassigned"}
+              href={`/tracks/${t.id ?? "unassigned"}`}
+              className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm hover:shadow-md hover:border-brand transition"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light text-xl">
+                  🧭
+                </div>
+                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{t.name}</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
+                <p>🕌 {t.halaqatCount} حلقة</p>
+                <p>📚 {t.studentsCount} طالبة</p>
+                <p>👩‍🏫 {t.teachersCount} معلمة</p>
+                <p>🧭 {t.supervisorsCount} مشرفة</p>
+                <p className="col-span-2">📖 {t.memorizedTotal} وجه محفوظ</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </div>
