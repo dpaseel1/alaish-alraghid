@@ -60,22 +60,22 @@ export default async function AuditLogPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">سجل الحركات</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">سجل الحركات</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           كل عمليات الإضافة والتعديل والحذف التي قام بها المستخدمون
         </p>
       </div>
 
       <form
         method="get"
-        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-wrap items-end gap-4"
+        className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm flex flex-wrap items-end gap-4"
       >
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">الصفة</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">الصفة</label>
           <select
             name="role"
             defaultValue={role ?? ""}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-800"
           >
             <option value="">الكل</option>
             <option value="ADMIN">مديرة</option>
@@ -84,31 +84,31 @@ export default async function AuditLogPage({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">من تاريخ</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">من تاريخ</label>
           <input
             type="date"
             name="from"
             defaultValue={toDateInputValue(fromDate)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">إلى تاريخ</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">إلى تاريخ</label>
           <input
             type="date"
             name="to"
             defaultValue={toDateInputValue(toDate)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">بحث</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">بحث</label>
           <input
             type="text"
             name="q"
             defaultValue={q ?? ""}
             placeholder="اسم المستخدمة أو الطالبة..."
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
           />
         </div>
         <button
@@ -119,9 +119,9 @@ export default async function AuditLogPage({
         </button>
       </form>
 
-      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-800">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100">
             العمليات ({entries.length}
             {entries.length === 300 ? "+" : ""}) — من {toDateInputValue(fromDate)} إلى{" "}
             {toDateInputValue(toDate)}
@@ -130,35 +130,35 @@ export default async function AuditLogPage({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-slate-500 text-right">
+              <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-5 py-3 font-medium">التاريخ والوقت</th>
                 <th className="px-5 py-3 font-medium">المستخدمة</th>
                 <th className="px-5 py-3 font-medium">الصفة</th>
                 <th className="px-5 py-3 font-medium">التفاصيل</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {entries.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد حركات مسجّلة في هذه الفترة
                   </td>
                 </tr>
               )}
               {entries.map((e) => (
-                <tr key={e.id} className="hover:bg-slate-50">
-                  <td className="px-5 py-3 text-slate-500 whitespace-nowrap" dir="ltr">
+                <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <td className="px-5 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap" dir="ltr">
                     {formatDateTime(e.createdAt)}
                   </td>
-                  <td className="px-5 py-3 font-medium text-slate-800 whitespace-nowrap">
+                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100 whitespace-nowrap">
                     {e.actorName}
                   </td>
-                  <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                     {ROLE_LABELS[e.actorRole]}
                   </td>
-                  <td className="px-5 py-3 text-slate-700">
+                  <td className="px-5 py-3 text-slate-700 dark:text-slate-200">
                     {e.message}{" "}
-                    <span className="font-medium text-slate-900">{e.targetLabel}</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-50">{e.targetLabel}</span>
                   </td>
                 </tr>
               ))}

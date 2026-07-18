@@ -21,7 +21,7 @@ export function MemorizationChart({
 }) {
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
+      <div className="flex items-center justify-center h-64 text-slate-400 dark:text-slate-500 text-sm">
         لا توجد بيانات كافية لعرض الرسم البياني
       </div>
     );

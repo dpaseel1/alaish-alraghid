@@ -1,11 +1,22 @@
 @import "tailwindcss";
 
+/* تفعيل الوضع الداكن عبر صنف .dark على عنصر html بدل الاعتماد فقط على إعدادات النظام */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
   --brand: #0f766e;
   --brand-dark: #115e59;
   --brand-light: #ccfbf1;
+}
+
+.dark {
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --brand: #2dd4bf;
+  --brand-dark: #14b8a6;
+  --brand-light: #134e4a;
 }
 
 @theme inline {
@@ -20,4 +31,11 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* تحسين طباعة الشهادات والتقارير: تبقى بالألوان الفاتحة دائمًا بغض النظر عن الوضع */
+@media print {
+  html {
+    color-scheme: light;
+  }
 }

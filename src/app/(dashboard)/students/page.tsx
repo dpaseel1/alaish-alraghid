@@ -22,7 +22,7 @@ export default async function StudentsPage({
 
     if (!halaqa) {
       return (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-700">
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-6 text-amber-700 dark:text-amber-400">
           لا توجد حلقة مرتبطة بحسابك بعد. تواصلي مع المشرفة أو المديرة.
         </div>
       );
@@ -39,14 +39,14 @@ export default async function StudentsPage({
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">طالبات {halaqa.name}</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">طالبات {halaqa.name}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             سجّلي حضور وأوجه الحفظ اليومية لطالباتك
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="font-semibold text-slate-800 mb-4">بيانات اليوم</h2>
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">بيانات اليوم</h2>
           <DailyDataForm
             students={halaqa.students}
             todayEntries={
@@ -59,21 +59,21 @@ export default async function StudentsPage({
           />
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="font-semibold text-slate-800 mb-4">إضافة طالبة جديدة</h2>
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">إضافة طالبة جديدة</h2>
           <AddStudentForm halaqaId={halaqa.id} />
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-slate-200">
-            <h2 className="font-semibold text-slate-800">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">
               كل الطالبات ({halaqa.students.length})
             </h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-right">
+                <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                   <th className="px-5 py-3 font-medium">الاسم</th>
                   <th className="px-5 py-3 font-medium">الجنسية</th>
                   <th className="px-5 py-3 font-medium">إجمالي الأوجه المحفوظة</th>
@@ -81,10 +81,10 @@ export default async function StudentsPage({
                   <th className="px-5 py-3 font-medium">إجراءات</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {halaqa.students.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-400">
+                    <td colSpan={5} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                       لا توجد طالبات مضافات بعد
                     </td>
                   </tr>
@@ -130,8 +130,8 @@ export default async function StudentsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">الطالبات</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">الطالبات</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             اختاري حلقة لعرض وإدارة طالباتها
           </p>
         </div>
@@ -139,30 +139,30 @@ export default async function StudentsPage({
       </div>
 
       {!selectedHalaqa && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-400">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-slate-400 dark:text-slate-500">
           اختاري حلقة من القائمة أعلاه لعرض طالباتها
         </div>
       )}
 
       {selectedHalaqa && (
         <>
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="font-semibold text-slate-800 mb-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">
               إضافة طالبة إلى {selectedHalaqa.name}
             </h2>
             <AddStudentForm halaqaId={selectedHalaqa.id} />
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-slate-200">
-              <h2 className="font-semibold text-slate-800">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100">
                 طالبات {selectedHalaqa.name} ({selectedHalaqa.students.length})
               </h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-right">
+                  <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                     <th className="px-5 py-3 font-medium">الاسم</th>
                     <th className="px-5 py-3 font-medium">الجنسية</th>
                     <th className="px-5 py-3 font-medium">إجمالي الأوجه المحفوظة</th>
@@ -170,10 +170,10 @@ export default async function StudentsPage({
                     <th className="px-5 py-3 font-medium">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {selectedHalaqa.students.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-slate-400">
+                      <td colSpan={5} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                         لا توجد طالبات مضافات بعد
                       </td>
                     </tr>

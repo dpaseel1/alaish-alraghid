@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cairo } from "next/font/google";
 import "./globals.css";
 
@@ -8,10 +8,35 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "نظام إدارة حلقات التحفيظ",
+  title: {
+    default: "العيش الرغيد",
+    template: "%s | العيش الرغيد",
+  },
   description:
     "منصة إدارة حلقات تحفيظ القرآن الكريم، المعلمات، الطالبات والتقارير",
 };
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
+};
+
+// سكربت مبكر يطبّق الوضع الداكن قبل رسم الصفحة، لتجنّب وميض الشاشة (FOUC)
+const themeInitScript = `
+(function () {
+  try {
+    var stored = localStorage.getItem("theme");
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (stored === "dark" || (!stored && prefersDark)) {
+      document.documentElement.classList.add("dark");
+    }
+  } catch (e) {}
+})();
+`;
 
 export default function RootLayout({
   children,
@@ -19,8 +44,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" className={`${cairo.variable} h-full`}>
-      <body className="min-h-full bg-slate-50 text-slate-900 antialiased font-sans">
+    <html lang="ar" dir="rtl" className={`${cairo.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-full bg-background text-foreground antialiased font-sans transition-colors duration-200">
         {children}
       </body>
     </html>

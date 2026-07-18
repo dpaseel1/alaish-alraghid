@@ -84,8 +84,8 @@ export default async function ReportsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">التقارير والإحصائيات</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">التقارير والإحصائيات</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             مستوى التحصيل في الحفظ وقوائم الغياب القابلة للتصفية
           </p>
         </div>
@@ -94,14 +94,14 @@ export default async function ReportsPage({
 
       <form
         method="get"
-        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-wrap items-end gap-4 print:hidden"
+        className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm flex flex-wrap items-end gap-4 print:hidden"
       >
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">الحلقة</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">الحلقة</label>
           <select
             name="halaqaId"
             defaultValue={halaqaId ?? ""}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-800"
           >
             <option value="">كل الحلقات</option>
             {halaqatForSelect.map((h) => (
@@ -112,21 +112,21 @@ export default async function ReportsPage({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">من تاريخ</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">من تاريخ</label>
           <input
             type="date"
             name="from"
             defaultValue={toDateInputValue(fromDate)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">إلى تاريخ</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">إلى تاريخ</label>
           <input
             type="date"
             name="to"
             defaultValue={toDateInputValue(toDate)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
           />
         </div>
         <button
@@ -137,16 +137,16 @@ export default async function ReportsPage({
         </button>
       </form>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-slate-800 mb-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">
           إجمالي الأوجه المحفوظة حسب الحلقة
         </h2>
         <MemorizationChart data={halaqaChartData} barName="إجمالي الأوجه المحفوظة" />
       </div>
 
       {singleHalaqa && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="font-semibold text-slate-800 mb-4">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">
             توزيع الحفظ بين طالبات {singleHalaqa.name}
           </h2>
           <MemorizationChart
@@ -157,9 +157,9 @@ export default async function ReportsPage({
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-800">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100">
             قائمة الغياب ({absentees.length}) — من {toDateInputValue(fromDate)} إلى{" "}
             {toDateInputValue(toDate)}
           </h2>
@@ -167,29 +167,29 @@ export default async function ReportsPage({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-slate-500 text-right">
+              <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-5 py-3 font-medium">الطالبة</th>
                 <th className="px-5 py-3 font-medium">الحلقة</th>
                 <th className="px-5 py-3 font-medium">التاريخ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {absentees.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan={3} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد حالات غياب مسجّلة في هذه الفترة
                   </td>
                 </tr>
               )}
               {absentees.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50">
-                  <td className="px-5 py-3 font-medium text-slate-800">
+                <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">
                     {a.student.name}
                   </td>
-                  <td className="px-5 py-3 text-slate-600">
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
                     {a.attendanceLog.halaqa.name}
                   </td>
-                  <td className="px-5 py-3 text-slate-600" dir="ltr">
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300" dir="ltr">
                     {toDateInputValue(a.attendanceLog.date)}
                   </td>
                 </tr>

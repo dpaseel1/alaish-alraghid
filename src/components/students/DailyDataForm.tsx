@@ -37,17 +37,17 @@ export function DailyDataForm({
   return (
     <form action={formAction} className="space-y-4">
       {alreadySubmitted && !state?.success && (
-        <div className="rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-sm px-4 py-3">
+        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-400 text-sm px-4 py-3">
           تم تسجيل بيانات اليوم مسبقًا، يمكنك تعديلها وإعادة الحفظ.
         </div>
       )}
       {state?.success && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3">
+        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 text-sm px-4 py-3">
           {state.success}
         </div>
       )}
       {state?.error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+        <div className="rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 text-sm px-4 py-3">
           {state.error}
         </div>
       )}
@@ -55,24 +55,24 @@ export function DailyDataForm({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-slate-500 text-right">
+            <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
               <th className="px-4 py-2 font-medium">الطالبة</th>
               <th className="px-4 py-2 font-medium">الحضور</th>
               <th className="px-4 py-2 font-medium">الأوجه المحفوظة اليوم</th>
               <th className="px-4 py-2 font-medium">النصاب</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
             {students.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                   لا توجد طالبات في حلقتك بعد
                 </td>
               </tr>
             )}
             {students.map((s) => (
               <tr key={s.id}>
-                <td className="px-4 py-2 font-medium text-slate-800">{s.name}</td>
+                <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
                 <td className="px-4 py-2">
                   <input
                     type="checkbox"
@@ -86,7 +86,7 @@ export function DailyDataForm({
                     type="number"
                     min={0}
                     name={`pages_${s.id}`}
-                    className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                    className="w-24 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
                     placeholder="0"
                   />
                 </td>
@@ -94,7 +94,7 @@ export function DailyDataForm({
                   <input
                     type="text"
                     name={`quota_${s.id}`}
-                    className="w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                    className="w-32 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
                     placeholder="اختياري"
                   />
                 </td>

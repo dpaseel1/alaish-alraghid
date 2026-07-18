@@ -18,7 +18,7 @@ export function HalaqaSelect({
         const id = e.target.value;
         router.push(id ? `/students?halaqaId=${id}` : "/students");
       }}
-      className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand bg-white"
+      className="rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand bg-white dark:bg-slate-800"
     >
       <option value="">اختاري حلقة لعرض طالباتها</option>
       {halaqat.map((h) => (

@@ -31,45 +31,45 @@ export function HalaqaForm({
   return (
     <form action={formAction} className="space-y-4 max-w-lg">
       {state?.error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+        <div className="rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 text-sm px-4 py-3">
           {state.error}
         </div>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
           اسم الحلقة
         </label>
         <input
           name="name"
           required
           defaultValue={initial?.name}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="مثال: حلقة النور"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
           وقت الحلقة
         </label>
         <input
           name="time"
           required
           defaultValue={initial?.time}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="مثال: بعد صلاة العصر"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
           المعلمة المسؤولة
         </label>
         <select
           name="teacherId"
           defaultValue={initial?.teacherId ?? ""}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
         >
           <option value="">بدون تعيين حاليًا</option>
           {teachers.map((t) => (
@@ -82,13 +82,13 @@ export function HalaqaForm({
 
       {isAdmin && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
             المشرفة
           </label>
           <select
             name="supervisorId"
             defaultValue={initial?.supervisorId ?? ""}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           >
             <option value="">بدون تعيين حاليًا</option>
             {supervisors.map((s) => (

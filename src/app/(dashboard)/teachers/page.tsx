@@ -9,10 +9,10 @@ import {
 import { RevealNationalId } from "@/components/teachers/RevealNationalId";
 
 const STATUS_STYLES: Record<string, string> = {
-  PENDING: "bg-amber-50 text-amber-700",
-  ACTIVE: "bg-emerald-50 text-emerald-700",
-  REJECTED: "bg-red-50 text-red-700",
-  SUSPENDED: "bg-slate-100 text-slate-500",
+  PENDING: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400",
+  ACTIVE: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400",
+  REJECTED: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400",
+  SUSPENDED: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -42,15 +42,15 @@ export default async function TeachersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">المعلمات</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">المعلمات</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           إدارة حسابات المعلمات وموافقة التسجيلات الجديدة
         </p>
       </div>
 
       {pending.length > 0 && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 overflow-hidden">
-          <div className="px-5 py-4 border-b border-amber-200">
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-950/30 overflow-hidden">
+          <div className="px-5 py-4 border-b border-amber-200 dark:border-amber-900/50">
             <h2 className="font-semibold text-amber-800">
               طلبات بانتظار الموافقة ({pending.length})
             </h2>
@@ -58,7 +58,7 @@ export default async function TeachersPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-amber-50 text-amber-700 text-right">
+                <tr className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-right">
                   <th className="px-5 py-3 font-medium">الاسم</th>
                   <th className="px-5 py-3 font-medium">السجل المدني</th>
                   <th className="px-5 py-3 font-medium">الجوال</th>
@@ -68,17 +68,17 @@ export default async function TeachersPage() {
               <tbody className="divide-y divide-amber-100">
                 {pending.map((t) => (
                   <tr key={t.id}>
-                    <td className="px-5 py-3 font-medium text-slate-800">{t.name}</td>
+                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{t.name}</td>
                     <td className="px-5 py-3">
                       {user.role === "ADMIN" ? (
                         <RevealNationalId userId={t.id} lastFour={t.nationalIdLastFour} />
                       ) : (
-                        <span dir="ltr" className="font-mono text-slate-400">
+                        <span dir="ltr" className="font-mono text-slate-400 dark:text-slate-500">
                           •••••{t.nationalIdLastFour}
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-slate-600">{t.phone ?? "—"}</td>
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{t.phone ?? "—"}</td>
                     <td className="px-5 py-3 space-x-2 space-x-reverse">
                       <form action={approveTeacherAction.bind(null, t.id)} className="inline">
                         <button className="rounded-lg bg-emerald-600 text-white text-xs font-medium px-3 py-1.5 hover:bg-emerald-700">
@@ -86,7 +86,7 @@ export default async function TeachersPage() {
                         </button>
                       </form>
                       <form action={rejectTeacherAction.bind(null, t.id)} className="inline">
-                        <button className="rounded-lg bg-red-50 text-red-700 text-xs font-medium px-3 py-1.5 hover:bg-red-100">
+                        <button className="rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 text-xs font-medium px-3 py-1.5 hover:bg-red-100">
                           رفض
                         </button>
                       </form>
@@ -99,14 +99,14 @@ export default async function TeachersPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-800">كل المعلمات</h2>
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100">كل المعلمات</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-slate-500 text-right">
+              <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-5 py-3 font-medium">الاسم</th>
                 <th className="px-5 py-3 font-medium">السجل المدني</th>
                 <th className="px-5 py-3 font-medium">الحلقة</th>
@@ -114,27 +114,27 @@ export default async function TeachersPage() {
                 <th className="px-5 py-3 font-medium">إجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {others.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد معلمات بعد
                   </td>
                 </tr>
               )}
               {others.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50">
-                  <td className="px-5 py-3 font-medium text-slate-800">{t.name}</td>
+                <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{t.name}</td>
                   <td className="px-5 py-3">
                     {user.role === "ADMIN" ? (
                       <RevealNationalId userId={t.id} lastFour={t.nationalIdLastFour} />
                     ) : (
-                      <span dir="ltr" className="font-mono text-slate-400">
+                      <span dir="ltr" className="font-mono text-slate-400 dark:text-slate-500">
                         •••••{t.nationalIdLastFour}
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-slate-600">
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
                     {t.teacherHalaqa?.name ?? "—"}
                   </td>
                   <td className="px-5 py-3">
@@ -147,7 +147,7 @@ export default async function TeachersPage() {
                   <td className="px-5 py-3">
                     {t.status === "ACTIVE" && (
                       <form action={suspendTeacherAction.bind(null, t.id)}>
-                        <button className="text-xs text-slate-500 hover:text-red-600 hover:underline">
+                        <button className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:underline">
                           إيقاف الحساب
                         </button>
                       </form>

@@ -16,7 +16,7 @@ export default async function EditHalaqaPage({
   if (!halaqa) notFound();
   if (user.role === "SUPERVISOR" && halaqa.supervisorId !== user.id) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+      <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 p-6 text-red-700 dark:text-red-400">
         لا تملكين صلاحية تعديل هذه الحلقة
       </div>
     );
@@ -46,10 +46,10 @@ export default async function EditHalaqaPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">تعديل الحلقة</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">تعديل الحلقة</h1>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
         <HalaqaForm
           action={boundAction}
           teachers={teachers}

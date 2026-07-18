@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default async function AuthLayout({
   children,
@@ -10,20 +11,23 @@ export default async function AuthLayout({
   if (user) redirect("/");
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-brand-light via-slate-50 to-slate-50 px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-brand-light via-slate-50 to-slate-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 px-4 py-10 relative">
+      <div className="absolute top-4 left-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-white text-2xl font-bold shadow-lg">
             ق
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">
-            نظام إدارة حلقات التحفيظ
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+            العيش الرغيد
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            منصة متابعة الحلقات والطالبات والمعلمات
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            نظام إدارة حلقات تحفيظ القرآن الكريم
           </p>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 sm:p-8">
           {children}
         </div>
       </div>

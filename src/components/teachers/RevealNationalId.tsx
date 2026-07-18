@@ -22,12 +22,12 @@ export function RevealNationalId({
   );
 
   if (state?.nationalId) {
-    return <span dir="ltr" className="font-mono text-slate-800">{state.nationalId}</span>;
+    return <span dir="ltr" className="font-mono text-slate-800 dark:text-slate-100">{state.nationalId}</span>;
   }
 
   return (
     <form action={formAction} className="inline-flex items-center gap-2">
-      <span dir="ltr" className="font-mono text-slate-400">•••••{lastFour}</span>
+      <span dir="ltr" className="font-mono text-slate-400 dark:text-slate-500">•••••{lastFour}</span>
       <button
         type="submit"
         disabled={pending}
@@ -35,7 +35,7 @@ export function RevealNationalId({
       >
         {pending ? "..." : "إظهار"}
       </button>
-      {state?.error && <span className="text-xs text-red-600">{state.error}</span>}
+      {state?.error && <span className="text-xs text-red-600 dark:text-red-400">{state.error}</span>}
     </form>
   );
 }

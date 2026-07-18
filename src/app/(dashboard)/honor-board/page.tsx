@@ -77,8 +77,8 @@ export default async function HonorBoardPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">لوحة الشرف</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">لوحة الشرف</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             الطالبات المتميزات بالحضور الكامل خلال الفترة المحددة
           </p>
         </div>
@@ -87,15 +87,15 @@ export default async function HonorBoardPage({
 
       <form
         method="get"
-        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-wrap items-end gap-4 print:hidden"
+        className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm flex flex-wrap items-end gap-4 print:hidden"
       >
         {user.role !== "TEACHER" && (
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">الحلقة</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">الحلقة</label>
             <select
               name="halaqaId"
               defaultValue={halaqaId ?? ""}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
+              className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-800"
             >
               <option value="">كل الحلقات</option>
               {halaqatForSelect.map((h) => (
@@ -107,25 +107,25 @@ export default async function HonorBoardPage({
           </div>
         )}
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">من تاريخ</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">من تاريخ</label>
           <input
             type="date"
             name="from"
             defaultValue={toDateInputValue(fromDate)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">إلى تاريخ</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">إلى تاريخ</label>
           <input
             type="date"
             name="to"
             defaultValue={toDateInputValue(toDate)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
             حد أدنى لعدد الأيام المسجّلة
           </label>
           <input
@@ -133,7 +133,7 @@ export default async function HonorBoardPage({
             name="minSessions"
             min={1}
             defaultValue={minSessions}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm w-32"
+            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-32"
           />
         </div>
         <button
@@ -144,8 +144,8 @@ export default async function HonorBoardPage({
         </button>
       </form>
 
-      <div className="rounded-2xl border border-amber-200 bg-amber-50/40 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-amber-200 flex items-center gap-2">
+      <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/30 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-amber-200 dark:border-amber-900/50 flex items-center gap-2">
           <span className="text-2xl">🏆</span>
           <h2 className="font-semibold text-amber-800">
             متميزات الحضور ({achievers.length}) — من {toDateInputValue(fromDate)} إلى{" "}
@@ -155,7 +155,7 @@ export default async function HonorBoardPage({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-amber-50 text-amber-700 text-right">
+              <tr className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-right">
                 <th className="px-5 py-3 font-medium">#</th>
                 <th className="px-5 py-3 font-medium">الطالبة</th>
                 <th className="px-5 py-3 font-medium">الحلقة</th>
@@ -165,17 +165,17 @@ export default async function HonorBoardPage({
             <tbody className="divide-y divide-amber-100">
               {achievers.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد طالبات مستوفية لشرط الحضور الكامل في هذه الفترة بعد
                   </td>
                 </tr>
               )}
               {achievers.map((s, i) => (
-                <tr key={s.id} className="hover:bg-amber-50/60">
-                  <td className="px-5 py-3 text-amber-700 font-semibold">{i + 1}</td>
-                  <td className="px-5 py-3 font-medium text-slate-800">{s.name}</td>
-                  <td className="px-5 py-3 text-slate-600">{s.halaqaName}</td>
-                  <td className="px-5 py-3 text-slate-600">{s.total}</td>
+                <tr key={s.id} className="hover:bg-amber-50/60 dark:hover:bg-amber-950/30">
+                  <td className="px-5 py-3 text-amber-700 dark:text-amber-400 font-semibold">{i + 1}</td>
+                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.halaqaName}</td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.total}</td>
                 </tr>
               ))}
             </tbody>

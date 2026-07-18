@@ -4,7 +4,7 @@ export function PrintButton({ label = "طباعة / تصدير" }: { label?: str
   return (
     <button
       onClick={() => window.print()}
-      className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 transition print:hidden"
+      className="rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition print:hidden"
     >
       {label}
     </button>

@@ -28,36 +28,36 @@ export function AddStudentForm({ halaqaId }: { halaqaId: string }) {
       <input type="hidden" name="halaqaId" value={halaqaId} />
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
           اسم الطالبة
         </label>
         <input
           name="name"
           required
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="اسم الطالبة"
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
           الجنسية
         </label>
         <input
           name="nationality"
           required
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="الجنسية"
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
           النصاب الحالي
         </label>
         <input
           name="currentQuota"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="اختياري"
         />
       </div>
@@ -71,7 +71,7 @@ export function AddStudentForm({ halaqaId }: { halaqaId: string }) {
       </button>
 
       {state?.error && (
-        <span className="text-xs text-red-600 basis-full">{state.error}</span>
+        <span className="text-xs text-red-600 dark:text-red-400 basis-full">{state.error}</span>
       )}
     </form>
   );
