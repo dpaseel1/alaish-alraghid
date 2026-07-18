@@ -75,6 +75,11 @@ export async function requireUser(): Promise<User> {
 /** يتأكد من أن المستخدم الحالي يملك أحد الأدوار المطلوبة */
 export async function requireRole(...roles: Role[]): Promise<User> {
   const user = await requireUser();
-  if (!roles.includes(user.role)) redirect("/");
+  if (!roles.includes(user.role) && user.role !== "DEVELOPER") redirect("/");
   return user;
+}
+
+/** المطورة تملك كل صلاحيات المديرة ضمنيًا (بالإضافة إلى لوحة المطور الخاصة بها) */
+export function isAdminRole(role: Role): boolean {
+  return role === "ADMIN" || role === "DEVELOPER";
 }

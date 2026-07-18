@@ -78,6 +78,7 @@ export default async function AuditLogPage({
             className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-800"
           >
             <option value="">الكل</option>
+            <option value="DEVELOPER">مطورة</option>
             <option value="ADMIN">مديرة</option>
             <option value="SUPERVISOR">مشرفة</option>
             <option value="TEACHER">معلمة</option>

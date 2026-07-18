@@ -7,37 +7,63 @@ import {
   lastFourOf,
 } from "../src/lib/crypto";
 
-async function main() {
-  const adminNationalId = process.env.SEED_ADMIN_NATIONAL_ID ?? "1000000000";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!";
-  const adminName = process.env.SEED_ADMIN_NAME ?? "مديرة المقرأة";
-
+async function seedAccount({
+  nationalId,
+  password,
+  name,
+  role,
+  label,
+}: {
+  nationalId: string;
+  password: string;
+  name: string;
+  role: "DEVELOPER" | "ADMIN";
+  label: string;
+}) {
   const existing = await db.user.findUnique({
-    where: { nationalIdHash: hashNationalId(adminNationalId) },
+    where: { nationalIdHash: hashNationalId(nationalId) },
   });
 
   if (existing) {
-    console.log("✅ حساب المديرة موجود مسبقًا، لا حاجة لإعادة الإنشاء.");
+    console.log(`✅ حساب ${label} موجود مسبقًا، لا حاجة لإعادة الإنشاء.`);
     return;
   }
 
-  const admin = await db.user.create({
+  const user = await db.user.create({
     data: {
-      name: adminName,
-      nationalIdHash: hashNationalId(adminNationalId),
-      nationalIdEncrypted: encryptNationalId(adminNationalId),
-      nationalIdLastFour: lastFourOf(adminNationalId),
-      passwordHash: await hashPassword(adminPassword),
-      role: "ADMIN",
+      name,
+      nationalIdHash: hashNationalId(nationalId),
+      nationalIdEncrypted: encryptNationalId(nationalId),
+      nationalIdLastFour: lastFourOf(nationalId),
+      passwordHash: await hashPassword(password),
+      role,
       status: "ACTIVE",
     },
   });
 
-  console.log("✅ تم إنشاء حساب المديرة بنجاح:");
-  console.log(`   الاسم: ${admin.name}`);
-  console.log(`   السجل المدني: ${adminNationalId}`);
-  console.log(`   كلمة المرور: ${adminPassword}`);
+  console.log(`✅ تم إنشاء حساب ${label} بنجاح:`);
+  console.log(`   الاسم: ${user.name}`);
+  console.log(`   السجل المدني: ${nationalId}`);
+  console.log(`   كلمة المرور: ${password}`);
   console.log("   ⚠️  غيّري كلمة المرور بعد أول تسجيل دخول.");
+}
+
+async function main() {
+  await seedAccount({
+    nationalId: process.env.SEED_ADMIN_NATIONAL_ID ?? "1000000000",
+    password: process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!",
+    name: process.env.SEED_ADMIN_NAME ?? "مديرة المقرأة",
+    role: "ADMIN",
+    label: "المديرة",
+  });
+
+  await seedAccount({
+    nationalId: process.env.SEED_DEV_NATIONAL_ID ?? "9999999999",
+    password: process.env.SEED_DEV_PASSWORD ?? "ChangeMeDev123!",
+    name: process.env.SEED_DEV_NAME ?? "المطورة",
+    role: "DEVELOPER",
+    label: "المطورة",
+  });
 }
 
 main()

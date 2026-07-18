@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/session";
+import { requireRole, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import {
   approveTeacherAction,
@@ -70,7 +70,7 @@ export default async function TeachersPage() {
                   <tr key={t.id}>
                     <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{t.name}</td>
                     <td className="px-5 py-3">
-                      {user.role === "ADMIN" ? (
+                      {isAdminRole(user.role) ? (
                         <RevealNationalId userId={t.id} lastFour={t.nationalIdLastFour} />
                       ) : (
                         <span dir="ltr" className="font-mono text-slate-400 dark:text-slate-500">
@@ -126,7 +126,7 @@ export default async function TeachersPage() {
                 <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                   <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{t.name}</td>
                   <td className="px-5 py-3">
-                    {user.role === "ADMIN" ? (
+                    {isAdminRole(user.role) ? (
                       <RevealNationalId userId={t.id} lastFour={t.nationalIdLastFour} />
                     ) : (
                       <span dir="ltr" className="font-mono text-slate-400 dark:text-slate-500">

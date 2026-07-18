@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireRole, requireUser } from "@/lib/session";
+import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 
@@ -20,7 +20,7 @@ async function assertHalaqaAccess(halaqaId: string) {
   const halaqa = await db.halaqa.findUnique({ where: { id: halaqaId } });
   if (!halaqa) return { user, ok: false as const };
 
-  if (user.role === "ADMIN") return { user, ok: true as const, halaqa };
+  if (isAdminRole(user.role)) return { user, ok: true as const, halaqa };
   if (user.role === "SUPERVISOR")
     return { user, ok: halaqa.supervisorId === user.id, halaqa };
   if (user.role === "TEACHER")

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/session";
+import { requireRole, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import { updateHalaqaAction } from "@/app/actions/halaqat";
 import { HalaqaForm } from "@/components/halaqat/HalaqaForm";
@@ -32,7 +32,7 @@ export default async function EditHalaqaPage({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-    user.role === "ADMIN"
+    isAdminRole(user.role)
       ? db.user.findMany({
           where: { role: "SUPERVISOR", status: "ACTIVE" },
           select: { id: true, name: true },
@@ -54,7 +54,7 @@ export default async function EditHalaqaPage({
           action={boundAction}
           teachers={teachers}
           supervisors={supervisors}
-          isAdmin={user.role === "ADMIN"}
+          isAdmin={isAdminRole(user.role)}
           initial={{
             name: halaqa.name,
             time: halaqa.time,

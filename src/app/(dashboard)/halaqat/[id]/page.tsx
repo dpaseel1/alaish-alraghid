@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/session";
+import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
 
 export default async function HalaqaDetailPage({
@@ -23,7 +23,7 @@ export default async function HalaqaDetailPage({
   if (!halaqa) notFound();
 
   const canManage =
-    user.role === "ADMIN" ||
+    isAdminRole(user.role) ||
     (user.role === "SUPERVISOR" && halaqa.supervisorId === user.id) ||
     (user.role === "TEACHER" && halaqa.teacherId === user.id);
 
@@ -55,7 +55,7 @@ export default async function HalaqaDetailPage({
             {halaqa.supervisor?.name ?? "—"}
           </p>
         </div>
-        {canManage && (user.role === "ADMIN" || user.role === "SUPERVISOR") && (
+        {canManage && (isAdminRole(user.role) || user.role === "SUPERVISOR") && (
           <Link
             href={`/halaqat/${halaqa.id}/edit`}
             className="rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
