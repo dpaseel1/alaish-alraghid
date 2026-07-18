@@ -14,7 +14,8 @@ export default async function AuditLogPage({
 }: {
   searchParams: Promise<{ role?: string; from?: string; to?: string; q?: string }>;
 }) {
-  await requireRole("ADMIN");
+  const viewer = await requireRole("ADMIN");
+  const isDeveloper = viewer.role === "DEVELOPER";
   const params = await searchParams;
 
   const defaultTo = riyadhToday();
@@ -29,9 +30,13 @@ export default async function AuditLogPage({
   const role = params.role as Role | undefined;
   const q = params.q?.trim();
 
+  const roleConditions: Prisma.AuditLogWhereInput[] = [];
+  if (!isDeveloper) roleConditions.push({ actorRole: { not: "ADMIN" } });
+  if (role) roleConditions.push({ actorRole: role });
+
   const where: Prisma.AuditLogWhereInput = {
     createdAt: { gte: fromDate, lte: toDate },
-    ...(role ? { actorRole: role } : {}),
+    ...(roleConditions.length ? { AND: roleConditions } : {}),
     ...(q
       ? {
           OR: [
@@ -71,7 +76,7 @@ export default async function AuditLogPage({
           >
             <option value="">الكل</option>
             <option value="DEVELOPER">مطورة</option>
-            <option value="ADMIN">مديرة</option>
+            {isDeveloper && <option value="ADMIN">مديرة</option>}
             <option value="SUPERVISOR">مشرفة</option>
             <option value="TEACHER">معلمة</option>
           </select>
