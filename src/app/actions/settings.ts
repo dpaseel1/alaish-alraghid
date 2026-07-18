@@ -1,12 +1,55 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
-import { passwordSchema } from "@/lib/validation";
+import { passwordSchema, nameSchema } from "@/lib/validation";
+import { logAudit } from "@/lib/audit";
 
 export type SettingsActionState = { error?: string; success?: string };
+
+const profileSchema = z.object({
+  name: nameSchema,
+  phone: z.string().trim().optional().or(z.literal("")),
+});
+
+export async function updateProfileAction(
+  _prev: SettingsActionState | undefined,
+  formData: FormData
+): Promise<SettingsActionState> {
+  const user = await requireUser();
+
+  const parsed = profileSchema.safeParse({
+    name: formData.get("name"),
+    phone: formData.get("phone"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+  }
+
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      name: parsed.data.name,
+      phone: parsed.data.phone || null,
+    },
+  });
+
+  await logAudit({
+    actor: user,
+    action: "PROFILE_UPDATE",
+    targetType: "User",
+    targetId: user.id,
+    targetLabel: parsed.data.name,
+    message: "حدّثت بيانات حسابها الشخصية",
+  });
+
+  revalidatePath("/settings");
+  return { success: "تم تحديث بيانات الحساب بنجاح" };
+}
 
 const schema = z
   .object({
