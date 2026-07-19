@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { PrintButton } from "@/components/reports/PrintButton";
 import { HalaqaSelect } from "@/components/students/HalaqaSelect";
 import { CertificateSection } from "@/components/certificates/CertificateSection";
+import { ExportHalaqaCertificatesButton } from "@/components/certificates/ExportHalaqaCertificatesButton";
 import type { Prisma } from "@/generated/prisma/client";
 
 function toDateInputValue(d: Date) {
@@ -40,9 +41,24 @@ export default async function CertificatesPage({
   const halaqa = halaqaId
     ? await db.halaqa.findFirst({
         where: { id: halaqaId, ...halaqaWhere },
-        include: { students: { where: { isActive: true }, orderBy: { name: "asc" } } },
+        include: {
+          students: {
+            where: { isActive: true },
+            orderBy: { name: "asc" },
+            include: { examGrades: { orderBy: { examDate: "desc" }, take: 1 } },
+          },
+        },
       })
     : null;
+
+  const studentsWithCertificates = (halaqa?.students ?? [])
+    .filter((s) => s.examGrades.length > 0)
+    .map((s) => ({
+      studentName: s.name,
+      quota: s.examGrades[0].quota,
+      grade: s.examGrades[0].grade,
+      maxGrade: s.examGrades[0].maxGrade,
+    }));
 
   const selectedStudent =
     params.studentId && halaqa
@@ -70,7 +86,7 @@ export default async function CertificatesPage({
 
       {user.role !== "TEACHER" && (
         <div className="print:hidden">
-          <HalaqaSelect halaqat={halaqatForSelect} selectedId={halaqaId} />
+          <HalaqaSelect halaqat={halaqatForSelect} selectedId={halaqaId} basePath="/certificates" />
         </div>
       )}
 
@@ -84,10 +100,11 @@ export default async function CertificatesPage({
 
       {halaqa && !selectedStudent && (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm print:hidden">
-          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">
               طالبات {halaqa.name} ({halaqa.students.length})
             </h2>
+            <ExportHalaqaCertificatesButton halaqaName={halaqa.name} students={studentsWithCertificates} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
