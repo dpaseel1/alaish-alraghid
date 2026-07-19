@@ -41,6 +41,10 @@ model User {
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 
+  // حماية تسجيل الدخول من محاولات التخمين المتكررة
+  failedLoginAttempts Int       @default(0) // عدد محاولات الدخول الفاشلة المتتالية
+  lockedUntil         DateTime? // إن كان في المستقبل، الحساب موقوف مؤقتًا عن الدخول
+
   // بيانات إضافية خاصة بالمعلمة/المشرفة (مطلوبة عند الإضافة/التعديل) - تُستخدم في صفحة تفاصيل الحلقة
   nationality     String? // الجنسية
   age             Int? // العمر

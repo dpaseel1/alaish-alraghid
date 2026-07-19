@@ -211,6 +211,30 @@ export async function createUserByDeveloperAction(
   return { success: "تم إنشاء الحساب بنجاح" };
 }
 
+/** إعادة ضبط محاولات الدخول الفاشلة وإلغاء الإيقاف المؤقت عن حساب - تُستخدم من لوحة المطورة */
+export async function resetLoginLockoutAction(userId: string) {
+  const actor = await requireRole("DEVELOPER");
+
+  const target = await db.user.findUnique({ where: { id: userId } });
+  if (!target) return;
+
+  await db.user.update({
+    where: { id: userId },
+    data: { failedLoginAttempts: 0, lockedUntil: null },
+  });
+
+  await logAudit({
+    actor,
+    action: "DEVELOPER_RESET_LOGIN_LOCKOUT",
+    targetType: "User",
+    targetId: userId,
+    targetLabel: target.name,
+    message: `أعادت المطورة ضبط محاولات الدخول الفاشلة لحساب "${target.name}"`,
+  });
+
+  revalidatePath("/developer");
+}
+
 export async function deleteUserByDeveloperAction(userId: string) {
   const actor = await requireRole("DEVELOPER");
   if (userId === actor.id) return;

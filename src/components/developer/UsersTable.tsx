@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ROLE_LABELS } from "@/components/layout/nav-items";
 import { DeleteUserButton } from "@/components/developer/DeleteUserButton";
+import { ResetLoginLockoutButton } from "@/components/developer/ResetLoginLockoutButton";
 import { startImpersonationAction } from "@/app/actions/impersonate";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatRiyadhDateTime } from "@/lib/dateFormat";
@@ -16,6 +17,8 @@ type UserRow = {
   status: "PENDING" | "ACTIVE" | "REJECTED" | "SUSPENDED";
   phone: string | null;
   lastSeenAt: Date | string | null;
+  failedLoginAttempts: number;
+  lockedUntil: Date | string | null;
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -79,6 +82,8 @@ export function UsersTable({ users, actorId }: { users: UserRow[]; actorId: stri
             )}
             {filtered.map((u) => {
               const canImpersonate = u.id !== actorId && u.role !== "DEVELOPER" && u.status === "ACTIVE";
+              const isLocked = !!u.lockedUntil && new Date(u.lockedUntil) > new Date();
+              const showResetLockout = isLocked || u.failedLoginAttempts > 0;
               return (
                 <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                   <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">
@@ -97,6 +102,16 @@ export function UsersTable({ users, actorId }: { users: UserRow[]; actorId: stri
                     >
                       {STATUS_LABELS[u.status]}
                     </span>
+                    {isLocked && (
+                      <span className="block mt-1 text-xs text-red-600 dark:text-red-400">
+                        مقفل مؤقتًا (دخول)
+                      </span>
+                    )}
+                    {!isLocked && u.failedLoginAttempts > 0 && (
+                      <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
+                        {u.failedLoginAttempts} محاولة دخول فاشلة
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300" dir="ltr">
                     {u.phone ?? "—"}
@@ -120,6 +135,9 @@ export function UsersTable({ users, actorId }: { users: UserRow[]; actorId: stri
                             تجربة الحساب
                           </button>
                         </form>
+                      )}
+                      {showResetLockout && (
+                        <ResetLoginLockoutButton userId={u.id} name={u.name} />
                       )}
                       {u.id !== actorId && <DeleteUserButton userId={u.id} name={u.name} />}
                     </div>

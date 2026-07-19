@@ -17,6 +17,10 @@ export type AuthActionState = {
   success?: string;
 };
 
+// حماية تسجيل الدخول من محاولات التخمين المتكررة
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+
 export async function loginAction(
   _prevState: AuthActionState | undefined,
   formData: FormData
@@ -40,9 +44,45 @@ export async function loginAction(
     return { error: "رقم الهوية/الإقامة أو كلمة المرور غير صحيحة" };
   }
 
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    const minutesLeft = Math.max(
+      1,
+      Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000)
+    );
+    return {
+      error: `تم إيقاف الدخول لهذا الحساب مؤقتًا بسبب محاولات كثيرة خاطئة. حاولي مرة أخرى بعد ${minutesLeft} دقيقة، أو تواصلي مع المطورة لإعادة الضبط فورًا.`,
+    };
+  }
+
   const passwordOk = await verifyPassword(password, user.passwordHash);
   if (!passwordOk) {
+    const attempts = user.failedLoginAttempts + 1;
+    const shouldLock = attempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: shouldLock ? 0 : attempts,
+        lockedUntil: shouldLock
+          ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+          : null,
+      },
+    });
+
+    if (shouldLock) {
+      return {
+        error: `تم إيقاف الدخول لهذا الحساب مؤقتًا لمدة ${LOCKOUT_MINUTES} دقيقة بسبب تكرار كلمة المرور الخاطئة. تواصلي مع المطورة إن احتجتِ لإعادة الضبط فورًا.`,
+      };
+    }
+
     return { error: "رقم الهوية/الإقامة أو كلمة المرور غير صحيحة" };
+  }
+
+  if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+    await db.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    });
   }
 
   if (user.status === "PENDING") {
