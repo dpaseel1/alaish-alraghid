@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PrintButton } from "@/components/reports/PrintButton";
 import { HalaqaSelect } from "@/components/students/HalaqaSelect";
+import { CertificateSection } from "@/components/certificates/CertificateSection";
 import type { Prisma } from "@/generated/prisma/client";
 
 function toDateInputValue(d: Date) {
@@ -174,7 +175,20 @@ export default async function CertificatesPage({
                 {selectedStudent.currentQuota ?? "—"}
               </p>
             </div>
+          </div>
 
+          {selectedStudent.examGrades.length > 0 && (
+            <CertificateSection
+              data={{
+                studentName: selectedStudent.name,
+                quota: selectedStudent.examGrades[0].quota,
+                grade: selectedStudent.examGrades[0].grade,
+                maxGrade: selectedStudent.examGrades[0].maxGrade,
+              }}
+            />
+          )}
+
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
             <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-2">درجات الاختبارات</h3>
             <div className="overflow-x-auto mb-6">
               <table className="w-full text-sm border border-slate-100 rounded-lg overflow-hidden">

@@ -3,6 +3,15 @@
 /* تفعيل الوضع الداكن عبر صنف .dark على عنصر html بدل الاعتماد فقط على إعدادات النظام */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* خط قالب الشهادات الرسمي (مستخرج من قالب الشهادة المعتمد) */
+@font-face {
+  font-family: "XB Shafigh";
+  src: url("/fonts/XBShafigh.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
