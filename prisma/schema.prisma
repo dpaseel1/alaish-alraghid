@@ -94,19 +94,26 @@ model Program {
 
 // ============ الحلقات ============
 
+enum HalaqaCategory {
+  MOTHERS // أمهات
+  GIRLS // فتيات
+  CHILDREN // أطفال
+}
+
 model Halaqa {
-  id           String   @id @default(cuid())
+  id           String          @id @default(cuid())
   name         String
   time         String // وقت الحلقة (نص حر، مثل: بعد صلاة العصر)
-  isActive     Boolean  @default(true)
-  teacherId    String?  @unique
-  teacher      User?    @relation("TeacherHalaqa", fields: [teacherId], references: [id])
+  category     HalaqaCategory? // تصنيف الحلقة: أمهات/فتيات/أطفال
+  isActive     Boolean         @default(true)
+  teacherId    String?         @unique
+  teacher      User?           @relation("TeacherHalaqa", fields: [teacherId], references: [id])
   supervisorId String?
-  supervisor   User?    @relation("SupervisorHalaqat", fields: [supervisorId], references: [id])
+  supervisor   User?           @relation("SupervisorHalaqat", fields: [supervisorId], references: [id])
   trackId      String?
-  track        Track?   @relation(fields: [trackId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  track        Track?          @relation(fields: [trackId], references: [id])
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   students       Student[]
   attendanceLogs AttendanceLog[]

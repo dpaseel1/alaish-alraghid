@@ -31,8 +31,8 @@
   --color-brand-light: var(--brand-light);
   --color-accent-gold: var(--accent-gold);
   --color-accent-gold-tint: var(--accent-gold-tint);
-  --font-sans: var(--font-naskh);
-  --font-display: var(--font-naskh);
+  --font-sans: var(--font-plex-arabic);
+  --font-display: var(--font-markazi);
   --font-ruqaa: var(--font-ruqaa);
 }
 
@@ -43,7 +43,7 @@ body {
 
 /* الخط الزخرفي للعناوين، مطابقًا لهوية المقرأة البصرية */
 h1, h2, h3 {
-  font-family: var(--font-display), var(--font-naskh), sans-serif;
+  font-family: var(--font-display), var(--font-plex-arabic), sans-serif;
 }
 
 /* تحسين طباعة الشهادات والتقارير: تبقى بالألوان الفاتحة دائمًا بغض النظر عن الوضع */

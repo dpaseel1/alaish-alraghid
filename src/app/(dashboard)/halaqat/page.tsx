@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { HALAQA_CATEGORY_LABELS } from "@/lib/halaqaCategory";
 
 export default async function HalaqatPage() {
   const user = await requireUser();
@@ -49,6 +50,7 @@ export default async function HalaqatPage() {
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-5 py-3 font-medium">اسم الحلقة</th>
+                <th className="px-5 py-3 font-medium">التصنيف</th>
                 <th className="px-5 py-3 font-medium">المعلمة</th>
                 <th className="px-5 py-3 font-medium">المشرفة</th>
                 <th className="px-5 py-3 font-medium">عدد الطالبات</th>
@@ -60,7 +62,7 @@ export default async function HalaqatPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {halaqat.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={8} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد حلقات مضافة بعد
                   </td>
                 </tr>
@@ -68,6 +70,9 @@ export default async function HalaqatPage() {
               {halaqat.map((h) => (
                 <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                   <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{h.name}</td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
+                    {h.category ? HALAQA_CATEGORY_LABELS[h.category] : "—"}
+                  </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.teacher?.name ?? "—"}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.supervisor?.name ?? "—"}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h._count.students}</td>

@@ -60,6 +60,7 @@ export default async function EditHalaqaPage({
           initial={{
             name: halaqa.name,
             time: halaqa.time,
+            category: halaqa.category,
             teacherId: halaqa.teacherId,
             supervisorId: halaqa.supervisorId,
             trackId: halaqa.trackId,

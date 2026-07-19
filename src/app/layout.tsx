@@ -1,12 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Naskh_Arabic, Aref_Ruqaa } from "next/font/google";
+import { IBM_Plex_Sans_Arabic, Markazi_Text, Aref_Ruqaa } from "next/font/google";
 import { NumeralNormalizer } from "@/components/NumeralNormalizer";
 import "./globals.css";
 
-const notoNaskh = Noto_Naskh_Arabic({
+const plexArabic = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-naskh",
+  variable: "--font-plex-arabic",
+});
+
+const markazi = Markazi_Text({
+  subsets: ["arabic", "latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-markazi",
 });
 
 const arefRuqaa = Aref_Ruqaa({
@@ -55,7 +61,7 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`${notoNaskh.variable} ${arefRuqaa.variable} h-full`}
+      className={`${plexArabic.variable} ${markazi.variable} ${arefRuqaa.variable} h-full`}
       suppressHydrationWarning
     >
       <head>

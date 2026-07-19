@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import type { HalaqaActionState } from "@/app/actions/halaqat";
+import { HALAQA_CATEGORIES, HALAQA_CATEGORY_LABELS } from "@/lib/halaqaCategory";
+import type { HalaqaCategory } from "@/generated/prisma/client";
 
 type Option = { id: string; name: string };
 
@@ -24,6 +26,7 @@ export function HalaqaForm({
   initial?: {
     name: string;
     time: string;
+    category?: HalaqaCategory | null;
     teacherId: string | null;
     supervisorId: string | null;
     trackId?: string | null;
@@ -63,6 +66,27 @@ export function HalaqaForm({
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="مثال: بعد صلاة العصر"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          تصنيف الحلقة
+        </label>
+        <select
+          name="category"
+          required
+          defaultValue={initial?.category ?? ""}
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+        >
+          <option value="" disabled>
+            اختاري تصنيف الحلقة
+          </option>
+          {HALAQA_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {HALAQA_CATEGORY_LABELS[c]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

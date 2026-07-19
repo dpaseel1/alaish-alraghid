@@ -14,8 +14,7 @@ export default async function AuditLogPage({
 }: {
   searchParams: Promise<{ role?: string; from?: string; to?: string; q?: string }>;
 }) {
-  const viewer = await requireRole("ADMIN");
-  const isDeveloper = viewer.role === "DEVELOPER";
+  await requireRole("ADMIN");
   const params = await searchParams;
 
   const defaultTo = riyadhToday();
@@ -30,13 +29,13 @@ export default async function AuditLogPage({
   const role = params.role as Role | undefined;
   const q = params.q?.trim();
 
-  const roleConditions: Prisma.AuditLogWhereInput[] = [];
-  if (!isDeveloper) roleConditions.push({ actorRole: { not: "ADMIN" } });
+  // حركات المطورة لا تظهر لأي أحد في سجل الحركات (خصوصية تامة لصلاحيات المطورة)
+  const roleConditions: Prisma.AuditLogWhereInput[] = [{ actorRole: { not: "DEVELOPER" } }];
   if (role) roleConditions.push({ actorRole: role });
 
   const where: Prisma.AuditLogWhereInput = {
     createdAt: { gte: fromDate, lte: toDate },
-    ...(roleConditions.length ? { AND: roleConditions } : {}),
+    AND: roleConditions,
     ...(q
       ? {
           OR: [
@@ -75,8 +74,7 @@ export default async function AuditLogPage({
             className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-800"
           >
             <option value="">الكل</option>
-            <option value="DEVELOPER">مطورة</option>
-            {isDeveloper && <option value="ADMIN">مديرة</option>}
+            <option value="ADMIN">مديرة</option>
             <option value="SUPERVISOR">مشرفة</option>
             <option value="TEACHER">معلمة</option>
           </select>

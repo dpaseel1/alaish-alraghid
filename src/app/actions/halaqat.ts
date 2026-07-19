@@ -6,10 +6,15 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
+import { HALAQA_CATEGORIES } from "@/lib/halaqaCategory";
+import type { HalaqaCategory } from "@/generated/prisma/client";
 
 const halaqaSchema = z.object({
   name: z.string().trim().min(2, "اسم الحلقة قصير جدًا"),
   time: z.string().trim().min(1, "الرجاء تحديد وقت الحلقة"),
+  category: z.enum(HALAQA_CATEGORIES as [HalaqaCategory, ...HalaqaCategory[]], {
+    message: "الرجاء اختيار تصنيف الحلقة",
+  }),
   teacherId: z.string().optional().nullable(),
   supervisorId: z.string().optional().nullable(),
   trackId: z.string().optional().nullable(),
@@ -26,6 +31,7 @@ export async function createHalaqaAction(
   const parsed = halaqaSchema.safeParse({
     name: formData.get("name"),
     time: formData.get("time"),
+    category: formData.get("category"),
     teacherId: formData.get("teacherId") || null,
     supervisorId: formData.get("supervisorId") || null,
     trackId: formData.get("trackId") || null,
@@ -35,7 +41,7 @@ export async function createHalaqaAction(
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
-  const { name, time, teacherId, trackId } = parsed.data;
+  const { name, time, category, teacherId, trackId } = parsed.data;
   // المشرفة تُنشئ حلقات تحت إشرافها تلقائيًا، المديرة تختار المشرفة
   const supervisorId =
     user.role === "SUPERVISOR" ? user.id : parsed.data.supervisorId || null;
@@ -48,7 +54,7 @@ export async function createHalaqaAction(
   }
 
   const halaqa = await db.halaqa.create({
-    data: { name, time, teacherId: teacherId || null, supervisorId, trackId: trackId || null },
+    data: { name, time, category, teacherId: teacherId || null, supervisorId, trackId: trackId || null },
   });
 
   await logAudit({
@@ -75,6 +81,7 @@ export async function updateHalaqaAction(
   const parsed = halaqaSchema.safeParse({
     name: formData.get("name"),
     time: formData.get("time"),
+    category: formData.get("category"),
     teacherId: formData.get("teacherId") || null,
     supervisorId: formData.get("supervisorId") || null,
     trackId: formData.get("trackId") || null,
@@ -90,7 +97,7 @@ export async function updateHalaqaAction(
     return { error: "لا تملكين صلاحية تعديل هذه الحلقة" };
   }
 
-  const { name, time, teacherId, trackId } = parsed.data;
+  const { name, time, category, teacherId, trackId } = parsed.data;
 
   if (teacherId) {
     const existing = await db.halaqa.findUnique({ where: { teacherId } });
@@ -104,7 +111,7 @@ export async function updateHalaqaAction(
 
   await db.halaqa.update({
     where: { id: halaqaId },
-    data: { name, time, teacherId: teacherId || null, supervisorId, trackId: trackId || null },
+    data: { name, time, category, teacherId: teacherId || null, supervisorId, trackId: trackId || null },
   });
 
   await logAudit({
