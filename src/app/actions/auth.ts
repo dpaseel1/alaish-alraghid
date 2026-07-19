@@ -74,6 +74,7 @@ export async function registerAction(
     educationLevel: formData.get("educationLevel"),
     residence: formData.get("residence"),
     memorizedAmount: formData.get("memorizedAmount"),
+    experience: formData.get("experience"),
   });
 
   if (!parsed.success) {
@@ -90,6 +91,7 @@ export async function registerAction(
     educationLevel,
     residence,
     memorizedAmount,
+    experience,
   } = parsed.data;
   const nationalIdHash = hashNationalId(nationalId);
 
@@ -113,6 +115,7 @@ export async function registerAction(
       educationLevel: educationLevel || null,
       residence: residence || null,
       memorizedAmount: memorizedAmount || null,
+      experience: experience || null,
     },
   });
 

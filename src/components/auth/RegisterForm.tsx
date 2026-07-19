@@ -36,7 +36,7 @@ export function RegisterForm() {
 
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-          الاسم الكامل
+          الاسم الرباعي
         </label>
         <input
           id="name"
@@ -80,7 +80,7 @@ export function RegisterForm() {
 
       <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
-          بيانات إضافية <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري، تظهر في صفحة الحلقة)</span>
+          بيانات إضافية <span className="text-slate-400 dark:text-slate-500 font-normal">(تظهر في صفحة الحلقة)</span>
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -92,6 +92,7 @@ export function RegisterForm() {
               id="nationality"
               name="nationality"
               type="text"
+              required
               className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
             />
           </div>
@@ -107,6 +108,7 @@ export function RegisterForm() {
               min={5}
               max={100}
               dir="ltr"
+              required
               className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
             />
           </div>
@@ -119,6 +121,7 @@ export function RegisterForm() {
               id="educationLevel"
               name="educationLevel"
               type="text"
+              required
               className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
             />
           </div>
@@ -131,6 +134,7 @@ export function RegisterForm() {
               id="residence"
               name="residence"
               type="text"
+              required
               className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
             />
           </div>
@@ -144,7 +148,22 @@ export function RegisterForm() {
             id="memorizedAmount"
             name="memorizedAmount"
             type="text"
+            required
             placeholder="مثال: حافظة كاملة / 15 جزءًا"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          />
+        </div>
+
+        <div className="mt-4">
+          <label htmlFor="experience" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+            الخبرة
+          </label>
+          <input
+            id="experience"
+            name="experience"
+            type="text"
+            required
+            placeholder="مثال: 3 سنوات تدريس تحفيظ"
             className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           />
         </div>

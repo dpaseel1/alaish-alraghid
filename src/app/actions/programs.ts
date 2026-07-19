@@ -12,6 +12,7 @@ export type ProgramActionState = { error?: string; success?: string };
 
 const programSchema = z.object({
   name: z.string().trim().min(2, "اسم البرنامج قصير جدًا").max(150, "اسم البرنامج طويل جدًا"),
+  description: z.string().trim().max(2000, "وصف البرنامج طويل جدًا").optional().or(z.literal("")),
   duration: z.string().trim().min(1, "مدة البرنامج مطلوبة").max(50, "مدة البرنامج طويلة جدًا"),
   academicYear: z.string().trim().min(1, "العام الدراسي مطلوب").max(20, "العام الدراسي طويل جدًا"),
 });
@@ -24,6 +25,7 @@ export async function createProgramAction(
 
   const parsed = programSchema.safeParse({
     name: formData.get("name"),
+    description: formData.get("description"),
     duration: formData.get("duration"),
     academicYear: formData.get("academicYear"),
   });
@@ -38,6 +40,7 @@ export async function createProgramAction(
   const program = await db.program.create({
     data: {
       name: parsed.data.name,
+      description: parsed.data.description || null,
       duration: parsed.data.duration,
       academicYear: parsed.data.academicYear,
       ...(reportUrl ? { reportUrl, reportFileName } : {}),
@@ -66,6 +69,7 @@ export async function updateProgramAction(
 
   const parsed = programSchema.safeParse({
     name: formData.get("name"),
+    description: formData.get("description"),
     duration: formData.get("duration"),
     academicYear: formData.get("academicYear"),
   });
@@ -84,6 +88,7 @@ export async function updateProgramAction(
     where: { id: programId },
     data: {
       name: parsed.data.name,
+      description: parsed.data.description || null,
       duration: parsed.data.duration,
       academicYear: parsed.data.academicYear,
       ...(reportUrl ? { reportUrl, reportFileName } : {}),

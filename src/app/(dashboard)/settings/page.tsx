@@ -27,12 +27,13 @@ export default async function SettingsPage() {
           name={user.name}
           phone={user.phone}
           avatarUrl={user.avatarUrl}
-          isTeacher={user.role === "TEACHER"}
+          showExtraFields={user.role === "TEACHER" || user.role === "SUPERVISOR"}
           nationality={user.nationality}
           age={user.age}
           educationLevel={user.educationLevel}
           residence={user.residence}
           memorizedAmount={user.memorizedAmount}
+          experience={user.experience}
         />
       </div>
 

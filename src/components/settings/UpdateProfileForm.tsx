@@ -13,22 +13,24 @@ export function UpdateProfileForm({
   name,
   phone,
   avatarUrl,
-  isTeacher,
+  showExtraFields,
   nationality,
   age,
   educationLevel,
   residence,
   memorizedAmount,
+  experience,
 }: {
   name: string;
   phone: string | null;
   avatarUrl?: string | null;
-  isTeacher?: boolean;
+  showExtraFields?: boolean;
   nationality?: string | null;
   age?: number | null;
   educationLevel?: string | null;
   residence?: string | null;
   memorizedAmount?: string | null;
+  experience?: string | null;
 }) {
   const [state, formAction, pending] = useActionState(
     updateProfileAction,
@@ -107,7 +109,7 @@ export function UpdateProfileForm({
         />
       </div>
 
-      {isTeacher && (
+      {showExtraFields && (
         <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
             بيانات إضافية <span className="text-slate-400 dark:text-slate-500 font-normal">(تظهر في صفحة الحلقة)</span>
@@ -121,6 +123,7 @@ export function UpdateProfileForm({
               <input
                 name="nationality"
                 type="text"
+                required
                 defaultValue={nationality ?? ""}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
               />
@@ -136,6 +139,7 @@ export function UpdateProfileForm({
                 min={5}
                 max={100}
                 dir="ltr"
+                required
                 defaultValue={age ?? ""}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
               />
@@ -148,6 +152,7 @@ export function UpdateProfileForm({
               <input
                 name="educationLevel"
                 type="text"
+                required
                 defaultValue={educationLevel ?? ""}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
               />
@@ -160,6 +165,7 @@ export function UpdateProfileForm({
               <input
                 name="residence"
                 type="text"
+                required
                 defaultValue={residence ?? ""}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
               />
@@ -173,8 +179,23 @@ export function UpdateProfileForm({
             <input
               name="memorizedAmount"
               type="text"
+              required
               placeholder="مثال: حافظة كاملة / 15 جزءًا"
               defaultValue={memorizedAmount ?? ""}
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            />
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              الخبرة
+            </label>
+            <input
+              name="experience"
+              type="text"
+              required
+              placeholder="مثال: 3 سنوات تدريس تحفيظ"
+              defaultValue={experience ?? ""}
               className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
             />
           </div>

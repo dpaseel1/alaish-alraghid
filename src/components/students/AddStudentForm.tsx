@@ -53,6 +53,69 @@ export function AddStudentForm({ halaqaId }: { halaqaId: string }) {
 
       <div>
         <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+          رقم الهوية/الإقامة
+        </label>
+        <input
+          name="nationalId"
+          required
+          dir="ltr"
+          inputMode="numeric"
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          placeholder="1XXXXXXXXX"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+          العمر
+        </label>
+        <input
+          name="age"
+          type="number"
+          min={5}
+          max={100}
+          dir="ltr"
+          required
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+          المؤهل الدراسي
+        </label>
+        <input
+          name="educationLevel"
+          required
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+          مقر الإقامة
+        </label>
+        <input
+          name="residence"
+          required
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+          مقدار الحفظ
+        </label>
+        <input
+          name="memorizedAmount"
+          required
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          placeholder="مثال: حافظة كاملة / 15 جزءًا"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
           النصاب الحالي
         </label>
         <input

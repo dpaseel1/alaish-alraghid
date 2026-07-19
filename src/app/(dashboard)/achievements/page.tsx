@@ -8,7 +8,7 @@ export default async function AchievementsPage() {
   const user = await requireUser();
   const isAdmin = isAdminRole(user.role);
 
-  const programs = await db.program.findMany({ orderBy: { createdAt: "asc" } });
+  const programs = await db.program.findMany({ orderBy: { academicYear: "asc" } });
 
   return (
     <div className="space-y-6">
@@ -47,6 +47,12 @@ export default async function AchievementsPage() {
               </div>
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{p.name}</h3>
             </div>
+
+            {p.description && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 whitespace-pre-line">
+                {p.description}
+              </p>
+            )}
 
             <div className="space-y-1.5 text-sm text-slate-600 dark:text-slate-300 mb-4">
               <p>المدة: {p.duration}</p>

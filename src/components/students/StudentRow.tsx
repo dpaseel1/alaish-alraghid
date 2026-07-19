@@ -5,6 +5,7 @@ import {
   addExamGradeAction,
   type StudentActionState,
 } from "@/app/actions/students";
+import { RevealStudentNationalId } from "@/components/students/RevealStudentNationalId";
 
 type Student = {
   id: string;
@@ -12,6 +13,11 @@ type Student = {
   nationality: string;
   memorizedPagesTotal: number;
   currentQuota: string | null;
+  nationalIdLastFour?: string | null;
+  age?: number | null;
+  educationLevel?: string | null;
+  residence?: string | null;
+  memorizedAmount?: string | null;
 };
 
 const initialState: StudentActionState = {};
@@ -21,6 +27,7 @@ export function StudentRow({
   showHalaqa,
   halaqaName,
   canManage,
+  canRevealNationalId,
   updateAction,
   deleteAction,
 }: {
@@ -28,6 +35,7 @@ export function StudentRow({
   showHalaqa?: boolean;
   halaqaName?: string;
   canManage: boolean;
+  canRevealNationalId?: boolean;
   updateAction: (
     prev: StudentActionState | undefined,
     formData: FormData
@@ -44,10 +52,19 @@ export function StudentRow({
     initialState
   );
 
+  const colCount =
+    1 + // الاسم
+    (showHalaqa ? 1 : 0) +
+    1 + // الجنسية
+    1 + // الأوجه المحفوظة
+    1 + // النصاب
+    (canRevealNationalId ? 1 : 0) +
+    (canManage ? 1 : 0);
+
   if (mode === "edit") {
     return (
       <tr className="bg-brand/5">
-        <td colSpan={showHalaqa ? 5 : 4} className="px-5 py-3">
+        <td colSpan={colCount} className="px-5 py-3">
           <form action={updateFormAction} className="flex flex-wrap items-end gap-3">
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">الاسم</label>
@@ -63,6 +80,57 @@ export function StudentRow({
               <input
                 name="nationality"
                 defaultValue={student.nationality}
+                required
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">رقم الهوية/الإقامة</label>
+              <input
+                name="nationalId"
+                dir="ltr"
+                inputMode="numeric"
+                required
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+                placeholder="1XXXXXXXXX"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">العمر</label>
+              <input
+                name="age"
+                type="number"
+                min={5}
+                max={100}
+                dir="ltr"
+                defaultValue={student.age ?? ""}
+                required
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-24"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">المؤهل الدراسي</label>
+              <input
+                name="educationLevel"
+                defaultValue={student.educationLevel ?? ""}
+                required
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">مقر الإقامة</label>
+              <input
+                name="residence"
+                defaultValue={student.residence ?? ""}
+                required
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">مقدار الحفظ</label>
+              <input
+                name="memorizedAmount"
+                defaultValue={student.memorizedAmount ?? ""}
                 required
                 className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
               />
@@ -101,7 +169,7 @@ export function StudentRow({
   if (mode === "grade") {
     return (
       <tr className="bg-amber-50/60 dark:bg-amber-950/30">
-        <td colSpan={showHalaqa ? 5 : 4} className="px-5 py-3">
+        <td colSpan={colCount} className="px-5 py-3">
           {gradeState?.success ? (
             <div className="flex items-center justify-between">
               <span className="text-sm text-emerald-700 dark:text-emerald-400">{gradeState.success}</span>
@@ -186,6 +254,11 @@ export function StudentRow({
       <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{student.nationality}</td>
       <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{student.memorizedPagesTotal}</td>
       <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{student.currentQuota ?? "—"}</td>
+      {canRevealNationalId && (
+        <td className="px-5 py-3">
+          <RevealStudentNationalId studentId={student.id} lastFour={student.nationalIdLastFour ?? null} />
+        </td>
+      )}
       {canManage && (
         <td className="px-5 py-3 space-x-2 space-x-reverse whitespace-nowrap">
           <button

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
 import {
@@ -9,22 +10,22 @@ import {
   encryptNationalId,
   lastFourOf,
 } from "@/lib/crypto";
-import { nameSchema, nationalIdSchema, passwordSchema } from "@/lib/validation";
+import {
+  nameSchema,
+  nationalIdSchema,
+  passwordSchema,
+  requiredProfileFields,
+} from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 
 export type SupervisorActionState = { error?: string; success?: string };
 
-const createSchema = {
-  parse: (data: { name: FormDataEntryValue | null; nationalId: FormDataEntryValue | null; password: FormDataEntryValue | null }) => {
-    const name = nameSchema.safeParse(data.name);
-    if (!name.success) return { error: name.error.issues[0]?.message };
-    const nid = nationalIdSchema.safeParse(data.nationalId);
-    if (!nid.success) return { error: nid.error.issues[0]?.message };
-    const pass = passwordSchema.safeParse(data.password);
-    if (!pass.success) return { error: pass.error.issues[0]?.message };
-    return { name: name.data, nationalId: nid.data, password: pass.data };
-  },
-};
+const createSchema = z.object({
+  name: nameSchema,
+  nationalId: nationalIdSchema,
+  password: passwordSchema,
+  ...requiredProfileFields,
+});
 
 export async function createSupervisorAction(
   _prev: SupervisorActionState | undefined,
@@ -32,27 +33,53 @@ export async function createSupervisorAction(
 ): Promise<SupervisorActionState> {
   const actor = await requireRole("ADMIN");
 
-  const parsed = createSchema.parse({
+  const parsed = createSchema.safeParse({
     name: formData.get("name"),
     nationalId: formData.get("nationalId"),
     password: formData.get("password"),
+    nationality: formData.get("nationality"),
+    age: formData.get("age"),
+    educationLevel: formData.get("educationLevel"),
+    residence: formData.get("residence"),
+    memorizedAmount: formData.get("memorizedAmount"),
+    experience: formData.get("experience"),
   });
 
-  if ("error" in parsed) return { error: parsed.error ?? "بيانات غير صحيحة" };
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+  }
 
-  const nationalIdHash = hashNationalId(parsed.nationalId);
+  const {
+    name,
+    nationalId,
+    password,
+    nationality,
+    age,
+    educationLevel,
+    residence,
+    memorizedAmount,
+    experience,
+  } = parsed.data;
+
+  const nationalIdHash = hashNationalId(nationalId);
   const existing = await db.user.findUnique({ where: { nationalIdHash } });
   if (existing) return { error: "يوجد حساب مسجّل مسبقًا بهذا الرقم" };
 
   const supervisor = await db.user.create({
     data: {
-      name: parsed.name,
+      name,
       nationalIdHash,
-      nationalIdEncrypted: encryptNationalId(parsed.nationalId),
-      nationalIdLastFour: lastFourOf(parsed.nationalId),
-      passwordHash: await hashPassword(parsed.password),
+      nationalIdEncrypted: encryptNationalId(nationalId),
+      nationalIdLastFour: lastFourOf(nationalId),
+      passwordHash: await hashPassword(password),
       role: "SUPERVISOR",
       status: "ACTIVE",
+      nationality,
+      age,
+      educationLevel,
+      residence,
+      memorizedAmount,
+      experience,
     },
   });
 

@@ -28,6 +28,7 @@ export default async function EditProgramPage({
         <ProgramForm
           action={boundAction}
           defaultName={program.name}
+          defaultDescription={program.description}
           defaultDuration={program.duration}
           defaultAcademicYear={program.academicYear}
           defaultReportFileName={program.reportFileName}

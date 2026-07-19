@@ -5,16 +5,19 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUser, requireRole } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
-import { passwordSchema, nameSchema, teacherProfileFields } from "@/lib/validation";
+import { passwordSchema, nameSchema, requiredProfileFields } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { fileToAvatarDataUrl } from "@/lib/avatar";
 
 export type SettingsActionState = { error?: string; success?: string };
 
-const profileSchema = z.object({
+const baseProfileSchema = z.object({
   name: nameSchema,
   phone: z.string().trim().optional().or(z.literal("")),
-  ...teacherProfileFields,
+});
+
+const extendedProfileSchema = baseProfileSchema.extend({
+  ...requiredProfileFields,
 });
 
 export async function updateProfileAction(
@@ -22,16 +25,23 @@ export async function updateProfileAction(
   formData: FormData
 ): Promise<SettingsActionState> {
   const user = await requireUser();
+  const isExtended = user.role === "TEACHER" || user.role === "SUPERVISOR";
 
-  const parsed = profileSchema.safeParse({
-    name: formData.get("name"),
-    phone: formData.get("phone"),
-    nationality: formData.get("nationality"),
-    age: formData.get("age"),
-    educationLevel: formData.get("educationLevel"),
-    residence: formData.get("residence"),
-    memorizedAmount: formData.get("memorizedAmount"),
-  });
+  const parsed = isExtended
+    ? extendedProfileSchema.safeParse({
+        name: formData.get("name"),
+        phone: formData.get("phone"),
+        nationality: formData.get("nationality"),
+        age: formData.get("age"),
+        educationLevel: formData.get("educationLevel"),
+        residence: formData.get("residence"),
+        memorizedAmount: formData.get("memorizedAmount"),
+        experience: formData.get("experience"),
+      })
+    : baseProfileSchema.safeParse({
+        name: formData.get("name"),
+        phone: formData.get("phone"),
+      });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
@@ -42,19 +52,24 @@ export async function updateProfileAction(
   );
   if (avatarError) return { error: avatarError };
 
+  const extraFields = isExtended
+    ? (parsed.data as z.infer<typeof extendedProfileSchema>)
+    : null;
+
   await db.user.update({
     where: { id: user.id },
     data: {
       name: parsed.data.name,
       phone: parsed.data.phone || null,
       ...(avatarUrl ? { avatarUrl } : {}),
-      ...(user.role === "TEACHER"
+      ...(extraFields
         ? {
-            nationality: parsed.data.nationality || null,
-            age: parsed.data.age ?? null,
-            educationLevel: parsed.data.educationLevel || null,
-            residence: parsed.data.residence || null,
-            memorizedAmount: parsed.data.memorizedAmount || null,
+            nationality: extraFields.nationality,
+            age: extraFields.age,
+            educationLevel: extraFields.educationLevel,
+            residence: extraFields.residence,
+            memorizedAmount: extraFields.memorizedAmount,
+            experience: extraFields.experience,
           }
         : {}),
     },

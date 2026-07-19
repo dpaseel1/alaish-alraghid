@@ -10,27 +10,62 @@ export const passwordSchema = z
   .string()
   .min(8, "كلمة المرور يجب ألا تقل عن 8 أحرف");
 
+// الاسم الرباعي (تسمية فقط، بدون تحقق صارم من عدد الكلمات)
 export const nameSchema = z
   .string()
   .trim()
   .min(3, "الاسم يجب ألا يقل عن 3 أحرف")
   .max(100, "الاسم طويل جدًا");
 
-// بيانات الملف الشخصي الإضافية (خاصة بالمعلمات، اختيارية دائمًا)
+// بيانات الملف الشخصي الإضافية (خاصة بالمعلمة/المشرفة، مطلوبة عند الإضافة/التعديل)
 const optionalText = (max: number) =>
   z.string().trim().max(max).optional().or(z.literal(""));
+
+const requiredText = (max: number, label: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, `الرجاء إدخال ${label}`)
+    .max(max, `${label} طويل جدًا`);
 
 export const ageSchema = z.preprocess(
   (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
   z.number().int().min(5, "العمر غير صحيح").max(100, "العمر غير صحيح").optional()
 );
 
+export const requiredAgeSchema = z.preprocess(
+  (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+  z.number({ message: "الرجاء إدخال العمر" }).int().min(5, "العمر غير صحيح").max(100, "العمر غير صحيح")
+);
+
+export const experienceSchema = requiredText(500, "الخبرة");
+
+// نسخة اختيارية (احتياطية، غير مستخدمة حاليًا بعد أن أصبحت الحقول مطلوبة)
 export const teacherProfileFields = {
   nationality: optionalText(50),
   age: ageSchema,
   educationLevel: optionalText(100),
   residence: optionalText(150),
   memorizedAmount: optionalText(150),
+};
+
+// الحقول الإضافية المطلوبة للمعلمة والمشرفة عند الإضافة/التعديل
+export const requiredProfileFields = {
+  nationality: requiredText(50, "الجنسية"),
+  age: requiredAgeSchema,
+  educationLevel: requiredText(100, "المؤهل الدراسي"),
+  residence: requiredText(150, "مقر الإقامة"),
+  memorizedAmount: requiredText(150, "مقدار الحفظ"),
+  experience: experienceSchema,
+};
+
+// الحقول الإضافية المطلوبة للطالبة (نفس حقول المعلمة بدون الخبرة، مع رقم الهوية)
+export const requiredStudentProfileFields = {
+  nationalId: nationalIdSchema,
+  age: requiredAgeSchema,
+  educationLevel: requiredText(100, "المؤهل الدراسي"),
+  residence: requiredText(150, "مقر الإقامة"),
+  memorizedAmount: requiredText(150, "مقدار الحفظ"),
 };
 
 export const registerSchema = z
@@ -40,7 +75,7 @@ export const registerSchema = z
     password: passwordSchema,
     confirmPassword: z.string(),
     phone: z.string().trim().optional().or(z.literal("")),
-    ...teacherProfileFields,
+    ...requiredProfileFields,
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "كلمتا المرور غير متطابقتين",

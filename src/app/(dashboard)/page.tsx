@@ -132,6 +132,8 @@ async function AdminOrSupervisorHome({
 
   return (
     <div className="space-y-6">
+      <WelcomeBanner />
+
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">الرئيسية</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">نظرة عامة على المسارات والحلقات والطالبات</p>

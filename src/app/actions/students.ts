@@ -6,6 +6,8 @@ import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { riyadhToday } from "@/lib/timezone";
+import { requiredStudentProfileFields } from "@/lib/validation";
+import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
 
 export type StudentActionState = { error?: string; success?: string };
 
@@ -14,6 +16,7 @@ const studentSchema = z.object({
   nationality: z.string().trim().min(2, "الرجاء تحديد الجنسية"),
   halaqaId: z.string().min(1, "الرجاء اختيار الحلقة"),
   currentQuota: z.string().trim().optional().or(z.literal("")),
+  ...requiredStudentProfileFields,
 });
 
 async function assertHalaqaAccess(halaqaId: string) {
@@ -40,6 +43,11 @@ export async function createStudentAction(
     nationality: formData.get("nationality"),
     halaqaId: formData.get("halaqaId"),
     currentQuota: formData.get("currentQuota"),
+    nationalId: formData.get("nationalId"),
+    age: formData.get("age"),
+    educationLevel: formData.get("educationLevel"),
+    residence: formData.get("residence"),
+    memorizedAmount: formData.get("memorizedAmount"),
   });
 
   if (!parsed.success) {
@@ -55,6 +63,12 @@ export async function createStudentAction(
       nationality: parsed.data.nationality,
       halaqaId: parsed.data.halaqaId,
       currentQuota: parsed.data.currentQuota || null,
+      nationalIdEncrypted: encryptNationalId(parsed.data.nationalId),
+      nationalIdLastFour: lastFourOf(parsed.data.nationalId),
+      age: parsed.data.age,
+      educationLevel: parsed.data.educationLevel,
+      residence: parsed.data.residence,
+      memorizedAmount: parsed.data.memorizedAmount,
     },
   });
 
@@ -91,6 +105,11 @@ export async function updateStudentAction(
       name: formData.get("name"),
       nationality: formData.get("nationality"),
       currentQuota: formData.get("currentQuota"),
+      nationalId: formData.get("nationalId"),
+      age: formData.get("age"),
+      educationLevel: formData.get("educationLevel"),
+      residence: formData.get("residence"),
+      memorizedAmount: formData.get("memorizedAmount"),
     });
 
   if (!parsed.success) {
@@ -103,6 +122,12 @@ export async function updateStudentAction(
       name: parsed.data.name,
       nationality: parsed.data.nationality,
       currentQuota: parsed.data.currentQuota || null,
+      nationalIdEncrypted: encryptNationalId(parsed.data.nationalId),
+      nationalIdLastFour: lastFourOf(parsed.data.nationalId),
+      age: parsed.data.age,
+      educationLevel: parsed.data.educationLevel,
+      residence: parsed.data.residence,
+      memorizedAmount: parsed.data.memorizedAmount,
     },
   });
 
@@ -282,4 +307,19 @@ export async function addExamGradeAction(
   revalidatePath("/students");
   revalidatePath("/reports");
   return { success: "تم تسجيل الدرجة بنجاح" };
+}
+
+/** المديرة/المشرفة فقط تقدر تكشف رقم هوية/إقامة الطالبة الكامل */
+export async function revealStudentNationalIdAction(
+  studentId: string
+): Promise<{ nationalId: string } | { error: string }> {
+  await requireRole("ADMIN", "SUPERVISOR");
+  const student = await db.student.findUnique({ where: { id: studentId } });
+  if (!student) return { error: "الطالبة غير موجودة" };
+  if (!student.nationalIdEncrypted) return { error: "لا يوجد رقم هوية مسجّل لهذه الطالبة" };
+  try {
+    return { nationalId: decryptNationalId(student.nationalIdEncrypted) };
+  } catch {
+    return { error: "تعذّر فك تشفير رقم الهوية/الإقامة" };
+  }
 }

@@ -41,12 +41,13 @@ model User {
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 
-  // بيانات إضافية خاصة بالمعلمة (اختيارية) - تُستخدم في صفحة تفاصيل الحلقة
+  // بيانات إضافية خاصة بالمعلمة/المشرفة (مطلوبة عند الإضافة/التعديل) - تُستخدم في صفحة تفاصيل الحلقة
   nationality     String? // الجنسية
   age             Int? // العمر
   educationLevel  String? // المؤهل الدراسي
   residence       String? // مقر الإقامة
   memorizedAmount String? // مقدار حفظها من القرآن الكريم
+  experience      String? // الخبرة
 
   teacherHalaqa     Halaqa?   @relation("TeacherHalaqa")
   supervisedHalaqat Halaqa[]  @relation("SupervisorHalaqat")
@@ -84,6 +85,7 @@ model Track {
 model Program {
   id             String   @id @default(cuid())
   name           String
+  description    String? // وصف البرنامج
   duration       String // مدة البرنامج (نص حر، مثل: 3 أشهر)
   academicYear   String // العام الدراسي، مثال: 1447هـ
   reportUrl      String? // ملف التقرير الختامي (PDF أو صورة) - يُخزَّن كـ data URL
@@ -130,6 +132,12 @@ model Student {
   nationality         String
   halaqaId            String
   halaqa              Halaqa   @relation(fields: [halaqaId], references: [id])
+  nationalIdEncrypted String? // رقم هوية الطالبة مشفّر (AES-256-GCM) - تراه المديرة/المشرفة فقط
+  nationalIdLastFour  String? // آخر 4 أرقام تُعرض بدون فك تشفير
+  age                 Int? // العمر
+  educationLevel      String? // المؤهل الدراسي
+  residence           String? // مقر الإقامة
+  memorizedAmount     String? // مقدار الحفظ من القرآن الكريم (وصف عام عند التسجيل)
   memorizedPagesTotal Int      @default(0) // إجمالي عدد الأوجه المحفوظة
   currentQuota        String? // نصاب الحفظ الحالي
   notes               String?

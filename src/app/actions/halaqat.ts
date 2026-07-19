@@ -152,3 +152,42 @@ export async function toggleHalaqaActiveAction(halaqaId: string) {
   revalidatePath("/halaqat");
   revalidatePath("/");
 }
+
+/** حذف الحلقة نهائيًا - يُمنع إذا كان لديها طالبات أو سجلات حضور مرتبطة، لحماية بيانات الطالبات من الضياع */
+export async function deleteHalaqaAction(
+  halaqaId: string
+): Promise<{ error?: string } | void> {
+  const user = await requireRole("ADMIN", "SUPERVISOR");
+  const halaqa = await db.halaqa.findUnique({ where: { id: halaqaId } });
+  if (!halaqa) return;
+  if (user.role === "SUPERVISOR" && halaqa.supervisorId !== user.id) {
+    return { error: "لا تملكين صلاحية حذف هذه الحلقة" };
+  }
+
+  const [studentsCount, attendanceCount] = await Promise.all([
+    db.student.count({ where: { halaqaId } }),
+    db.attendanceLog.count({ where: { halaqaId } }),
+  ]);
+
+  if (studentsCount > 0 || attendanceCount > 0) {
+    return {
+      error:
+        "لا يمكن حذف الحلقة لوجود طالبات أو سجلات حضور مرتبطة بها. يمكنك تعطيل الحلقة بدلًا من ذلك من صفحة تعديلها.",
+    };
+  }
+
+  await db.halaqa.delete({ where: { id: halaqaId } });
+
+  await logAudit({
+    actor: user,
+    action: "HALAQA_DELETE",
+    targetType: "Halaqa",
+    targetId: halaqaId,
+    targetLabel: halaqa.name,
+    message: `حذفت الحلقة "${halaqa.name}"`,
+  });
+
+  revalidatePath("/halaqat");
+  revalidatePath("/");
+  revalidatePath("/tracks", "layout");
+}

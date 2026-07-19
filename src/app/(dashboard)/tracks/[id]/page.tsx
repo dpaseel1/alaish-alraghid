@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { MosqueIcon, TeacherIcon, CompassIcon, BookIcon } from "@/components/icons";
+import { DeleteHalaqaButton } from "@/components/halaqat/DeleteHalaqaButton";
 
 export default async function TrackDetailPage({
   params,
@@ -117,10 +118,11 @@ export default async function TrackDetailPage({
                     </Link>
                     <Link
                       href={`/halaqat/${h.id}/edit`}
-                      className="text-slate-500 dark:text-slate-400 hover:underline"
+                      className="text-slate-500 dark:text-slate-400 hover:underline ml-3"
                     >
                       تعديل
                     </Link>
+                    <DeleteHalaqaButton halaqaId={h.id} name={h.name} />
                   </td>
                 </tr>
               ))}

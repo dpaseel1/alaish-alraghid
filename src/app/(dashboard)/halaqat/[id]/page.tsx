@@ -4,6 +4,7 @@ import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import { RevealNationalId } from "@/components/teachers/RevealNationalId";
 import { Avatar } from "@/components/ui/Avatar";
+import { DeleteHalaqaButton } from "@/components/halaqat/DeleteHalaqaButton";
 
 export default async function HalaqaDetailPage({
   params,
@@ -79,12 +80,19 @@ export default async function HalaqaDetailPage({
           </p>
         </div>
         {canManage && (isAdminRole(user.role) || user.role === "SUPERVISOR") && (
-          <Link
-            href={`/halaqat/${halaqa.id}/edit`}
-            className="rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-          >
-            تعديل الحلقة
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/halaqat/${halaqa.id}/edit`}
+              className="rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+            >
+              تعديل الحلقة
+            </Link>
+            <DeleteHalaqaButton
+              halaqaId={halaqa.id}
+              name={halaqa.name}
+              className="rounded-lg border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 px-4 py-2.5 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-950/30 transition disabled:opacity-50"
+            />
+          </div>
         )}
       </div>
 
