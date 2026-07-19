@@ -5,6 +5,7 @@ import { updateStudentAction, deleteStudentAction } from "@/app/actions/students
 import { AddStudentForm } from "@/components/students/AddStudentForm";
 import { StudentRow } from "@/components/students/StudentRow";
 import { DailyDataForm } from "@/components/students/DailyDataForm";
+import { ExamGradesCard } from "@/components/students/ExamGradesCard";
 import { HalaqaSelect } from "@/components/students/HalaqaSelect";
 
 export default async function StudentsPage({
@@ -18,7 +19,13 @@ export default async function StudentsPage({
   if (user.role === "TEACHER") {
     const halaqa = await db.halaqa.findUnique({
       where: { teacherId: user.id },
-      include: { students: { where: { isActive: true }, orderBy: { name: "asc" } } },
+      include: {
+        students: {
+          where: { isActive: true },
+          orderBy: { name: "asc" },
+          include: { examGrades: { orderBy: { examDate: "desc" }, take: 1 } },
+        },
+      },
     });
 
     if (!halaqa) {
@@ -58,6 +65,20 @@ export default async function StudentsPage({
             alreadySubmitted={attendanceLog?.dataSubmitted ?? false}
           />
         </div>
+
+        <ExamGradesCard
+          students={halaqa.students.map((s) => ({
+            id: s.id,
+            name: s.name,
+            latestGrade: s.examGrades[0]
+              ? {
+                  quota: s.examGrades[0].quota,
+                  grade: s.examGrades[0].grade,
+                  maxGrade: s.examGrades[0].maxGrade,
+                }
+              : null,
+          }))}
+        />
 
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">إضافة طالبة جديدة</h2>

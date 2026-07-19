@@ -306,6 +306,7 @@ export async function addExamGradeAction(
 
   revalidatePath("/students");
   revalidatePath("/reports");
+  revalidatePath("/certificates");
   return { success: "تم تسجيل الدرجة بنجاح" };
 }
 
