@@ -94,6 +94,7 @@ model Program {
   academicYear   String // العام الدراسي، مثال: 1447هـ
   reportUrl      String? // ملف التقرير الختامي (PDF أو صورة) - يُخزَّن كـ data URL
   reportFileName String? // اسم الملف الأصلي، لعرضه عند التحميل
+  coverImageUrl  String? // صورة تعريفية للبرنامج (اختيارية) - تُخزَّن كـ data URL مصغّرة
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

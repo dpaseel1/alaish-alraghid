@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
 import { fileToReportDataUrl } from "@/lib/fileUpload";
+import { fileToAvatarDataUrl } from "@/lib/avatar";
 
 export type ProgramActionState = { error?: string; success?: string };
 
@@ -37,6 +38,11 @@ export async function createProgramAction(
     await fileToReportDataUrl(formData.get("report"));
   if (reportError) return { error: reportError };
 
+  const { dataUrl: coverImageUrl, error: coverImageError } = await fileToAvatarDataUrl(
+    formData.get("coverImage")
+  );
+  if (coverImageError) return { error: coverImageError };
+
   const program = await db.program.create({
     data: {
       name: parsed.data.name,
@@ -44,6 +50,7 @@ export async function createProgramAction(
       duration: parsed.data.duration,
       academicYear: parsed.data.academicYear,
       ...(reportUrl ? { reportUrl, reportFileName } : {}),
+      ...(coverImageUrl ? { coverImageUrl } : {}),
     },
   });
 
@@ -84,6 +91,11 @@ export async function updateProgramAction(
     await fileToReportDataUrl(formData.get("report"));
   if (reportError) return { error: reportError };
 
+  const { dataUrl: coverImageUrl, error: coverImageError } = await fileToAvatarDataUrl(
+    formData.get("coverImage")
+  );
+  if (coverImageError) return { error: coverImageError };
+
   await db.program.update({
     where: { id: programId },
     data: {
@@ -92,6 +104,7 @@ export async function updateProgramAction(
       duration: parsed.data.duration,
       academicYear: parsed.data.academicYear,
       ...(reportUrl ? { reportUrl, reportFileName } : {}),
+      ...(coverImageUrl ? { coverImageUrl } : {}),
     },
   });
 

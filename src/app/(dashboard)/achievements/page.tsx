@@ -42,9 +42,18 @@ export default async function AchievementsPage() {
             className="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-md hover:border-brand transition p-6 flex flex-col"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light dark:bg-brand-dark/30 text-brand-dark dark:text-brand">
-                <TrophyIcon className="h-6 w-6" />
-              </div>
+              {p.coverImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.coverImageUrl}
+                  alt={p.name}
+                  className="h-12 w-12 shrink-0 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                />
+              ) : (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light dark:bg-brand-dark/30 text-brand-dark dark:text-brand">
+                  <TrophyIcon className="h-6 w-6" />
+                </div>
+              )}
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{p.name}</h3>
             </div>
 

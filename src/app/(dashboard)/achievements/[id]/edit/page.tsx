@@ -32,6 +32,7 @@ export default async function EditProgramPage({
           defaultDuration={program.duration}
           defaultAcademicYear={program.academicYear}
           defaultReportFileName={program.reportFileName}
+          defaultCoverImageUrl={program.coverImageUrl}
           cancelHref="/achievements"
           submitLabel="حفظ التعديلات"
         />
