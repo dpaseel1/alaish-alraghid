@@ -10,7 +10,13 @@ import {
   encryptNationalId,
   lastFourOf,
 } from "@/lib/crypto";
-import { nameSchema, nationalIdSchema, passwordSchema, teacherProfileFields } from "@/lib/validation";
+import {
+  nameSchema,
+  nationalIdSchema,
+  passwordSchema,
+  teacherProfileFields,
+  validateRequiredProfileFieldsForRole,
+} from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { fileToAvatarDataUrl } from "@/lib/avatar";
 import type { Role, UserStatus } from "@/generated/prisma/client";
@@ -49,6 +55,7 @@ export async function updateUserByDeveloperAction(
     educationLevel: formData.get("educationLevel"),
     residence: formData.get("residence"),
     memorizedAmount: formData.get("memorizedAmount"),
+    experience: formData.get("experience"),
   });
 
   if (!parsed.success) {
@@ -67,7 +74,18 @@ export async function updateUserByDeveloperAction(
     educationLevel,
     residence,
     memorizedAmount,
+    experience,
   } = parsed.data;
+
+  const profileError = validateRequiredProfileFieldsForRole(role, {
+    nationality,
+    age,
+    educationLevel,
+    residence,
+    memorizedAmount,
+    experience,
+  });
+  if (profileError) return { error: profileError };
 
   // منع المطورة من تغيير صفتها الخاصة عن طريق الخطأ (تفادي فقدان الوصول)
   if (userId === actor.id && role !== "DEVELOPER") {
@@ -107,6 +125,7 @@ export async function updateUserByDeveloperAction(
       educationLevel: educationLevel || null,
       residence: residence || null,
       memorizedAmount: memorizedAmount || null,
+      experience: experience || null,
       ...(avatarUrl ? { avatarUrl } : {}),
       ...(newPassword ? { passwordHash: await hashPassword(newPassword) } : {}),
     },
@@ -151,6 +170,7 @@ export async function createUserByDeveloperAction(
     educationLevel: formData.get("educationLevel"),
     residence: formData.get("residence"),
     memorizedAmount: formData.get("memorizedAmount"),
+    experience: formData.get("experience"),
   });
 
   if (!parsed.success) {
@@ -168,7 +188,18 @@ export async function createUserByDeveloperAction(
     educationLevel,
     residence,
     memorizedAmount,
+    experience,
   } = parsed.data;
+
+  const profileError = validateRequiredProfileFieldsForRole(role, {
+    nationality,
+    age,
+    educationLevel,
+    residence,
+    memorizedAmount,
+    experience,
+  });
+  if (profileError) return { error: profileError };
 
   const { dataUrl: avatarUrl, error: avatarError } = await fileToAvatarDataUrl(
     formData.get("avatar")
@@ -194,6 +225,7 @@ export async function createUserByDeveloperAction(
       educationLevel: educationLevel || null,
       residence: residence || null,
       memorizedAmount: memorizedAmount || null,
+      experience: experience || null,
       ...(avatarUrl ? { avatarUrl } : {}),
     },
   });

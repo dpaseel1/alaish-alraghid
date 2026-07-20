@@ -42,6 +42,7 @@ export default async function DeveloperEditUserPage({
           educationLevel={user.educationLevel}
           residence={user.residence}
           memorizedAmount={user.memorizedAmount}
+          experience={user.experience}
         />
       </div>
     </div>

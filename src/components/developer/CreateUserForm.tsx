@@ -24,6 +24,8 @@ export function CreateUserForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [role, setRole] = useState("TEACHER");
+  const needsProfile = role === "TEACHER" || role === "SUPERVISOR";
 
   useEffect(() => {
     if (state?.success) {
@@ -91,7 +93,8 @@ export function CreateUserForm() {
         <select
           name="role"
           required
-          defaultValue="TEACHER"
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
         >
           {ROLE_OPTIONS.map((r) => (
@@ -131,29 +134,36 @@ export function CreateUserForm() {
 
       <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
-          بيانات إضافية <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري - للمعلمات)</span>
+          بيانات إضافية{" "}
+          <span className="text-slate-400 dark:text-slate-500 font-normal">
+            {needsProfile ? "(مطلوبة للمعلمة/المشرفة)" : "(غير مطلوبة لهذه الصفة)"}
+          </span>
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">الجنسية</label>
-            <input name="nationality" type="text" className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
+            <input name="nationality" type="text" required={needsProfile} className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">العمر</label>
-            <input name="age" type="number" min={5} max={100} dir="ltr" className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
+            <input name="age" type="number" min={5} max={100} dir="ltr" required={needsProfile} className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">المؤهل الدراسي</label>
-            <input name="educationLevel" type="text" className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
+            <input name="educationLevel" type="text" required={needsProfile} className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">مقر الإقامة</label>
-            <input name="residence" type="text" className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
+            <input name="residence" type="text" required={needsProfile} className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
           </div>
         </div>
         <div className="mt-4">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">مقدار الحفظ من القرآن الكريم</label>
-          <input name="memorizedAmount" type="text" placeholder="مثال: حافظة كاملة / 15 جزءًا" className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
+          <input name="memorizedAmount" type="text" placeholder="مثال: حافظة كاملة / 15 جزءًا" required={needsProfile} className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">الخبرة</label>
+          <textarea name="experience" rows={2} required={needsProfile} className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
         </div>
       </div>
 

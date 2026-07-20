@@ -7,6 +7,7 @@ import {
   reactivateTeacherAction,
 } from "@/app/actions/teachers";
 import { RevealNationalId } from "@/components/teachers/RevealNationalId";
+import { TeacherProfileButton } from "@/components/teachers/TeacherProfileButton";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400",
@@ -143,6 +144,15 @@ export default async function TeachersPage() {
                     >
                       {STATUS_LABELS[t.status]}
                     </span>
+                    <TeacherProfileButton
+                      name={t.name}
+                      nationality={t.nationality}
+                      age={t.age}
+                      educationLevel={t.educationLevel}
+                      residence={t.residence}
+                      memorizedAmount={t.memorizedAmount}
+                      experience={t.experience}
+                    />
                   </td>
                   <td className="px-5 py-3">
                     {t.status === "ACTIVE" && (

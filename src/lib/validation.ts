@@ -40,14 +40,45 @@ export const requiredAgeSchema = z.preprocess(
 
 export const experienceSchema = requiredText(500, "الخبرة");
 
-// نسخة اختيارية (احتياطية، غير مستخدمة حاليًا بعد أن أصبحت الحقول مطلوبة)
+// نسخة اختيارية على مستوى Zod (تُستخدم في نموذج المطورة لأنه يُنشئ/يعدّل كل الصفات
+// بما فيها المديرة/المطورة اللي ما تحتاج هذه الحقول)، لكن يتم فرضها كإلزامية فعليًا
+// للمعلمة والمشرفة عبر validateRequiredProfileFieldsForRole أدناه
 export const teacherProfileFields = {
   nationality: optionalText(50),
   age: ageSchema,
   educationLevel: optionalText(100),
   residence: optionalText(150),
   memorizedAmount: optionalText(150),
+  experience: optionalText(500),
 };
+
+type ProfileFieldsInput = {
+  nationality?: string;
+  age?: number;
+  educationLevel?: string;
+  residence?: string;
+  memorizedAmount?: string;
+  experience?: string;
+};
+
+/**
+ * تتحقق من أن بيانات الملف الشخصي الإضافية (الجنسية، العمر، المؤهل، الإقامة،
+ * مقدار الحفظ، الخبرة) مُدخلة إلزاميًا عند إنشاء/تعديل حساب معلمة أو مشرفة.
+ * ترجع رسالة الخطأ الأولى أو null إذا كانت البيانات مكتملة (أو الصفة لا تتطلبها).
+ */
+export function validateRequiredProfileFieldsForRole(
+  role: string,
+  fields: ProfileFieldsInput
+): string | null {
+  if (role !== "TEACHER" && role !== "SUPERVISOR") return null;
+  if (!fields.nationality) return "الرجاء إدخال الجنسية";
+  if (fields.age === undefined || fields.age === null) return "الرجاء إدخال العمر";
+  if (!fields.educationLevel) return "الرجاء إدخال المؤهل الدراسي";
+  if (!fields.residence) return "الرجاء إدخال مقر الإقامة";
+  if (!fields.memorizedAmount) return "الرجاء إدخال مقدار الحفظ";
+  if (!fields.experience) return "الرجاء إدخال الخبرة";
+  return null;
+}
 
 // الحقول الإضافية المطلوبة للمعلمة والمشرفة عند الإضافة/التعديل
 export const requiredProfileFields = {

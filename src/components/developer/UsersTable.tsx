@@ -8,6 +8,7 @@ import { ResetLoginLockoutButton } from "@/components/developer/ResetLoginLockou
 import { startImpersonationAction } from "@/app/actions/impersonate";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatRiyadhDateTime } from "@/lib/dateFormat";
+import { TeacherProfileButton } from "@/components/teachers/TeacherProfileButton";
 
 type UserRow = {
   id: string;
@@ -19,6 +20,12 @@ type UserRow = {
   lastSeenAt: Date | string | null;
   failedLoginAttempts: number;
   lockedUntil: Date | string | null;
+  nationality?: string | null;
+  age?: number | null;
+  educationLevel?: string | null;
+  residence?: string | null;
+  memorizedAmount?: string | null;
+  experience?: string | null;
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -111,6 +118,17 @@ export function UsersTable({ users, actorId }: { users: UserRow[]; actorId: stri
                       <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
                         {u.failedLoginAttempts} محاولة دخول فاشلة
                       </span>
+                    )}
+                    {(u.role === "TEACHER" || u.role === "SUPERVISOR") && (
+                      <TeacherProfileButton
+                        name={u.name}
+                        nationality={u.nationality}
+                        age={u.age}
+                        educationLevel={u.educationLevel}
+                        residence={u.residence}
+                        memorizedAmount={u.memorizedAmount}
+                        experience={u.experience}
+                      />
                     )}
                   </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300" dir="ltr">
