@@ -163,7 +163,7 @@ export function RegisterForm() {
             name="experience"
             type="text"
             required
-            placeholder="مثال: 3 سنوات تدريس تحفيظ"
+            placeholder="مثال: ٣ سنوات"
             className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           />
         </div>

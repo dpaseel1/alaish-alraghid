@@ -163,7 +163,7 @@ export function CreateUserForm() {
         </div>
         <div className="mt-4">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">الخبرة</label>
-          <textarea name="experience" rows={2} required={needsProfile} className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
+          <textarea name="experience" rows={2} required={needsProfile} placeholder="مثال: ٣ سنوات" className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand" />
         </div>
       </div>
 

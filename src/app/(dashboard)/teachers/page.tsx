@@ -69,7 +69,18 @@ export default async function TeachersPage() {
               <tbody className="divide-y divide-amber-100">
                 {pending.map((t) => (
                   <tr key={t.id}>
-                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{t.name}</td>
+                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">
+                      {t.name}
+                      <TeacherProfileButton
+                        name={t.name}
+                        nationality={t.nationality}
+                        age={t.age}
+                        educationLevel={t.educationLevel}
+                        residence={t.residence}
+                        memorizedAmount={t.memorizedAmount}
+                        experience={t.experience}
+                      />
+                    </td>
                     <td className="px-5 py-3">
                       {isAdminRole(user.role) ? (
                         <RevealNationalId userId={t.id} lastFour={t.nationalIdLastFour} />
