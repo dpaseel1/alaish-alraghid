@@ -71,15 +71,6 @@ export default async function TeachersPage() {
                   <tr key={t.id}>
                     <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">
                       {t.name}
-                      <TeacherProfileButton
-                        name={t.name}
-                        nationality={t.nationality}
-                        age={t.age}
-                        educationLevel={t.educationLevel}
-                        residence={t.residence}
-                        memorizedAmount={t.memorizedAmount}
-                        experience={t.experience}
-                      />
                     </td>
                     <td className="px-5 py-3">
                       {isAdminRole(user.role) ? (
@@ -92,6 +83,16 @@ export default async function TeachersPage() {
                     </td>
                     <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{t.phone ?? "—"}</td>
                     <td className="px-5 py-3 space-x-2 space-x-reverse">
+                      <TeacherProfileButton
+                        variant="solid"
+                        name={t.name}
+                        nationality={t.nationality}
+                        age={t.age}
+                        educationLevel={t.educationLevel}
+                        residence={t.residence}
+                        memorizedAmount={t.memorizedAmount}
+                        experience={t.experience}
+                      />
                       <form action={approveTeacherAction.bind(null, t.id)} className="inline">
                         <button className="rounded-lg bg-emerald-600 text-white text-xs font-medium px-3 py-1.5 hover:bg-emerald-700">
                           موافقة

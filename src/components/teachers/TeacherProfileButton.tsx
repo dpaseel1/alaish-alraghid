@@ -10,6 +10,7 @@ type TeacherProfileButtonProps = {
   residence?: string | null;
   memorizedAmount?: string | null;
   experience?: string | null;
+  variant?: "link" | "solid";
 };
 
 const FIELD_LABELS: { key: keyof Omit<TeacherProfileButtonProps, "name">; label: string }[] = [
@@ -23,13 +24,18 @@ const FIELD_LABELS: { key: keyof Omit<TeacherProfileButtonProps, "name">; label:
 
 export function TeacherProfileButton(props: TeacherProfileButtonProps) {
   const [open, setOpen] = useState(false);
+  const isSolid = props.variant === "solid";
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="block mt-1 text-xs text-brand hover:underline"
+        className={
+          isSolid
+            ? "rounded-lg bg-brand-light dark:bg-brand-dark/30 text-brand-dark dark:text-brand text-xs font-medium px-3 py-1.5 hover:bg-brand/20"
+            : "block mt-1 text-xs text-brand hover:underline"
+        }
       >
         عرض بيانات المعلمة
       </button>
