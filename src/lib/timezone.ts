@@ -17,3 +17,16 @@ export function riyadhToday(): Date {
 
   return new Date(Date.UTC(year, month - 1, day));
 }
+
+/** أيام الأسبوع الدراسي الحالي (الأحد إلى الخميس) بتوقيت الرياض، كمصفوفة من 5 تواريخ UTC-منتصف-ليل */
+export function riyadhWeekDays(): Date[] {
+  const today = riyadhToday();
+  const weekday = today.getUTCDay(); // الأحد = 0 ... السبت = 6
+  const sunday = new Date(today);
+  sunday.setUTCDate(sunday.getUTCDate() - weekday);
+  return Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(sunday);
+    d.setUTCDate(d.getUTCDate() + i);
+    return d;
+  });
+}

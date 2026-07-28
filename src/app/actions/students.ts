@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
-import { riyadhToday } from "@/lib/timezone";
+import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
 import { requiredStudentProfileFields } from "@/lib/validation";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
 
@@ -181,7 +181,7 @@ export async function submitDailyDataAction(
 
   const today = riyadhToday();
 
-  const attendanceLog = await db.attendanceLog.upsert({
+  await db.attendanceLog.upsert({
     where: { halaqaId_date: { halaqaId: halaqa.id, date: today } },
     create: {
       halaqaId: halaqa.id,
@@ -194,26 +194,10 @@ export async function submitDailyDataAction(
   });
 
   for (const student of halaqa.students) {
-    const present = formData.get(`present_${student.id}`) === "on";
     const pagesRaw = formData.get(`pages_${student.id}`);
     const quotaRaw = formData.get(`quota_${student.id}`);
     const pages = pagesRaw ? parseInt(String(pagesRaw), 10) : 0;
     const quota = quotaRaw ? String(quotaRaw).trim() : "";
-
-    await db.studentAttendance.upsert({
-      where: {
-        attendanceLogId_studentId: {
-          attendanceLogId: attendanceLog.id,
-          studentId: student.id,
-        },
-      },
-      create: {
-        attendanceLogId: attendanceLog.id,
-        studentId: student.id,
-        present,
-      },
-      update: { present },
-    });
 
     if (pages > 0) {
       await db.memorizationRecord.create({
@@ -323,4 +307,59 @@ export async function revealStudentNationalIdAction(
   } catch {
     return { error: "تعذّر فك تشفير رقم الهوية/الإقامة" };
   }
+}
+
+/** تبديل حضور/غياب طالبة ليوم واحد ضمن الأسبوع الدراسي الحالي (الأحد-الخميس) */
+export async function toggleStudentAttendanceAction(
+  studentId: string,
+  dateIso: string,
+  present: boolean
+) {
+  const user = await requireRole("TEACHER");
+
+  const student = await db.student.findUnique({
+    where: { id: studentId },
+    include: { halaqa: true },
+  });
+  if (!student || student.halaqa.teacherId !== user.id) return;
+
+  const date = new Date(dateIso);
+  const validDates = riyadhWeekDays().map((d) => d.getTime());
+  if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج الأسبوع الحالي
+
+  const attendanceLog = await db.attendanceLog.upsert({
+    where: { halaqaId_date: { halaqaId: student.halaqaId, date } },
+    create: {
+      halaqaId: student.halaqaId,
+      date,
+      teacherPresent: true,
+      dataSubmitted: true,
+      submittedAt: new Date(),
+    },
+    update: { dataSubmitted: true, submittedAt: new Date() },
+  });
+
+  await db.studentAttendance.upsert({
+    where: {
+      attendanceLogId_studentId: {
+        attendanceLogId: attendanceLog.id,
+        studentId,
+      },
+    },
+    create: { attendanceLogId: attendanceLog.id, studentId, present },
+    update: { present },
+  });
+
+  await logAudit({
+    actor: user,
+    action: "STUDENT_ATTENDANCE_TOGGLE",
+    targetType: "Student",
+    targetId: student.id,
+    targetLabel: student.name,
+    message: `سجّلت ${present ? "حضور" : "غياب"} الطالبة ليوم ${dateIso}`,
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+  revalidatePath("/honor-board");
 }

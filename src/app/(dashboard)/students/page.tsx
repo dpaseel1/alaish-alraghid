@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhToday } from "@/lib/timezone";
+import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
 import { updateStudentAction, deleteStudentAction } from "@/app/actions/students";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
 import { StudentRow } from "@/components/students/StudentRow";
@@ -36,12 +36,29 @@ export default async function StudentsPage({
       );
     }
 
-    const today = riyadhToday();
+    const WEEKDAY_LABELS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+    const weekDayDates = riyadhWeekDays();
+    const weekDays = weekDayDates.map((d, i) => ({
+      iso: d.toISOString().slice(0, 10),
+      label: WEEKDAY_LABELS[i],
+    }));
 
-    const attendanceLog = await db.attendanceLog.findUnique({
-      where: { halaqaId_date: { halaqaId: halaqa.id, date: today } },
+    const weekLogs = await db.attendanceLog.findMany({
+      where: { halaqaId: halaqa.id, date: { in: weekDayDates } },
       include: { studentAttendance: true },
     });
+
+    const weekAttendance: Record<string, Record<string, boolean>> = {};
+    for (const log of weekLogs) {
+      const dateIso = log.date.toISOString().slice(0, 10);
+      for (const a of log.studentAttendance) {
+        weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
+        weekAttendance[a.studentId][dateIso] = a.present;
+      }
+    }
+
+    const todayIso = riyadhToday().toISOString().slice(0, 10);
+    const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
 
     return (
       <div className="space-y-6">
@@ -56,13 +73,9 @@ export default async function StudentsPage({
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">بيانات اليوم</h2>
           <DailyDataForm
             students={halaqa.students}
-            todayEntries={
-              attendanceLog?.studentAttendance.map((a) => ({
-                studentId: a.studentId,
-                present: a.present,
-              })) ?? []
-            }
-            alreadySubmitted={attendanceLog?.dataSubmitted ?? false}
+            weekDays={weekDays}
+            weekAttendance={weekAttendance}
+            alreadySubmitted={todayLog?.dataSubmitted ?? false}
           />
         </div>
 

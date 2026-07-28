@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhToday } from "@/lib/timezone";
+import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
 import { PrintButton } from "@/components/reports/PrintButton";
 import { TrophyIcon } from "@/components/icons";
 import type { Prisma } from "@/generated/prisma/client";
@@ -34,7 +34,9 @@ export default async function HonorBoardPage({
 
   const halaqaId = user.role === "TEACHER" ? undefined : params.halaqaId || undefined;
 
-  const [halaqatForSelect, students] = await Promise.all([
+  const weekDays = riyadhWeekDays();
+
+  const [halaqatForSelect, students, weekStudents] = await Promise.all([
     user.role === "TEACHER"
       ? Promise.resolve([])
       : db.halaqa.findMany({
@@ -58,7 +60,38 @@ export default async function HonorBoardPage({
       },
       orderBy: { name: "asc" },
     }),
+    db.student.findMany({
+      where: {
+        isActive: true,
+        halaqa: halaqaWhere,
+      },
+      select: {
+        id: true,
+        name: true,
+        halaqa: { select: { name: true } },
+        attendanceRecords: {
+          where: { present: true, attendanceLog: { date: { in: weekDays } } },
+          select: { attendanceLog: { select: { date: true } } },
+        },
+      },
+      orderBy: { name: "asc" },
+    }),
   ]);
+
+  const weekStars = weekStudents
+    .map((s) => {
+      const presentDays = new Set(
+        s.attendanceRecords.map((a) => a.attendanceLog.date.getTime())
+      );
+      return {
+        id: s.id,
+        name: s.name,
+        halaqaName: s.halaqa.name,
+        isStar: presentDays.size === weekDays.length,
+      };
+    })
+    .filter((s) => s.isStar)
+    .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 
   const achievers = students
     .map((s) => {
@@ -85,6 +118,42 @@ export default async function HonorBoardPage({
           </p>
         </div>
         <PrintButton />
+      </div>
+
+      <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/30 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-emerald-200 dark:border-emerald-900/50 flex items-center gap-2">
+          <TrophyIcon className="h-6 w-6 text-emerald-700 dark:text-emerald-400" />
+          <h2 className="font-semibold text-emerald-800 dark:text-emerald-400">
+            نجمات الأسبوع ({weekStars.length}) — الأحد إلى الخميس
+          </h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-right">
+                <th className="px-5 py-3 font-medium">#</th>
+                <th className="px-5 py-3 font-medium">الطالبة</th>
+                <th className="px-5 py-3 font-medium">الحلقة</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-emerald-100 dark:divide-emerald-900/40">
+              {weekStars.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                    لا توجد طالبات حضرن كل أيام هذا الأسبوع بعد
+                  </td>
+                </tr>
+              )}
+              {weekStars.map((s, i) => (
+                <tr key={s.id} className="hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30">
+                  <td className="px-5 py-3 text-emerald-700 dark:text-emerald-400 font-semibold">{i + 1}</td>
+                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.halaqaName}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <form
@@ -150,7 +219,7 @@ export default async function HonorBoardPage({
         <div className="px-5 py-4 border-b border-amber-200 dark:border-amber-900/50 flex items-center gap-2">
           <TrophyIcon className="h-6 w-6 text-amber-700 dark:text-amber-400" />
           <h2 className="font-semibold text-amber-800">
-            متميزات الحضور ({achievers.length}) — من {toDateInputValue(fromDate)} إلى{" "}
+            تقرير حضور مخصص — متميزات ({achievers.length}) — من {toDateInputValue(fromDate)} إلى{" "}
             {toDateInputValue(toDate)}
           </h2>
         </div>
