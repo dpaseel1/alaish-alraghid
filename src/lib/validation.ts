@@ -1,10 +1,16 @@
 import { z } from "zod";
+import { normalizeDigits } from "@/lib/numbers";
 
 // رقم الهوية الوطنية أو الإقامة: أرقام فقط، بين 9 و12 رقمًا (يغطي معظم الحالات)
-export const nationalIdSchema = z
-  .string()
-  .trim()
-  .regex(/^\d{9,12}$/, "رقم الهوية/الإقامة يجب أن يتكون من أرقام فقط (9 إلى 12 رقمًا)");
+// يُطبَّق تطبيع الأرقام العربية إلى إنجليزية هنا أيضًا كطبقة حماية إضافية على مستوى الخادم
+// (بالإضافة إلى التطبيع اللحظي في الواجهة عبر NumeralNormalizer)
+export const nationalIdSchema = z.preprocess(
+  (v) => (typeof v === "string" ? normalizeDigits(v) : v),
+  z
+    .string()
+    .trim()
+    .regex(/^\d{9,12}$/, "رقم الهوية/الإقامة يجب أن يتكون من أرقام فقط (9 إلى 12 رقمًا)")
+);
 
 export const passwordSchema = z
   .string()
@@ -28,13 +34,18 @@ const requiredText = (max: number, label: string) =>
     .min(1, `الرجاء إدخال ${label}`)
     .max(max, `${label} طويل جدًا`);
 
+const toDigitsNumber = (v: unknown) => {
+  if (v === "" || v === null || v === undefined) return undefined;
+  return Number(typeof v === "string" ? normalizeDigits(v) : v);
+};
+
 export const ageSchema = z.preprocess(
-  (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+  toDigitsNumber,
   z.number().int().min(5, "العمر غير صحيح").max(100, "العمر غير صحيح").optional()
 );
 
 export const requiredAgeSchema = z.preprocess(
-  (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+  toDigitsNumber,
   z.number({ message: "الرجاء إدخال العمر" }).int().min(5, "العمر غير صحيح").max(100, "العمر غير صحيح")
 );
 

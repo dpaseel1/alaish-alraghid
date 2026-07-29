@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
+import { normalizeDigits } from "@/lib/numbers";
 
 export type StudentActionState = { error?: string; success?: string };
 
@@ -235,11 +236,17 @@ export async function submitDailyDataAction(
   return { success: "تم حفظ بيانات اليوم بنجاح" };
 }
 
+const digitsNumber = (min: number) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? normalizeDigits(v) : v),
+    z.coerce.number().min(min)
+  );
+
 const examGradeSchema = z.object({
   studentId: z.string().min(1),
   quota: z.string().trim().min(1, "الرجاء تحديد النصاب"),
-  grade: z.coerce.number().min(0),
-  maxGrade: z.coerce.number().min(1).default(100),
+  grade: digitsNumber(0),
+  maxGrade: digitsNumber(1).default(100),
   examDate: z.string().min(1, "الرجاء تحديد تاريخ الاختبار"),
 });
 
