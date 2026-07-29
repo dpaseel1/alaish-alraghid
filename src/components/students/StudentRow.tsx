@@ -67,7 +67,7 @@ export function StudentRow({
         <td colSpan={colCount} className="px-5 py-3">
           <form action={updateFormAction} className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">الاسم</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">الاسم الرباعي</label>
               <input
                 name="name"
                 defaultValue={student.name}

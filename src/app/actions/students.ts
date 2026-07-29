@@ -6,13 +6,13 @@ import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
-import { requiredStudentProfileFields } from "@/lib/validation";
+import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
 
 export type StudentActionState = { error?: string; success?: string };
 
 const studentSchema = z.object({
-  name: z.string().trim().min(2, "اسم الطالبة قصير جدًا"),
+  name: nameSchema,
   nationality: z.string().trim().min(2, "الرجاء تحديد الجنسية"),
   halaqaId: z.string().min(1, "الرجاء اختيار الحلقة"),
   currentQuota: z.string().trim().optional().or(z.literal("")),
