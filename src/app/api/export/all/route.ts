@@ -26,10 +26,16 @@ export async function GET(request: Request) {
     buildGradesRows(scope.halaqaWhere, scope.fromDate, scope.toDate),
   ]);
 
-  const buffer = rowsToXlsxBuffer([
+  const sheets = [
     { name: "الطالبات", rows: students },
     { name: "الحضور والغياب", rows: attendance },
     { name: "الدرجات", rows: grades },
-  ]);
+  ];
+
+  if (searchParams.get("format") === "json") {
+    return Response.json({ sheets });
+  }
+
+  const buffer = rowsToXlsxBuffer(sheets);
   return xlsxResponse(buffer, "تقرير شامل");
 }

@@ -14,6 +14,12 @@ export async function GET(request: Request) {
   if (!scope.ok) return new Response("لا تملكين صلاحية الوصول لهذه البيانات", { status: 403 });
 
   const rows = await buildAttendanceRows(scope.halaqaWhere, scope.fromDate, scope.toDate);
-  const buffer = rowsToXlsxBuffer([{ name: "الحضور والغياب", rows }]);
+  const sheets = [{ name: "الحضور والغياب", rows }];
+
+  if (searchParams.get("format") === "json") {
+    return Response.json({ sheets });
+  }
+
+  const buffer = rowsToXlsxBuffer(sheets);
   return xlsxResponse(buffer, "الحضور والغياب");
 }
