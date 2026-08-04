@@ -41,7 +41,8 @@ export function ExportButton({
       const data: { sheets: { name: string; rows: Record<string, unknown>[] }[] } = await res.json();
       const { downloadRowsAsPdf } = await import("@/lib/exportPdf");
       await downloadRowsAsPdf({ title: label, fileName: label, sheets: data.sheets });
-    } catch {
+    } catch (err) {
+      console.error("PDF export failed:", err);
       alert("تعذّر إنشاء ملف PDF، حاولي مرة أخرى");
     } finally {
       setPdfBusy(false);
