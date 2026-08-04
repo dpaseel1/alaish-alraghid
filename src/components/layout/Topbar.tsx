@@ -27,7 +27,7 @@ export function Topbar({
           </div>
         )}
         <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm truncate">
-          العيش الرغيد
+          مقرأة العيش الرغيد
         </span>
       </div>
       <div className="hidden md:block" />

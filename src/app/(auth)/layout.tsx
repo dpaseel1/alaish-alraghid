@@ -33,10 +33,10 @@ export default async function AuthLayout({
             </div>
           )}
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-            العيش الرغيد
+            مقرأة العيش الرغيد
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            نظام إدارة حلقات تحفيظ القرآن الكريم
+            صرح تعليمي للقرآن وعلومه
           </p>
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 sm:p-8">

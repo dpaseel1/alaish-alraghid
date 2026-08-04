@@ -23,11 +23,10 @@ const arefRuqaa = Aref_Ruqaa({
 
 export const metadata: Metadata = {
   title: {
-    default: "العيش الرغيد",
-    template: "%s | العيش الرغيد",
+    default: "مقرأة العيش الرغيد",
+    template: "%s | مقرأة العيش الرغيد",
   },
-  description:
-    "منصة إدارة حلقات تحفيظ القرآن الكريم، المعلمات، الطالبات والتقارير",
+  description: "صرح تعليمي للقرآن وعلومه",
 };
 
 export const viewport: Viewport = {
