@@ -5,6 +5,7 @@ import {
   reactivateSupervisorAction,
 } from "@/app/actions/supervisors";
 import { CreateSupervisorForm } from "@/components/supervisors/CreateSupervisorForm";
+import { ForceLogoutButton } from "@/components/ui/ForceLogoutButton";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400",
@@ -21,7 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function SupervisorsPage() {
-  await requireRole("ADMIN");
+  const user = await requireRole("ADMIN");
 
   const supervisors = await db.user.findMany({
     where: { role: "SUPERVISOR" },
@@ -81,20 +82,25 @@ export default async function SupervisorsPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    {s.status === "ACTIVE" && (
-                      <form action={suspendSupervisorAction.bind(null, s.id)}>
-                        <button className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:underline">
-                          إيقاف الحساب
-                        </button>
-                      </form>
-                    )}
-                    {s.status === "SUSPENDED" && (
-                      <form action={reactivateSupervisorAction.bind(null, s.id)}>
-                        <button className="text-xs text-brand hover:underline">
-                          إعادة التفعيل
-                        </button>
-                      </form>
-                    )}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {s.status === "ACTIVE" && (
+                        <form action={suspendSupervisorAction.bind(null, s.id)}>
+                          <button className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:underline">
+                            إيقاف الحساب
+                          </button>
+                        </form>
+                      )}
+                      {s.status === "SUSPENDED" && (
+                        <form action={reactivateSupervisorAction.bind(null, s.id)}>
+                          <button className="text-xs text-brand hover:underline">
+                            إعادة التفعيل
+                          </button>
+                        </form>
+                      )}
+                      {user.role === "DEVELOPER" && (
+                        <ForceLogoutButton userId={s.id} name={s.name} />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { generateSessionToken } from "@/lib/crypto";
@@ -17,8 +17,12 @@ export async function createSession(userId: string) {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + SESSION_DURATION_DAYS);
 
+  const headerList = await headers();
+  const userAgent = headerList.get("user-agent") ?? undefined;
+  const ipAddress = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
+
   await db.session.create({
-    data: { token, userId, expiresAt },
+    data: { token, userId, expiresAt, userAgent, ipAddress, lastActiveAt: new Date() },
   });
 
   const cookieStore = await cookies();
@@ -60,14 +64,29 @@ export async function getRawUser(): Promise<User | null> {
   if (session.user.status !== "ACTIVE") return null;
 
   // تحديث آخر ظهور (يُستخدم في إحصائية "المعلمات المتصلات حاليًا")
+  const now = new Date();
   db.user
     .update({
       where: { id: session.user.id },
-      data: { lastSeenAt: new Date() },
+      data: { lastSeenAt: now },
+    })
+    .catch(() => {});
+
+  // تحديث آخر نشاط لهذه الجلسة تحديدًا - يُستخدم في عرض "الجلسات النشطة"
+  db.session
+    .update({
+      where: { id: session.id },
+      data: { lastActiveAt: now },
     })
     .catch(() => {});
 
   return session.user;
+}
+
+/** يرجع توكن الجلسة الحالية من الكوكي - يُستخدم لتمييز "هذه الجلسة" في قائمة الجلسات النشطة */
+export async function getCurrentSessionToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(SESSION_COOKIE)?.value ?? null;
 }
 
 /**

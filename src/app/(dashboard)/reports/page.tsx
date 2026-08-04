@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { riyadhToday } from "@/lib/timezone";
 import { MemorizationChart } from "@/components/reports/MemorizationChart";
 import { PrintButton } from "@/components/reports/PrintButton";
+import { ExportButton } from "@/components/export/ExportButton";
 
 function toDateInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -74,6 +75,12 @@ export default async function ReportsPage({
     value: h.students.reduce((sum, s) => sum + s.memorizedPagesTotal, 0),
   }));
 
+  const exportQuery = new URLSearchParams({
+    ...(halaqaId ? { halaqaId } : {}),
+    from: toDateInputValue(fromDate),
+    to: toDateInputValue(toDate),
+  }).toString();
+
   const singleHalaqa = halaqaId ? halaqat[0] : undefined;
   const studentChartData =
     singleHalaqa?.students
@@ -90,7 +97,13 @@ export default async function ReportsPage({
             مستوى التحصيل في الحفظ وقوائم الغياب القابلة للتصفية
           </p>
         </div>
-        <PrintButton />
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButton href={`/api/export/students?${exportQuery}`} label="تصدير الطالبات" />
+          <ExportButton href={`/api/export/attendance?${exportQuery}`} label="تصدير الحضور والغياب" />
+          <ExportButton href={`/api/export/grades?${exportQuery}`} label="تصدير الدرجات" />
+          <ExportButton href={`/api/export/all?${exportQuery}`} label="تصدير الكل" emphasize />
+          <PrintButton />
+        </div>
       </div>
 
       <form

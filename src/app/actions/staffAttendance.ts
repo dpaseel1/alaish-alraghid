@@ -1,0 +1,176 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { requireRole, isAdminRole } from "@/lib/session";
+import { logAudit } from "@/lib/audit";
+import { riyadhWeekDays } from "@/lib/timezone";
+import type { StaffAttendanceStatus, Role } from "@/generated/prisma/client";
+
+export type LeaveRequestActionState = { error?: string; success?: string };
+
+const STAFF_ATTENDANCE_STATUSES: StaffAttendanceStatus[] = ["PRESENT", "ABSENT", "LEAVE"];
+
+const STAFF_ATTENDANCE_LABELS: Record<StaffAttendanceStatus, string> = {
+  PRESENT: "حاضرة",
+  ABSENT: "غائبة",
+  LEAVE: "إجازة",
+};
+
+/** تُنشئ/تحدّث سجل حضور المستخدمة نفسها ليوم ضمن الأسبوع الحالي فقط */
+export async function toggleStaffAttendanceAction(dateIso: string, status: StaffAttendanceStatus) {
+  const user = await requireRole("TEACHER", "SUPERVISOR");
+  if (!STAFF_ATTENDANCE_STATUSES.includes(status)) return;
+
+  const date = new Date(dateIso);
+  const validDates = riyadhWeekDays().map((d) => d.getTime());
+  if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج الأسبوع الحالي
+
+  await db.staffAttendance.upsert({
+    where: { userId_date: { userId: user.id, date } },
+    create: { userId: user.id, date, status, recordedById: user.id },
+    update: { status, recordedById: user.id },
+  });
+
+  await logAudit({
+    actor: user,
+    action: "STAFF_ATTENDANCE_TOGGLE",
+    targetType: "StaffAttendance",
+    targetId: user.id,
+    targetLabel: user.name,
+    message: `سجّلت حضورها (${STAFF_ATTENDANCE_LABELS[status]}) ليوم ${dateIso}`,
+  });
+
+  revalidatePath("/attendance");
+}
+
+const leaveRequestSchema = z
+  .object({
+    fromDate: z.string().min(1, "الرجاء تحديد تاريخ البداية"),
+    toDate: z.string().min(1, "الرجاء تحديد تاريخ النهاية"),
+    reason: z.string().trim().min(5, "الرجاء توضيح سبب الإجازة (٥ أحرف على الأقل)"),
+  })
+  .refine((data) => new Date(data.toDate).getTime() >= new Date(data.fromDate).getTime(), {
+    message: "تاريخ النهاية يجب أن يكون بعد تاريخ البداية أو مساويًا له",
+    path: ["toDate"],
+  });
+
+/** تقدّم المعلمة/المشرفة طلب إجازة بحالة "بانتظار الموافقة" */
+export async function createLeaveRequestAction(
+  _prev: LeaveRequestActionState | undefined,
+  formData: FormData
+): Promise<LeaveRequestActionState> {
+  const user = await requireRole("TEACHER", "SUPERVISOR");
+
+  const parsed = leaveRequestSchema.safeParse({
+    fromDate: formData.get("fromDate"),
+    toDate: formData.get("toDate"),
+    reason: formData.get("reason"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+  }
+
+  const { fromDate, toDate, reason } = parsed.data;
+
+  await db.leaveRequest.create({
+    data: {
+      userId: user.id,
+      fromDate: new Date(fromDate),
+      toDate: new Date(toDate),
+      reason,
+      status: "PENDING",
+    },
+  });
+
+  await logAudit({
+    actor: user,
+    action: "LEAVE_REQUEST_CREATE",
+    targetType: "LeaveRequest",
+    targetLabel: user.name,
+    message: `قدّمت طلب إجازة من ${fromDate} إلى ${toDate}`,
+  });
+
+  revalidatePath("/attendance");
+  return { success: "تم إرسال طلب الإجازة بانتظار الموافقة" };
+}
+
+/** تتحقق أن المراجعة يملك صلاحية مراجعة طلب إجازة مقدّمة من requesterId */
+async function canReviewLeaveRequest(
+  reviewer: { id: string; role: Role },
+  requesterId: string,
+  requesterRole: Role
+): Promise<boolean> {
+  if (isAdminRole(reviewer.role)) return true;
+  if (reviewer.role !== "SUPERVISOR") return false;
+  if (requesterRole !== "TEACHER") return false; // المشرفة لا تراجع طلبات مشرفة أخرى
+
+  const halaqa = await db.halaqa.findFirst({
+    where: { teacherId: requesterId, supervisorId: reviewer.id },
+  });
+  return !!halaqa;
+}
+
+/** المديرة/المطورة أو المشرفة (لمعلماتها فقط) تراجع طلب إجازة بالموافقة أو الرفض */
+export async function reviewLeaveRequestAction(
+  requestId: string,
+  decision: "APPROVED" | "REJECTED",
+  note?: string
+) {
+  const reviewer = await requireRole("ADMIN", "SUPERVISOR");
+
+  const request = await db.leaveRequest.findUnique({
+    where: { id: requestId },
+    include: { user: true },
+  });
+  if (!request || request.status !== "PENDING") return;
+
+  const allowed = await canReviewLeaveRequest(reviewer, request.userId, request.user.role);
+  if (!allowed) return;
+
+  await db.leaveRequest.update({
+    where: { id: requestId },
+    data: {
+      status: decision,
+      reviewedById: reviewer.id,
+      reviewedByName: reviewer.name,
+      reviewedAt: new Date(),
+      reviewNote: note?.trim() || null,
+    },
+  });
+
+  if (decision === "APPROVED") {
+    const days: Date[] = [];
+    const cursor = new Date(request.fromDate);
+    while (cursor.getTime() <= request.toDate.getTime()) {
+      days.push(new Date(cursor));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    await Promise.all(
+      days.map((date) =>
+        db.staffAttendance.upsert({
+          where: { userId_date: { userId: request.userId, date } },
+          create: { userId: request.userId, date, status: "LEAVE", recordedById: reviewer.id },
+          update: { status: "LEAVE", recordedById: reviewer.id },
+        })
+      )
+    );
+  }
+
+  await logAudit({
+    actor: reviewer,
+    action: decision === "APPROVED" ? "LEAVE_REQUEST_APPROVE" : "LEAVE_REQUEST_REJECT",
+    targetType: "LeaveRequest",
+    targetId: request.id,
+    targetLabel: request.user.name,
+    message:
+      decision === "APPROVED"
+        ? `وافقت على طلب إجازة "${request.user.name}"`
+        : `رفضت طلب إجازة "${request.user.name}"`,
+  });
+
+  revalidatePath("/attendance");
+}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ROLE_LABELS } from "@/components/layout/nav-items";
 import { DeleteUserButton } from "@/components/developer/DeleteUserButton";
 import { ResetLoginLockoutButton } from "@/components/developer/ResetLoginLockoutButton";
+import { ForceLogoutButton } from "@/components/ui/ForceLogoutButton";
 import { startImpersonationAction } from "@/app/actions/impersonate";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatRiyadhDateTime } from "@/lib/dateFormat";
@@ -156,6 +157,9 @@ export function UsersTable({ users, actorId }: { users: UserRow[]; actorId: stri
                       )}
                       {showResetLockout && (
                         <ResetLoginLockoutButton userId={u.id} name={u.name} />
+                      )}
+                      {u.id !== actorId && u.role !== "DEVELOPER" && (
+                        <ForceLogoutButton userId={u.id} name={u.name} />
                       )}
                       {u.id !== actorId && <DeleteUserButton userId={u.id} name={u.name} />}
                     </div>

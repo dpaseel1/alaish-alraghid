@@ -13,6 +13,8 @@ import {
   TrophyIcon,
   LogIcon,
   SettingsIcon,
+  CalendarIcon,
+  StatsIcon,
 } from "@/components/icons";
 
 export type NavItem = {
@@ -30,6 +32,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/students", label: "الطالبات", icon: BookIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
   { href: "/halaqat", label: "الحلقات", icon: MosqueIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
   { href: "/reports", label: "التقارير والإحصائيات", icon: ChartIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR"] },
+  { href: "/statistics", label: "لوحة الإحصاءات", icon: StatsIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
+  { href: "/attendance", label: "الحضور والإجازات", icon: CalendarIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
   { href: "/honor-board", label: "لوحة الشرف", icon: AwardIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
   { href: "/certificates", label: "الأرشيف والشهادات", icon: ArchiveIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },
   { href: "/achievements", label: "سجل الإنجازات", icon: TrophyIcon, roles: ["DEVELOPER", "ADMIN", "SUPERVISOR", "TEACHER"] },

@@ -57,16 +57,22 @@ model User {
   supervisedHalaqat Halaqa[]  @relation("SupervisorHalaqat")
   sessions          Session[]
 
+  staffAttendance StaffAttendance[] @relation("StaffAttendanceUser")
+  leaveRequests   LeaveRequest[]    @relation("LeaveRequester")
+
   @@index([role, status])
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  token        String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent    String? // متصفح/جهاز المستخدم وقت إنشاء الجلسة
+  ipAddress    String? // عنوان IP وقت إنشاء الجلسة
+  lastActiveAt DateTime? // آخر طلب استخدم هذه الجلسة - لعرضها في "الجلسات النشطة"
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
 
   @@index([userId])
 }
@@ -212,6 +218,53 @@ model StudentAttendance {
   present         Boolean       @default(true)
 
   @@unique([attendanceLogId, studentId])
+}
+
+// ============ حضور وإجازات الطاقم (المعلمات/المشرفات) ============
+
+enum StaffAttendanceStatus {
+  PRESENT // حاضرة
+  ABSENT // غائبة
+  LEAVE // إجازة (تُضبط تلقائيًا عند قبول طلب إجازة)
+}
+
+model StaffAttendance {
+  id           String                @id @default(cuid())
+  userId       String
+  user         User                  @relation("StaffAttendanceUser", fields: [userId], references: [id])
+  date         DateTime
+  status       StaffAttendanceStatus @default(PRESENT)
+  note         String?
+  recordedById String // من سجّلت هذا اليوم (المستخدمة نفسها أو من وافقت على الإجازة)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+enum LeaveRequestStatus {
+  PENDING // بانتظار المراجعة
+  APPROVED // مقبولة
+  REJECTED // مرفوضة
+}
+
+model LeaveRequest {
+  id             String             @id @default(cuid())
+  userId         String
+  user           User               @relation("LeaveRequester", fields: [userId], references: [id])
+  fromDate       DateTime
+  toDate         DateTime
+  reason         String
+  status         LeaveRequestStatus @default(PENDING)
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+  reviewNote     String?
+  createdAt      DateTime           @default(now())
+
+  @@index([userId])
+  @@index([status])
 }
 
 // ============ إعدادات الموقع العامة (صف وحيد) ============

@@ -7,6 +7,7 @@ import { StudentRow } from "@/components/students/StudentRow";
 import { DailyDataForm } from "@/components/students/DailyDataForm";
 import { ExamGradesCard } from "@/components/students/ExamGradesCard";
 import { HalaqaSelect } from "@/components/students/HalaqaSelect";
+import { ExportButton } from "@/components/export/ExportButton";
 
 export default async function StudentsPage({
   searchParams,
@@ -99,10 +100,11 @@ export default async function StudentsPage({
         </div>
 
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">
               كل الطالبات ({halaqa.students.length})
             </h2>
+            <ExportButton href={`/api/export/students?halaqaId=${halaqa.id}`} label="تصدير Excel" />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -189,10 +191,11 @@ export default async function StudentsPage({
           </div>
 
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
               <h2 className="font-semibold text-slate-800 dark:text-slate-100">
                 طالبات {selectedHalaqa.name} ({selectedHalaqa.students.length})
               </h2>
+              <ExportButton href={`/api/export/students?halaqaId=${selectedHalaqa.id}`} label="تصدير Excel" />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

@@ -4,6 +4,7 @@ import { ROLE_LABELS } from "@/components/layout/nav-items";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import { UpdateProfileForm } from "@/components/settings/UpdateProfileForm";
 import { UpdateLogoForm } from "@/components/settings/UpdateLogoForm";
+import { SessionsCard } from "@/components/settings/SessionsCard";
 
 export default async function SettingsPage() {
   const user = await requireUser();
@@ -41,6 +42,8 @@ export default async function SettingsPage() {
         <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">تغيير كلمة المرور</h2>
         <ChangePasswordForm />
       </div>
+
+      <SessionsCard userId={user.id} />
 
       {isAdmin && (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">

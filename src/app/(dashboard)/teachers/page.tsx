@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/teachers";
 import { RevealNationalId } from "@/components/teachers/RevealNationalId";
 import { TeacherProfileButton } from "@/components/teachers/TeacherProfileButton";
+import { ForceLogoutButton } from "@/components/ui/ForceLogoutButton";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400",
@@ -167,20 +168,23 @@ export default async function TeachersPage() {
                     />
                   </td>
                   <td className="px-5 py-3">
-                    {t.status === "ACTIVE" && (
-                      <form action={suspendTeacherAction.bind(null, t.id)}>
-                        <button className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:underline">
-                          إيقاف الحساب
-                        </button>
-                      </form>
-                    )}
-                    {t.status === "SUSPENDED" && (
-                      <form action={reactivateTeacherAction.bind(null, t.id)}>
-                        <button className="text-xs text-brand hover:underline">
-                          إعادة التفعيل
-                        </button>
-                      </form>
-                    )}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {t.status === "ACTIVE" && (
+                        <form action={suspendTeacherAction.bind(null, t.id)}>
+                          <button className="text-xs text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:underline">
+                            إيقاف الحساب
+                          </button>
+                        </form>
+                      )}
+                      {t.status === "SUSPENDED" && (
+                        <form action={reactivateTeacherAction.bind(null, t.id)}>
+                          <button className="text-xs text-brand hover:underline">
+                            إعادة التفعيل
+                          </button>
+                        </form>
+                      )}
+                      {user.role === "DEVELOPER" && <ForceLogoutButton userId={t.id} name={t.name} />}
+                    </div>
                   </td>
                 </tr>
               ))}
