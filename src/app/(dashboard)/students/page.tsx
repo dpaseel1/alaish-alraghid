@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
+import { HALAQA_DAYS, HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
 import { updateStudentAction, deleteStudentAction, reactivateStudentAction } from "@/app/actions/students";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
 import { ImportStudentsForm } from "@/components/students/ImportStudentsForm";
@@ -65,11 +66,14 @@ export default async function StudentsPage({
       );
     }
 
-    const WEEKDAY_LABELS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
-    const weekDayDates = riyadhWeekDays();
-    const weekDays = weekDayDates.map((d, i) => ({
+    // إن حدّدت المديرة أيام انعقاد للحلقة، تُقتصر شبكة التحضير على تلك الأيام فقط ضمن الأسبوع الدراسي الحالي (الأحد-الخميس)
+    const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : null;
+    const weekDayDates = riyadhWeekDays().filter(
+      (d) => !scheduledDays || scheduledDays.has(HALAQA_DAYS[d.getUTCDay()])
+    );
+    const weekDays = weekDayDates.map((d) => ({
       iso: d.toISOString().slice(0, 10),
-      label: WEEKDAY_LABELS[i],
+      label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],
     }));
 
     const weekLogs = await db.attendanceLog.findMany({
@@ -101,7 +105,14 @@ export default async function StudentsPage({
         {!isArchiveView && (
           <>
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-              <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">بيانات اليوم</h2>
+              <div className="mb-4">
+                <h2 className="font-semibold text-slate-800 dark:text-slate-100">بيانات اليوم</h2>
+                {scheduledDays && (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                    أيام انعقاد الحلقة: {halaqa.days.map((d) => HALAQA_DAY_LABELS[d as HalaqaDay]).join("، ")}
+                  </p>
+                )}
+              </div>
               <DailyDataForm
                 students={halaqa.students}
                 weekDays={weekDays}

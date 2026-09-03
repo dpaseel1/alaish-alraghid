@@ -37,13 +37,18 @@ export function DailyDataForm({
 
   return (
     <div className="space-y-6">
-      {students.length > 0 && (
+      {students.length > 0 && weekDays.length === 0 && (
+        <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-4 py-3">
+          لا يوجد يوم من أيام انعقاد الحلقة ضمن الأسبوع الدراسي الحالي (الأحد-الخميس)، لذا لا تظهر شبكة تحضير هذا الأسبوع.
+        </p>
+      )}
+      {students.length > 0 && weekDays.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-4 py-2 font-medium">الطالبة</th>
-                <th className="px-4 py-2 font-medium">الحضور الأسبوعي (الأحد - الخميس)</th>
+                <th className="px-4 py-2 font-medium">الحضور الأسبوعي</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">

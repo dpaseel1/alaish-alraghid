@@ -7,6 +7,7 @@ import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
+import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
 import { normalizeDigits } from "@/lib/numbers";
@@ -434,7 +435,7 @@ export async function revealStudentNationalIdAction(
   }
 }
 
-/** تبديل حضور/غياب طالبة ليوم واحد ضمن الأسبوع الدراسي الحالي (الأحد-الخميس) */
+/** تبديل حضور/غياب طالبة ليوم واحد ضمن الأسبوع الدراسي الحالي (الأحد-الخميس)، ومقيّد بأيام انعقاد الحلقة إن حُدِّدت */
 export async function toggleStudentAttendanceAction(
   studentId: string,
   dateIso: string,
@@ -451,6 +452,10 @@ export async function toggleStudentAttendanceAction(
   const date = new Date(dateIso);
   const validDates = riyadhWeekDays().map((d) => d.getTime());
   if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج الأسبوع الحالي
+
+  if (student.halaqa.days.length > 0 && !student.halaqa.days.includes(HALAQA_DAYS[date.getUTCDay()])) {
+    return; // منع تسجيل حضور ليوم لا تنعقد فيه الحلقة
+  }
 
   const attendanceLog = await db.attendanceLog.upsert({
     where: { halaqaId_date: { halaqaId: student.halaqaId, date } },
