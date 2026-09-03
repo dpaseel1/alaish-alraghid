@@ -8,7 +8,9 @@ import {
 
 const initialState: SupervisorActionState = {};
 
-export function CreateSupervisorForm() {
+type Track = { id: string; name: string };
+
+export function CreateSupervisorForm({ tracks }: { tracks: Track[] }) {
   const [state, formAction, pending] = useActionState(
     createSupervisorAction,
     initialState
@@ -56,6 +58,41 @@ export function CreateSupervisorForm() {
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="1XXXXXXXXX"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          رقم الجوال
+        </label>
+        <input
+          name="phone"
+          type="tel"
+          required
+          dir="ltr"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          placeholder="05XXXXXXXX"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          المسار
+        </label>
+        <select
+          name="trackId"
+          required
+          defaultValue=""
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+        >
+          <option value="" disabled>
+            اختاري المسار
+          </option>
+          {tracks.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

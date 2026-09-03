@@ -6,6 +6,7 @@ import {
   CERTIFICATE_CANVAS_WIDTH,
   CERTIFICATE_CANVAS_HEIGHT,
   type CertificateData,
+  type CertificateTemplateInput,
 } from "@/lib/certificateRender";
 
 type StudentCertificate = CertificateData;
@@ -13,9 +14,11 @@ type StudentCertificate = CertificateData;
 export function ExportHalaqaCertificatesButton({
   halaqaName,
   students,
+  template,
 }: {
   halaqaName: string;
   students: StudentCertificate[];
+  template?: CertificateTemplateInput;
 }) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -45,7 +48,7 @@ export function ExportHalaqaCertificatesButton({
       });
 
       for (let i = 0; i < students.length; i++) {
-        await renderCertificateToCanvas(canvas, students[i]);
+        await renderCertificateToCanvas(canvas, students[i], template);
         const imgData = canvas.toDataURL("image/jpeg", 0.92);
         if (i > 0) pdf.addPage([CERTIFICATE_CANVAS_WIDTH, CERTIFICATE_CANVAS_HEIGHT], "landscape");
         pdf.addImage(imgData, "JPEG", 0, 0, CERTIFICATE_CANVAS_WIDTH, CERTIFICATE_CANVAS_HEIGHT);

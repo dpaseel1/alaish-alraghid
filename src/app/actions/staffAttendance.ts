@@ -99,16 +99,17 @@ export async function createLeaveRequestAction(
 
 /** تتحقق أن المراجعة يملك صلاحية مراجعة طلب إجازة مقدّمة من requesterId */
 async function canReviewLeaveRequest(
-  reviewer: { id: string; role: Role },
+  reviewer: { id: string; role: Role; supervisedTrackId: string | null },
   requesterId: string,
   requesterRole: Role
 ): Promise<boolean> {
   if (isAdminRole(reviewer.role)) return true;
   if (reviewer.role !== "SUPERVISOR") return false;
   if (requesterRole !== "TEACHER") return false; // المشرفة لا تراجع طلبات مشرفة أخرى
+  if (!reviewer.supervisedTrackId) return false;
 
   const halaqa = await db.halaqa.findFirst({
-    where: { teacherId: requesterId, supervisorId: reviewer.id },
+    where: { teacherId: requesterId, trackId: reviewer.supervisedTrackId },
   });
   return !!halaqa;
 }

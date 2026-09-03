@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { CertificateCanvas, type CertificateData } from "@/components/certificates/CertificateCanvas";
+import type { CertificateTemplateInput } from "@/lib/certificateRender";
 
-export function CertificateSection({ data }: { data: CertificateData }) {
+export function CertificateSection({ data, template }: { data: CertificateData; template?: CertificateTemplateInput }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -27,7 +28,7 @@ export function CertificateSection({ data }: { data: CertificateData }) {
 
       {open && (
         <div className="mt-5">
-          <CertificateCanvas data={data} />
+          <CertificateCanvas data={data} template={template} />
         </div>
       )}
     </div>

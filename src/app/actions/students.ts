@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
 import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
@@ -27,7 +28,7 @@ async function assertHalaqaAccess(halaqaId: string) {
 
   if (isAdminRole(user.role)) return { user, ok: true as const, halaqa };
   if (user.role === "SUPERVISOR")
-    return { user, ok: halaqa.supervisorId === user.id, halaqa };
+    return { user, ok: halaqa.trackId != null && halaqa.trackId === user.supervisedTrackId, halaqa };
   if (user.role === "TEACHER")
     return { user, ok: halaqa.teacherId === user.id, halaqa };
   return { user, ok: false as const, halaqa };
@@ -165,6 +166,123 @@ export async function deleteStudentAction(studentId: string) {
 
   revalidatePath("/students");
   revalidatePath("/");
+}
+
+export async function reactivateStudentAction(studentId: string) {
+  await requireRole("ADMIN", "SUPERVISOR", "TEACHER");
+  const student = await db.student.findUnique({ where: { id: studentId } });
+  if (!student) return;
+  const { ok, user } = await assertHalaqaAccess(student.halaqaId);
+  if (!ok) return;
+
+  await db.student.update({ where: { id: studentId }, data: { isActive: true } });
+
+  await logAudit({
+    actor: user,
+    action: "STUDENT_REACTIVATE",
+    targetType: "Student",
+    targetId: student.id,
+    targetLabel: student.name,
+    message: "استعادت الطالبة من الأرشيف",
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+}
+
+export type ImportStudentsResult = {
+  successCount: number;
+  failures: { row: number; message: string }[];
+  error?: string;
+};
+
+const IMPORT_HEADER_MAP = {
+  name: "الاسم",
+  nationality: "الجنسية",
+  nationalId: "رقم الهوية/الإقامة",
+  age: "العمر",
+  educationLevel: "المؤهل الدراسي",
+  residence: "مقر الإقامة",
+  memorizedAmount: "مقدار الحفظ",
+} as const;
+
+/** استيراد طالبات دفعة واحدة من ملف Excel لحلقة محددة (نفس تحقق الإضافة اليدوية لكل صف) */
+export async function importStudentsAction(
+  _prev: ImportStudentsResult | undefined,
+  formData: FormData
+): Promise<ImportStudentsResult> {
+  await requireRole("ADMIN", "SUPERVISOR", "TEACHER");
+
+  const halaqaId = String(formData.get("halaqaId") ?? "");
+  const { ok, user, halaqa } = await assertHalaqaAccess(halaqaId);
+  if (!ok || !halaqa) return { successCount: 0, failures: [], error: "لا تملكين صلاحية الإضافة لهذه الحلقة" };
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { successCount: 0, failures: [], error: "الرجاء اختيار ملف Excel" };
+  }
+
+  let rows: Record<string, unknown>[];
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const wb = XLSX.read(buffer, { type: "buffer" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+  } catch {
+    return { successCount: 0, failures: [], error: "تعذّر قراءة الملف، تأكدي أنه بصيغة Excel صحيحة" };
+  }
+
+  const importRowSchema = studentSchema.omit({ halaqaId: true, currentQuota: true });
+  const failures: { row: number; message: string }[] = [];
+  let successCount = 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const parsed = importRowSchema.safeParse({
+      name: row[IMPORT_HEADER_MAP.name],
+      nationality: row[IMPORT_HEADER_MAP.nationality],
+      nationalId: row[IMPORT_HEADER_MAP.nationalId],
+      age: row[IMPORT_HEADER_MAP.age],
+      educationLevel: row[IMPORT_HEADER_MAP.educationLevel],
+      residence: row[IMPORT_HEADER_MAP.residence],
+      memorizedAmount: row[IMPORT_HEADER_MAP.memorizedAmount],
+    });
+
+    if (!parsed.success) {
+      failures.push({ row: i + 2, message: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" });
+      continue;
+    }
+
+    await db.student.create({
+      data: {
+        name: parsed.data.name,
+        nationality: parsed.data.nationality,
+        halaqaId,
+        nationalIdEncrypted: encryptNationalId(parsed.data.nationalId),
+        nationalIdLastFour: lastFourOf(parsed.data.nationalId),
+        age: parsed.data.age,
+        educationLevel: parsed.data.educationLevel,
+        residence: parsed.data.residence,
+        memorizedAmount: parsed.data.memorizedAmount,
+      },
+    });
+    successCount++;
+  }
+
+  await logAudit({
+    actor: user,
+    action: "STUDENT_IMPORT",
+    targetType: "Halaqa",
+    targetId: halaqa.id,
+    targetLabel: halaqa.name,
+    message: `استوردت ${successCount} طالبة من ملف Excel إلى حلقة ${halaqa.name}${
+      failures.length ? ` (${failures.length} صف مرفوض)` : ""
+    }`,
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+  return { successCount, failures };
 }
 
 /** تسجيل بيانات اليوم: الحضور + الأوجه المحفوظة لكل طالبات الحلقة دفعة واحدة */

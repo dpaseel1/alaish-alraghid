@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { renderCertificateToCanvas, type CertificateData } from "@/lib/certificateRender";
+import { renderCertificateToCanvas, type CertificateData, type CertificateTemplateInput } from "@/lib/certificateRender";
 
 export type { CertificateData };
 
-export function CertificateCanvas({ data }: { data: CertificateData }) {
+export function CertificateCanvas({ data, template }: { data: CertificateData; template?: CertificateTemplateInput }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
 
@@ -15,7 +15,7 @@ export function CertificateCanvas({ data }: { data: CertificateData }) {
     async function draw() {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      await renderCertificateToCanvas(canvas, data);
+      await renderCertificateToCanvas(canvas, data, template);
       if (!cancelled) setReady(true);
     }
 
@@ -23,7 +23,7 @@ export function CertificateCanvas({ data }: { data: CertificateData }) {
     return () => {
       cancelled = true;
     };
-  }, [data]);
+  }, [data, template]);
 
   const download = () => {
     const canvas = canvasRef.current;

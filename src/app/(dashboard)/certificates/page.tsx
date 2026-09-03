@@ -5,6 +5,7 @@ import { PrintButton } from "@/components/reports/PrintButton";
 import { HalaqaSelect } from "@/components/students/HalaqaSelect";
 import { CertificateSection } from "@/components/certificates/CertificateSection";
 import { ExportHalaqaCertificatesButton } from "@/components/certificates/ExportHalaqaCertificatesButton";
+import { getActiveCertificateTemplate } from "@/lib/certificateTemplate";
 import type { Prisma } from "@/generated/prisma/client";
 
 function toDateInputValue(d: Date) {
@@ -18,10 +19,11 @@ export default async function CertificatesPage({
 }) {
   const user = await requireUser();
   const params = await searchParams;
+  const template = await getActiveCertificateTemplate();
 
   let halaqaWhere: Prisma.HalaqaWhereInput = {};
   if (user.role === "TEACHER") halaqaWhere = { teacherId: user.id };
-  else if (user.role === "SUPERVISOR") halaqaWhere = { supervisorId: user.id };
+  else if (user.role === "SUPERVISOR") halaqaWhere = { trackId: user.supervisedTrackId ?? "__no_track__" };
 
   let halaqaId = params.halaqaId;
   if (user.role === "TEACHER") {
@@ -81,7 +83,17 @@ export default async function CertificatesPage({
             سجل الحفظ ودرجات الاختبارات لكل طالبة، جاهز للطباعة عند الحاجة لشهادة
           </p>
         </div>
-        {selectedStudent && <PrintButton />}
+        <div className="flex items-center gap-3 print:hidden">
+          {(user.role === "ADMIN" || user.role === "DEVELOPER") && (
+            <Link
+              href="/certificates/template"
+              className="text-sm text-brand hover:underline whitespace-nowrap"
+            >
+              إدارة قوالب الشهادات
+            </Link>
+          )}
+          {selectedStudent && <PrintButton />}
+        </div>
       </div>
 
       {user.role !== "TEACHER" && (
@@ -104,7 +116,11 @@ export default async function CertificatesPage({
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">
               طالبات {halaqa.name} ({halaqa.students.length})
             </h2>
-            <ExportHalaqaCertificatesButton halaqaName={halaqa.name} students={studentsWithCertificates} />
+            <ExportHalaqaCertificatesButton
+              halaqaName={halaqa.name}
+              students={studentsWithCertificates}
+              template={template}
+            />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -202,6 +218,7 @@ export default async function CertificatesPage({
                 grade: selectedStudent.examGrades[0].grade,
                 maxGrade: selectedStudent.examGrades[0].maxGrade,
               }}
+              template={template}
             />
           )}
 

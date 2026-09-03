@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { RevealNationalId } from "@/components/teachers/RevealNationalId";
 import { Avatar } from "@/components/ui/Avatar";
 import { DeleteHalaqaButton } from "@/components/halaqat/DeleteHalaqaButton";
+import { ToggleHalaqaActiveButton } from "@/components/halaqat/ToggleHalaqaActiveButton";
+import { HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
 
 export default async function HalaqaDetailPage({
   params,
@@ -30,7 +32,6 @@ export default async function HalaqaDetailPage({
           memorizedAmount: true,
         },
       },
-      supervisor: { select: { name: true, avatarUrl: true, phone: true } },
       track: { select: { id: true, name: true } },
       students: { where: { isActive: true }, orderBy: { name: "asc" } },
     },
@@ -40,11 +41,12 @@ export default async function HalaqaDetailPage({
 
   const canManage =
     isAdminRole(user.role) ||
-    (user.role === "SUPERVISOR" && halaqa.supervisorId === user.id) ||
+    (user.role === "SUPERVISOR" && !!user.supervisedTrackId && halaqa.trackId === user.supervisedTrackId) ||
     (user.role === "TEACHER" && halaqa.teacherId === user.id);
 
   if (
-    user.role === "SUPERVISOR" && halaqa.supervisorId !== user.id
+    user.role === "SUPERVISOR" &&
+    (!user.supervisedTrackId || halaqa.trackId !== user.supervisedTrackId)
   ) {
     // مشرفة تحاول الدخول لحلقة ليست تحت إشرافها
     return (
@@ -65,9 +67,17 @@ export default async function HalaqaDetailPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{halaqa.name}</h1>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            {halaqa.name}
+            {!halaqa.isActive && (
+              <span className="rounded-full px-2.5 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                مؤرشفة
+              </span>
+            )}
+          </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {halaqa.time}
+            {halaqa.days.length > 0 && ` · ${halaqa.days.map((d) => HALAQA_DAY_LABELS[d as HalaqaDay]).join("، ")}`}
             {halaqa.track && (
               <>
                 {" "}
@@ -87,6 +97,12 @@ export default async function HalaqaDetailPage({
             >
               تعديل الحلقة
             </Link>
+            <ToggleHalaqaActiveButton
+              halaqaId={halaqa.id}
+              name={halaqa.name}
+              isActive={halaqa.isActive}
+              className="rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-50"
+            />
             <DeleteHalaqaButton
               halaqaId={halaqa.id}
               name={halaqa.name}
@@ -146,21 +162,18 @@ export default async function HalaqaDetailPage({
 
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">بيانات المشرفة</h2>
-          {halaqa.supervisor ? (
-            <>
-              <div className="flex items-center gap-3 mb-4">
-                <Avatar name={halaqa.supervisor.name} avatarUrl={halaqa.supervisor.avatarUrl} size={48} />
-                <span className="font-medium text-slate-800 dark:text-slate-100">{halaqa.supervisor.name}</span>
-              </div>
-              <dl className="grid grid-cols-2 gap-y-2 text-sm">
-                <dt className="text-slate-400 dark:text-slate-500">رقم الجوال</dt>
-                <dd dir="ltr" className="text-slate-700 dark:text-slate-200 text-right">
-                  {halaqa.supervisor.phone ?? "—"}
-                </dd>
-              </dl>
-            </>
-          ) : (
-            <p className="text-sm text-slate-400 dark:text-slate-500">لم يتم تعيين مشرفة لهذه الحلقة بعد</p>
+          <p className="text-sm text-slate-700 dark:text-slate-200">
+            {halaqa.supervisorName ?? (
+              <span className="text-slate-400 dark:text-slate-500">لم يتم تحديد مشرفة لهذه الحلقة بعد</span>
+            )}
+          </p>
+          {halaqa.track && (
+            <Link
+              href={`/tracks/${halaqa.track.id}`}
+              className="inline-block mt-3 text-xs text-brand hover:underline"
+            >
+              عرض مشرفات المسار
+            </Link>
           )}
         </div>
       </div>

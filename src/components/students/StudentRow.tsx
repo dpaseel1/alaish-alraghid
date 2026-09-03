@@ -30,6 +30,8 @@ export function StudentRow({
   canRevealNationalId,
   updateAction,
   deleteAction,
+  isArchived,
+  reactivateAction,
 }: {
   student: Student;
   showHalaqa?: boolean;
@@ -41,6 +43,8 @@ export function StudentRow({
     formData: FormData
   ) => Promise<StudentActionState>;
   deleteAction: () => Promise<void>;
+  isArchived?: boolean;
+  reactivateAction?: () => Promise<void>;
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "grade">("view");
   const [updateState, updateFormAction, updatePending] = useActionState(
@@ -261,21 +265,29 @@ export function StudentRow({
       )}
       {canManage && (
         <td className="px-5 py-3 space-x-2 space-x-reverse whitespace-nowrap">
-          <button
-            onClick={() => setMode("edit")}
-            className="text-xs text-brand hover:underline"
-          >
-            تعديل
-          </button>
-          <button
-            onClick={() => setMode("grade")}
-            className="text-xs text-amber-700 dark:text-amber-400 hover:underline"
-          >
-            تسجيل درجة
-          </button>
-          <form action={deleteAction} className="inline">
-            <button className="text-xs text-red-600 dark:text-red-400 hover:underline">حذف</button>
-          </form>
+          {isArchived ? (
+            <form action={reactivateAction} className="inline">
+              <button className="text-xs text-emerald-700 dark:text-emerald-400 hover:underline">استعادة</button>
+            </form>
+          ) : (
+            <>
+              <button
+                onClick={() => setMode("edit")}
+                className="text-xs text-brand hover:underline"
+              >
+                تعديل
+              </button>
+              <button
+                onClick={() => setMode("grade")}
+                className="text-xs text-amber-700 dark:text-amber-400 hover:underline"
+              >
+                تسجيل درجة
+              </button>
+              <form action={deleteAction} className="inline">
+                <button className="text-xs text-red-600 dark:text-red-400 hover:underline">أرشفة</button>
+              </form>
+            </>
+          )}
         </td>
       )}
     </tr>

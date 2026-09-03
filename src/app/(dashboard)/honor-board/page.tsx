@@ -30,7 +30,7 @@ export default async function HonorBoardPage({
 
   let halaqaWhere: Prisma.HalaqaWhereInput = {};
   if (user.role === "TEACHER") halaqaWhere = { teacherId: user.id };
-  else if (user.role === "SUPERVISOR") halaqaWhere = { supervisorId: user.id };
+  else if (user.role === "SUPERVISOR") halaqaWhere = { trackId: user.supervisedTrackId ?? "__no_track__" };
 
   const halaqaId = user.role === "TEACHER" ? undefined : params.halaqaId || undefined;
 

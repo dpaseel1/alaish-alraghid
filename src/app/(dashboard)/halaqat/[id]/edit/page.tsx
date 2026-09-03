@@ -14,7 +14,7 @@ export default async function EditHalaqaPage({
 
   const halaqa = await db.halaqa.findUnique({ where: { id } });
   if (!halaqa) notFound();
-  if (user.role === "SUPERVISOR" && halaqa.supervisorId !== user.id) {
+  if (user.role === "SUPERVISOR" && halaqa.trackId !== user.supervisedTrackId) {
     return (
       <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 p-6 text-red-700 dark:text-red-400">
         لا تملكين صلاحية تعديل هذه الحلقة
@@ -22,7 +22,7 @@ export default async function EditHalaqaPage({
     );
   }
 
-  const [teachers, supervisors, tracks] = await Promise.all([
+  const [teachers, tracks] = await Promise.all([
     db.user.findMany({
       where: {
         role: "TEACHER",
@@ -32,13 +32,6 @@ export default async function EditHalaqaPage({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-    isAdminRole(user.role)
-      ? db.user.findMany({
-          where: { role: "SUPERVISOR", status: "ACTIVE" },
-          select: { id: true, name: true },
-          orderBy: { name: "asc" },
-        })
-      : Promise.resolve([]),
     db.track.findMany({ select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
   ]);
 
@@ -54,7 +47,6 @@ export default async function EditHalaqaPage({
         <HalaqaForm
           action={boundAction}
           teachers={teachers}
-          supervisors={supervisors}
           tracks={tracks}
           isAdmin={isAdminRole(user.role)}
           initial={{
@@ -62,8 +54,9 @@ export default async function EditHalaqaPage({
             time: halaqa.time,
             category: halaqa.category,
             teacherId: halaqa.teacherId,
-            supervisorId: halaqa.supervisorId,
+            supervisorName: halaqa.supervisorName,
             trackId: halaqa.trackId,
+            days: halaqa.days,
           }}
         />
       </div>

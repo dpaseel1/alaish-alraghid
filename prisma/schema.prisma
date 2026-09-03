@@ -54,13 +54,17 @@ model User {
   experience      String? // الخبرة
 
   teacherHalaqa     Halaqa?   @relation("TeacherHalaqa")
-  supervisedHalaqat Halaqa[]  @relation("SupervisorHalaqat")
   sessions          Session[]
 
   staffAttendance StaffAttendance[] @relation("StaffAttendanceUser")
   leaveRequests   LeaveRequest[]    @relation("LeaveRequester")
 
+  // مشرفة المسار: حساب دخول كامل مرتبط بمسار واحد (بدون @unique للسماح بعدة مشرفات لنفس المسار)
+  supervisedTrackId String?
+  supervisedTrack   Track?  @relation("TrackSupervisors", fields: [supervisedTrackId], references: [id])
+
   @@index([role, status])
+  @@index([supervisedTrackId])
 }
 
 model Session {
@@ -86,7 +90,8 @@ model Track {
   imageUrl  String? // صورة المسار (اختيارية) - تُخزَّن كـ data URL مصغّرة
   createdAt DateTime @default(now())
 
-  halaqat Halaqa[]
+  halaqat     Halaqa[]
+  supervisors User[]   @relation("TrackSupervisors")
 }
 
 // ============ البرامج (سجل الإنجازات) ============
@@ -121,8 +126,8 @@ model Halaqa {
   isActive     Boolean         @default(true)
   teacherId    String?         @unique
   teacher      User?           @relation("TeacherHalaqa", fields: [teacherId], references: [id])
-  supervisorId String?
-  supervisor   User?           @relation("SupervisorHalaqat", fields: [supervisorId], references: [id])
+  supervisorName String? // اسم مشرفة الحلقة (نص حر، بدون حساب دخول)
+  days           String[]      @default([]) // أيام انعقاد الحلقة: SUN/MON/TUE/WED/THU/FRI/SAT
   trackId      String?
   track        Track?          @relation(fields: [trackId], references: [id])
   createdAt    DateTime        @default(now())
@@ -131,7 +136,6 @@ model Halaqa {
   students       Student[]
   attendanceLogs AttendanceLog[]
 
-  @@index([supervisorId])
   @@index([trackId])
 }
 
@@ -294,4 +298,21 @@ model AuditLog {
   @@index([createdAt])
   @@index([actorId])
   @@index([targetType, targetId])
+}
+
+// ============ قوالب الشهادات ============
+// خلفية شهادة مخصصة قابلة للرفع كل ترم، مع مواضع نصوص/صور قابلة للتخصيص
+// (إحداثيات بكسل مباشرة على كانفاس ثابت 3508×2480 - راجع src/lib/certificateRender.ts)
+
+model CertificateTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  backgroundUrl String // data URL لصورة خلفية الشهادة
+  layout        Json // مواضع كل عنصر نصي/صورة على الكانفاس
+  isActive      Boolean  @default(false)
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive])
 }

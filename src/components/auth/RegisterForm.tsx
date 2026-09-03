@@ -66,12 +66,13 @@ export function RegisterForm() {
 
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-          رقم الجوال <span className="text-slate-400 dark:text-slate-500">(اختياري)</span>
+          رقم الجوال
         </label>
         <input
           id="phone"
           name="phone"
           type="tel"
+          required
           dir="ltr"
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-right focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="05XXXXXXXX"

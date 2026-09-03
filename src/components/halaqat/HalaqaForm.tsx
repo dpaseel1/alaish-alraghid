@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { HalaqaActionState } from "@/app/actions/halaqat";
 import { HALAQA_CATEGORIES, HALAQA_CATEGORY_LABELS } from "@/lib/halaqaCategory";
+import { HALAQA_DAYS, HALAQA_DAY_LABELS } from "@/lib/halaqaDays";
 import type { HalaqaCategory } from "@/generated/prisma/client";
 
 type Option = { id: string; name: string };
@@ -10,7 +11,6 @@ type Option = { id: string; name: string };
 export function HalaqaForm({
   action,
   teachers,
-  supervisors,
   tracks,
   isAdmin,
   initial,
@@ -20,7 +20,6 @@ export function HalaqaForm({
     formData: FormData
   ) => Promise<HalaqaActionState>;
   teachers: Option[];
-  supervisors: Option[];
   tracks: Option[];
   isAdmin: boolean;
   initial?: {
@@ -28,8 +27,9 @@ export function HalaqaForm({
     time: string;
     category?: HalaqaCategory | null;
     teacherId: string | null;
-    supervisorId: string | null;
+    supervisorName?: string | null;
     trackId?: string | null;
+    days?: string[];
   };
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -66,6 +66,28 @@ export function HalaqaForm({
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           placeholder="مثال: بعد صلاة العصر"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          أيام الحلقة
+        </label>
+        <div className="flex flex-wrap gap-3">
+          {HALAQA_DAYS.map((d) => (
+            <label
+              key={d}
+              className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                name="days"
+                value={d}
+                defaultChecked={initial?.days?.includes(d)}
+              />
+              {HALAQA_DAY_LABELS[d]}
+            </label>
+          ))}
+        </div>
       </div>
 
       <div>
@@ -107,43 +129,46 @@ export function HalaqaForm({
         </select>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-          المسار
-        </label>
-        <select
-          name="trackId"
-          defaultValue={initial?.trackId ?? ""}
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
-        >
-          <option value="">بدون مسار حاليًا</option>
-          {tracks.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {isAdmin && (
+      {isAdmin ? (
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-            المشرفة
+            المسار
           </label>
           <select
-            name="supervisorId"
-            defaultValue={initial?.supervisorId ?? ""}
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            name="trackId"
+            defaultValue={initial?.trackId ?? ""}
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           >
-            <option value="">بدون تعيين حاليًا</option>
-            {supervisors.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
+            <option value="">بدون مسار حاليًا</option>
+            {tracks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
               </option>
             ))}
           </select>
         </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+            المسار
+          </label>
+          <p className="text-sm text-slate-500 dark:text-slate-400 px-4 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-900">
+            سيُنشأ ضمن مسارك الحالي
+          </p>
+        </div>
       )}
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          مشرفة الحلقة
+        </label>
+        <input
+          name="supervisorName"
+          defaultValue={initial?.supervisorName ?? ""}
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+          placeholder="اسم مشرفة الحلقة (اختياري)"
+        />
+      </div>
 
       <button
         type="submit"

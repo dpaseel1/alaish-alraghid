@@ -24,11 +24,14 @@ const STATUS_LABELS: Record<string, string> = {
 export default async function SupervisorsPage() {
   const user = await requireRole("ADMIN");
 
-  const supervisors = await db.user.findMany({
-    where: { role: "SUPERVISOR" },
-    include: { supervisedHalaqat: { select: { id: true, name: true } } },
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-  });
+  const [supervisors, tracks] = await Promise.all([
+    db.user.findMany({
+      where: { role: "SUPERVISOR" },
+      include: { supervisedTrack: { select: { id: true, name: true } } },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    }),
+    db.track.findMany({ select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -41,7 +44,7 @@ export default async function SupervisorsPage() {
 
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
         <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">إضافة مشرفة جديدة</h2>
-        <CreateSupervisorForm />
+        <CreateSupervisorForm tracks={tracks} />
       </div>
 
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
@@ -54,7 +57,7 @@ export default async function SupervisorsPage() {
               <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-5 py-3 font-medium">الاسم</th>
                 <th className="px-5 py-3 font-medium">الجوال</th>
-                <th className="px-5 py-3 font-medium">عدد الحلقات المُشرَف عليها</th>
+                <th className="px-5 py-3 font-medium">المسار</th>
                 <th className="px-5 py-3 font-medium">الحالة</th>
                 <th className="px-5 py-3 font-medium">إجراءات</th>
               </tr>
@@ -71,8 +74,12 @@ export default async function SupervisorsPage() {
                 <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                   <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.phone ?? "—"}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
-                    {s.supervisedHalaqat.length}
+                  <td className="px-5 py-3">
+                    {s.supervisedTrack ? (
+                      <span className="text-slate-600 dark:text-slate-300">{s.supervisedTrack.name}</span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">لم يُحدَّد بعد</span>
+                    )}
                   </td>
                   <td className="px-5 py-3">
                     <span

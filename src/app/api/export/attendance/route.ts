@@ -13,13 +13,15 @@ export async function GET(request: Request) {
   });
   if (!scope.ok) return new Response("لا تملكين صلاحية الوصول لهذه البيانات", { status: 403 });
 
-  const rows = await buildAttendanceRows(scope.halaqaWhere, scope.fromDate, scope.toDate);
-  const sheets = [{ name: "الحضور والغياب", rows }];
+  const onlyAbsent = searchParams.get("onlyAbsent") === "1";
+  const rows = await buildAttendanceRows(scope.halaqaWhere, scope.fromDate, scope.toDate, onlyAbsent);
+  const fileName = onlyAbsent ? "الغائبات" : "الحضور والغياب";
+  const sheets = [{ name: fileName, rows }];
 
   if (searchParams.get("format") === "json") {
     return Response.json({ sheets });
   }
 
   const buffer = rowsToXlsxBuffer(sheets);
-  return xlsxResponse(buffer, "الحضور والغياب");
+  return xlsxResponse(buffer, fileName);
 }

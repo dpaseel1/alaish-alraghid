@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { normalizeDigits } from "@/lib/numbers";
 
-// رقم الهوية الوطنية أو الإقامة: أرقام فقط، بين 9 و12 رقمًا (يغطي معظم الحالات)
+// رقم الهوية الوطنية أو الإقامة: أرقام فقط، بين 6 و15 رقمًا (يغطي معظم الحالات)
 // يُطبَّق تطبيع الأرقام العربية إلى إنجليزية هنا أيضًا كطبقة حماية إضافية على مستوى الخادم
 // (بالإضافة إلى التطبيع اللحظي في الواجهة عبر NumeralNormalizer)
 export const nationalIdSchema = z.preprocess(
@@ -9,12 +9,18 @@ export const nationalIdSchema = z.preprocess(
   z
     .string()
     .trim()
-    .regex(/^\d{9,12}$/, "رقم الهوية/الإقامة يجب أن يتكون من أرقام فقط (9 إلى 12 رقمًا)")
+    .regex(/^\d{6,15}$/, "رقم الهوية/الإقامة يجب أن يتكون من أرقام فقط (6 إلى 15 رقمًا)")
 );
 
 export const passwordSchema = z
   .string()
   .min(8, "كلمة المرور يجب ألا تقل عن 8 أحرف");
+
+export const phoneSchema = z
+  .string()
+  .trim()
+  .min(8, "الرجاء إدخال رقم جوال صحيح")
+  .max(20, "رقم الجوال طويل جدًا");
 
 // الاسم الرباعي (تسمية فقط، بدون تحقق صارم من عدد الكلمات)
 export const nameSchema = z
@@ -116,7 +122,7 @@ export const registerSchema = z
     nationalId: nationalIdSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
-    phone: z.string().trim().optional().or(z.literal("")),
+    phone: phoneSchema,
     ...requiredProfileFields,
   })
   .refine((data) => data.password === data.confirmPassword, {

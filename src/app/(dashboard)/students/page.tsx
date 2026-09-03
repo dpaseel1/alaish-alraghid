@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
-import { updateStudentAction, deleteStudentAction } from "@/app/actions/students";
+import { updateStudentAction, deleteStudentAction, reactivateStudentAction } from "@/app/actions/students";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
+import { ImportStudentsForm } from "@/components/students/ImportStudentsForm";
 import { StudentRow } from "@/components/students/StudentRow";
 import { DailyDataForm } from "@/components/students/DailyDataForm";
 import { ExamGradesCard } from "@/components/students/ExamGradesCard";
@@ -12,17 +14,43 @@ import { ExportButton } from "@/components/export/ExportButton";
 export default async function StudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ halaqaId?: string }>;
+  searchParams: Promise<{ halaqaId?: string; archived?: string }>;
 }) {
   const user = await requireUser();
-  const { halaqaId } = await searchParams;
+  const { halaqaId, archived } = await searchParams;
+  const isArchiveView = archived === "1";
+
+  const ArchiveTabs = (
+    <div className="flex items-center gap-2 print:hidden">
+      <Link
+        href={halaqaId ? `/students?archived=0&halaqaId=${halaqaId}` : "/students?archived=0"}
+        className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+          !isArchiveView
+            ? "bg-brand text-white"
+            : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+        }`}
+      >
+        نشطات
+      </Link>
+      <Link
+        href={halaqaId ? `/students?archived=1&halaqaId=${halaqaId}` : "/students?archived=1"}
+        className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+          isArchiveView
+            ? "bg-brand text-white"
+            : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+        }`}
+      >
+        مؤرشفات
+      </Link>
+    </div>
+  );
 
   if (user.role === "TEACHER") {
     const halaqa = await db.halaqa.findUnique({
       where: { teacherId: user.id },
       include: {
         students: {
-          where: { isActive: true },
+          where: { isActive: !isArchiveView },
           orderBy: { name: "asc" },
           include: { examGrades: { orderBy: { examDate: "desc" }, take: 1 } },
         },
@@ -70,39 +98,50 @@ export default async function StudentsPage({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">بيانات اليوم</h2>
-          <DailyDataForm
-            students={halaqa.students}
-            weekDays={weekDays}
-            weekAttendance={weekAttendance}
-            alreadySubmitted={todayLog?.dataSubmitted ?? false}
-          />
-        </div>
+        {!isArchiveView && (
+          <>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">بيانات اليوم</h2>
+              <DailyDataForm
+                students={halaqa.students}
+                weekDays={weekDays}
+                weekAttendance={weekAttendance}
+                alreadySubmitted={todayLog?.dataSubmitted ?? false}
+              />
+            </div>
 
-        <ExamGradesCard
-          students={halaqa.students.map((s) => ({
-            id: s.id,
-            name: s.name,
-            latestGrade: s.examGrades[0]
-              ? {
-                  quota: s.examGrades[0].quota,
-                  grade: s.examGrades[0].grade,
-                  maxGrade: s.examGrades[0].maxGrade,
-                }
-              : null,
-          }))}
-        />
+            <ExamGradesCard
+              students={halaqa.students.map((s) => ({
+                id: s.id,
+                name: s.name,
+                latestGrade: s.examGrades[0]
+                  ? {
+                      quota: s.examGrades[0].quota,
+                      grade: s.examGrades[0].grade,
+                      maxGrade: s.examGrades[0].maxGrade,
+                    }
+                  : null,
+              }))}
+            />
+          </>
+        )}
 
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">إضافة طالبة جديدة</h2>
-          <AddStudentForm halaqaId={halaqa.id} />
-        </div>
+        {ArchiveTabs}
+
+        {!isArchiveView && (
+          <>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">إضافة طالبة جديدة</h2>
+              <AddStudentForm halaqaId={halaqa.id} />
+            </div>
+            <ImportStudentsForm halaqaId={halaqa.id} />
+          </>
+        )}
 
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">
-              كل الطالبات ({halaqa.students.length})
+              {isArchiveView ? "الطالبات المؤرشفات" : "كل الطالبات"} ({halaqa.students.length})
             </h2>
             <ExportButton href={`/api/export/students?halaqaId=${halaqa.id}`} label="تصدير Excel" />
           </div>
@@ -121,7 +160,7 @@ export default async function StudentsPage({
                 {halaqa.students.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
-                      لا توجد طالبات مضافات بعد
+                      {isArchiveView ? "لا توجد طالبات مؤرشفات" : "لا توجد طالبات مضافات بعد"}
                     </td>
                   </tr>
                 )}
@@ -133,6 +172,8 @@ export default async function StudentsPage({
                     canRevealNationalId={false}
                     updateAction={updateStudentAction.bind(null, s.id)}
                     deleteAction={deleteStudentAction.bind(null, s.id)}
+                    isArchived={isArchiveView}
+                    reactivateAction={reactivateStudentAction.bind(null, s.id)}
                   />
                 ))}
               </tbody>
@@ -147,7 +188,7 @@ export default async function StudentsPage({
   const halaqat = await db.halaqa.findMany({
     where: {
       isActive: true,
-      ...(user.role === "SUPERVISOR" ? { supervisorId: user.id } : {}),
+      ...(user.role === "SUPERVISOR" ? { trackId: user.supervisedTrackId ?? "__no_track__" } : {}),
     },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
@@ -157,9 +198,9 @@ export default async function StudentsPage({
     ? await db.halaqa.findFirst({
         where: {
           id: halaqaId,
-          ...(user.role === "SUPERVISOR" ? { supervisorId: user.id } : {}),
+          ...(user.role === "SUPERVISOR" ? { trackId: user.supervisedTrackId ?? "__no_track__" } : {}),
         },
-        include: { students: { where: { isActive: true }, orderBy: { name: "asc" } } },
+        include: { students: { where: { isActive: !isArchiveView }, orderBy: { name: "asc" } } },
       })
     : null;
 
@@ -175,6 +216,8 @@ export default async function StudentsPage({
         <HalaqaSelect halaqat={halaqat} selectedId={halaqaId} />
       </div>
 
+      {ArchiveTabs}
+
       {!selectedHalaqa && (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-slate-400 dark:text-slate-500">
           اختاري حلقة من القائمة أعلاه لعرض طالباتها
@@ -183,17 +226,22 @@ export default async function StudentsPage({
 
       {selectedHalaqa && (
         <>
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">
-              إضافة طالبة إلى {selectedHalaqa.name}
-            </h2>
-            <AddStudentForm halaqaId={selectedHalaqa.id} />
-          </div>
+          {!isArchiveView && (
+            <>
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+                <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-4">
+                  إضافة طالبة إلى {selectedHalaqa.name}
+                </h2>
+                <AddStudentForm halaqaId={selectedHalaqa.id} />
+              </div>
+              <ImportStudentsForm halaqaId={selectedHalaqa.id} />
+            </>
+          )}
 
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
             <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
               <h2 className="font-semibold text-slate-800 dark:text-slate-100">
-                طالبات {selectedHalaqa.name} ({selectedHalaqa.students.length})
+                {isArchiveView ? "طالبات مؤرشفات من" : "طالبات"} {selectedHalaqa.name} ({selectedHalaqa.students.length})
               </h2>
               <ExportButton href={`/api/export/students?halaqaId=${selectedHalaqa.id}`} label="تصدير Excel" />
             </div>
@@ -213,7 +261,7 @@ export default async function StudentsPage({
                   {selectedHalaqa.students.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
-                        لا توجد طالبات مضافات بعد
+                        {isArchiveView ? "لا توجد طالبات مؤرشفات" : "لا توجد طالبات مضافات بعد"}
                       </td>
                     </tr>
                   )}
@@ -225,6 +273,8 @@ export default async function StudentsPage({
                       canRevealNationalId
                       updateAction={updateStudentAction.bind(null, s.id)}
                       deleteAction={deleteStudentAction.bind(null, s.id)}
+                      isArchived={isArchiveView}
+                      reactivateAction={reactivateStudentAction.bind(null, s.id)}
                     />
                   ))}
                 </tbody>

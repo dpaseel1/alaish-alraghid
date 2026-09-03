@@ -25,7 +25,8 @@ export async function resolveExportScope(
   let restrictedId: string | undefined;
 
   if (user.role === "SUPERVISOR") {
-    halaqaWhere.supervisorId = user.id;
+    if (!user.supervisedTrackId) return { ok: false };
+    halaqaWhere.trackId = user.supervisedTrackId;
   } else if (user.role === "TEACHER") {
     const halaqa = await db.halaqa.findUnique({ where: { teacherId: user.id } });
     if (!halaqa) return { ok: false };
@@ -85,7 +86,12 @@ export async function buildStudentsRows(halaqaWhere: HalaqaWhere) {
   return rows;
 }
 
-export async function buildAttendanceRows(halaqaWhere: HalaqaWhere, fromDate: Date, toDate: Date) {
+export async function buildAttendanceRows(
+  halaqaWhere: HalaqaWhere,
+  fromDate: Date,
+  toDate: Date,
+  onlyAbsent = false
+) {
   const records = await db.studentAttendance.findMany({
     where: {
       student: { isActive: true },
@@ -93,6 +99,7 @@ export async function buildAttendanceRows(halaqaWhere: HalaqaWhere, fromDate: Da
         date: { gte: fromDate, lte: toDate },
         halaqa: halaqaWhere,
       },
+      ...(onlyAbsent ? { present: false } : {}),
     },
     include: {
       student: { select: { name: true } },
@@ -138,6 +145,23 @@ export function rowsToXlsxBuffer(sheets: { name: string; rows: Record<string, un
     const ws = XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, ws, sheet.name.slice(0, 31));
   }
+  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+}
+
+export const STUDENT_IMPORT_HEADERS = [
+  "الاسم",
+  "الجنسية",
+  "رقم الهوية/الإقامة",
+  "العمر",
+  "المؤهل الدراسي",
+  "مقر الإقامة",
+  "مقدار الحفظ",
+] as const;
+
+export function buildStudentImportTemplateBuffer(): Buffer {
+  const ws = XLSX.utils.aoa_to_sheet([[...STUDENT_IMPORT_HEADERS]]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "قالب استيراد الطالبات");
   return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }
 

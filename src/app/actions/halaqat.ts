@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { HALAQA_CATEGORIES } from "@/lib/halaqaCategory";
+import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import type { HalaqaCategory } from "@/generated/prisma/client";
 
 const halaqaSchema = z.object({
@@ -16,8 +17,9 @@ const halaqaSchema = z.object({
     message: "الرجاء اختيار تصنيف الحلقة",
   }),
   teacherId: z.string().optional().nullable(),
-  supervisorId: z.string().optional().nullable(),
+  supervisorName: z.string().trim().max(100).optional().nullable(),
   trackId: z.string().optional().nullable(),
+  days: z.array(z.enum(HALAQA_DAYS)).default([]),
 });
 
 export type HalaqaActionState = { error?: string; success?: string };
@@ -33,18 +35,27 @@ export async function createHalaqaAction(
     time: formData.get("time"),
     category: formData.get("category"),
     teacherId: formData.get("teacherId") || null,
-    supervisorId: formData.get("supervisorId") || null,
+    supervisorName: formData.get("supervisorName") || null,
     trackId: formData.get("trackId") || null,
+    days: formData.getAll("days"),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
-  const { name, time, category, teacherId, trackId } = parsed.data;
-  // المشرفة تُنشئ حلقات تحت إشرافها تلقائيًا، المديرة تختار المشرفة
-  const supervisorId =
-    user.role === "SUPERVISOR" ? user.id : parsed.data.supervisorId || null;
+  const { name, time, category, teacherId, supervisorName, days } = parsed.data;
+
+  // المشرفة تُنشئ حلقات ضمن مسارها فقط (يُفرض من الجلسة، وليس من الفورم)، والمديرة تختار المسار
+  let trackId: string | null;
+  if (user.role === "SUPERVISOR") {
+    if (!user.supervisedTrackId) {
+      return { error: "حسابك غير مرتبط بمسار بعد. يرجى التواصل مع المديرة" };
+    }
+    trackId = user.supervisedTrackId;
+  } else {
+    trackId = parsed.data.trackId || null;
+  }
 
   if (teacherId) {
     const existing = await db.halaqa.findUnique({ where: { teacherId } });
@@ -54,7 +65,7 @@ export async function createHalaqaAction(
   }
 
   const halaqa = await db.halaqa.create({
-    data: { name, time, category, teacherId: teacherId || null, supervisorId, trackId: trackId || null },
+    data: { name, time, category, teacherId: teacherId || null, supervisorName: supervisorName || null, trackId, days },
   });
 
   await logAudit({
@@ -83,8 +94,9 @@ export async function updateHalaqaAction(
     time: formData.get("time"),
     category: formData.get("category"),
     teacherId: formData.get("teacherId") || null,
-    supervisorId: formData.get("supervisorId") || null,
+    supervisorName: formData.get("supervisorName") || null,
     trackId: formData.get("trackId") || null,
+    days: formData.getAll("days"),
   });
 
   if (!parsed.success) {
@@ -93,11 +105,11 @@ export async function updateHalaqaAction(
 
   const halaqa = await db.halaqa.findUnique({ where: { id: halaqaId } });
   if (!halaqa) return { error: "الحلقة غير موجودة" };
-  if (user.role === "SUPERVISOR" && halaqa.supervisorId !== user.id) {
+  if (user.role === "SUPERVISOR" && halaqa.trackId !== user.supervisedTrackId) {
     return { error: "لا تملكين صلاحية تعديل هذه الحلقة" };
   }
 
-  const { name, time, category, teacherId, trackId } = parsed.data;
+  const { name, time, category, teacherId, supervisorName, days } = parsed.data;
 
   if (teacherId) {
     const existing = await db.halaqa.findUnique({ where: { teacherId } });
@@ -106,12 +118,11 @@ export async function updateHalaqaAction(
     }
   }
 
-  const supervisorId =
-    user.role === "SUPERVISOR" ? user.id : parsed.data.supervisorId || null;
+  const trackId = user.role === "SUPERVISOR" ? user.supervisedTrackId : parsed.data.trackId || null;
 
   await db.halaqa.update({
     where: { id: halaqaId },
-    data: { name, time, category, teacherId: teacherId || null, supervisorId, trackId: trackId || null },
+    data: { name, time, category, teacherId: teacherId || null, supervisorName: supervisorName || null, trackId, days },
   });
 
   await logAudit({
@@ -133,7 +144,7 @@ export async function toggleHalaqaActiveAction(halaqaId: string) {
   const user = await requireRole("ADMIN", "SUPERVISOR");
   const halaqa = await db.halaqa.findUnique({ where: { id: halaqaId } });
   if (!halaqa) return;
-  if (user.role === "SUPERVISOR" && halaqa.supervisorId !== user.id) return;
+  if (user.role === "SUPERVISOR" && halaqa.trackId !== user.supervisedTrackId) return;
 
   await db.halaqa.update({
     where: { id: halaqaId },
@@ -160,7 +171,7 @@ export async function deleteHalaqaAction(
   const user = await requireRole("ADMIN", "SUPERVISOR");
   const halaqa = await db.halaqa.findUnique({ where: { id: halaqaId } });
   if (!halaqa) return;
-  if (user.role === "SUPERVISOR" && halaqa.supervisorId !== user.id) {
+  if (user.role === "SUPERVISOR" && halaqa.trackId !== user.supervisedTrackId) {
     return { error: "لا تملكين صلاحية حذف هذه الحلقة" };
   }
 
@@ -172,7 +183,7 @@ export async function deleteHalaqaAction(
   if (studentsCount > 0 || attendanceCount > 0) {
     return {
       error:
-        "لا يمكن حذف الحلقة لوجود طالبات أو سجلات حضور مرتبطة بها. يمكنك تعطيل الحلقة بدلًا من ذلك من صفحة تعديلها.",
+        "لا يمكن حذف الحلقة لوجود طالبات أو سجلات حضور مرتبطة بها. يمكنك أرشفة الحلقة بدلًا من ذلك.",
     };
   }
 

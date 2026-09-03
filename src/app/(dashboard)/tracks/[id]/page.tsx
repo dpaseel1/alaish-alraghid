@@ -19,23 +19,36 @@ export default async function TrackDetailPage({
 
   if (!isUnassigned && !track) notFound();
 
-  const halaqaWhere = {
-    trackId: isUnassigned ? null : id,
-    ...(user.role === "SUPERVISOR" ? { supervisorId: user.id } : {}),
-  };
+  if (user.role === "SUPERVISOR" && (isUnassigned || id !== user.supervisedTrackId)) {
+    return (
+      <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-6 text-amber-700 dark:text-amber-400">
+        لا تملكين صلاحية الوصول إلى هذا المسار.
+      </div>
+    );
+  }
 
-  const halaqat = await db.halaqa.findMany({
-    where: halaqaWhere,
-    include: {
-      teacher: { select: { name: true } },
-      supervisor: { select: { name: true } },
-      students: { where: { isActive: true }, select: { memorizedPagesTotal: true } },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  const halaqaWhere = { trackId: isUnassigned ? null : id };
+
+  const [halaqat, trackSupervisors] = await Promise.all([
+    db.halaqa.findMany({
+      where: halaqaWhere,
+      include: {
+        teacher: { select: { name: true } },
+        students: { where: { isActive: true }, select: { memorizedPagesTotal: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    isUnassigned
+      ? Promise.resolve([])
+      : db.user.findMany({
+          where: { role: "SUPERVISOR", supervisedTrackId: id },
+          select: { name: true, phone: true },
+          orderBy: { name: "asc" },
+        }),
+  ]);
 
   const teachersCount = new Set(halaqat.filter((h) => h.teacherId).map((h) => h.teacherId)).size;
-  const supervisorsCount = new Set(halaqat.filter((h) => h.supervisorId).map((h) => h.supervisorId)).size;
+  const supervisorsCount = trackSupervisors.length;
   const studentsCount = halaqat.reduce((sum, h) => sum + h.students.length, 0);
   const memorizedTotal = halaqat.reduce(
     (sum, h) => sum + h.students.reduce((s, st) => s + st.memorizedPagesTotal, 0),
@@ -81,6 +94,28 @@ export default async function TrackDetailPage({
 
       <StatCard label="إجمالي الأوجه المحفوظة" value={memorizedTotal} icon={<BookIcon className="h-6 w-6" />} />
 
+      {!isUnassigned && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">مشرفات المسار</h2>
+          </div>
+          <div className="p-5">
+            {trackSupervisors.length === 0 ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500">لا توجد مشرفة مرتبطة بهذا المسار بعد</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {trackSupervisors.map((s, i) => (
+                  <li key={i} className="flex items-center justify-between">
+                    <span className="text-slate-800 dark:text-slate-100 font-medium">{s.name}</span>
+                    <span className="text-slate-500 dark:text-slate-400" dir="ltr">{s.phone ?? "—"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100">حلقات المسار</h2>
@@ -109,7 +144,7 @@ export default async function TrackDetailPage({
                 <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                   <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{h.name}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.teacher?.name ?? "—"}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.supervisor?.name ?? "—"}</td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.supervisorName ?? "—"}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.students.length}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.time}</td>
                   <td className="px-5 py-3">

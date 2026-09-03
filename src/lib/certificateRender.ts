@@ -1,32 +1,71 @@
 import { gradePercent, gradeTierLabel } from "@/lib/certificateGrading";
 
-type Box = { x: number; y: number; w: number; h: number };
+export type ImageBox = { x: number; y: number; w: number; h: number };
+export type TextBox = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  fontSize: number;
+  color: string;
+  align: "center" | "right";
+};
 
-// أبعاد قالب الشهادة الأصلي (بوحدة EMU من ملف PowerPoint المصدر)
-const SLIDE_W = 10693400;
+export type CertificateLayout = {
+  images: {
+    logoJamiyah: ImageBox;
+    logoAlaish: ImageBox;
+    stamp: ImageBox;
+    title: ImageBox;
+  };
+  texts: {
+    intro: TextBox;
+    name: TextBox;
+    quota: TextBox;
+    onCompletion: TextBox;
+    tier: TextBox;
+    percent: TextBox;
+    gradeLabel: TextBox;
+    dua: TextBox;
+    signature: TextBox;
+  };
+};
 
-// إحداثيات كل عنصر داخل القالب الأصلي، منقولة كما هي من القالب المعتمد
-const BOXES = {
-  wave: { x: -3929310, y: 3339014, w: 10692000, h: 2833380 },
-  title: { x: 4300728, y: 756000, w: 3962656, h: 1561947 },
-  intro: { x: 3060651, y: 2667705, w: 6254920, h: 538372 },
-  name: { x: 3580693, y: 3238852, w: 5286837, h: 770522 },
-  logoJamiyah: { x: 2433179, y: 172054, w: 1867550, h: 1733036 },
-  logoAlaish: { x: 8912550, y: 540170, w: 1134781, h: 996803 },
-  stamp: { x: 1505495, y: 5783266, w: 1591156, h: 1567605 },
-  quota: { x: 2049752, y: 4202847, w: 3553381, h: 504098 },
-  onCompletion: { x: 5603133, y: 4193322, w: 3021418, h: 538372 },
-  tier: { x: 4064798, y: 4684069, w: 2634404, h: 504098 },
-  percent: { x: 2049752, y: 4684069, w: 2015047, h: 504098 },
-  gradeLabel: { x: 3515389, y: 4698554, w: 5779899, h: 538372 },
-  dua: { x: 2361179, y: 5291067, w: 7543116, h: 1100347 },
-  // تم تصغير عرض هذا المربع مقارنة بالأصل لأنه كان يتجاوز حدود الشريحة
-  signature: { x: 5700000, y: 6573003, w: 4600000, h: 414370 },
-} satisfies Record<string, Box>;
+export type CertificateTemplateInput = {
+  backgroundUrl: string | null;
+  layout: CertificateLayout;
+} | null;
 
 const BLACK = "#000000";
 const GOLD = "#8B752D";
 const FONT = "XB Shafigh";
+
+// القيم الافتراضية = تحويل مباشر لإحداثيات القالب الأصلي (EMU من PowerPoint) إلى بكسل
+// على كانفاس ثابت 3508×2480 (CERTIFICATE_CANVAS_WIDTH × CERTIFICATE_CANVAS_HEIGHT)،
+// بحيث تبقى الشهادة الافتراضية مطابقة تمامًا لما كانت عليه قبل دعم القوالب المخصصة.
+export const DEFAULT_CERTIFICATE_LAYOUT: CertificateLayout = {
+  images: {
+    logoJamiyah: { x: 798.21, y: 56.44, w: 612.66, h: 568.53 },
+    logoAlaish: { x: 2923.79, y: 177.2, w: 372.27, h: 327 },
+    stamp: { x: 493.88, y: 1897.22, w: 521.98, h: 514.26 },
+    title: { x: 1410.87, y: 248.01, w: 1299.96, h: 512.4 },
+  },
+  texts: {
+    intro: { x: 1004.06, y: 875.15, w: 2051.94, h: 176.61, fontSize: 132.45, color: BLACK, align: "center" },
+    name: { x: 1174.66, y: 1062.51, w: 1734.36, h: 252.77, fontSize: 189.11, color: GOLD, align: "center" },
+    quota: { x: 672.43, y: 1378.76, w: 1165.7, h: 165.37, fontSize: 126.15, color: GOLD, align: "center" },
+    onCompletion: { x: 1838.12, y: 1375.63, w: 991.18, h: 176.61, fontSize: 132.45, color: BLACK, align: "center" },
+    tier: { x: 1333.47, y: 1536.62, w: 864.22, h: 165.37, fontSize: 126.15, color: GOLD, align: "center" },
+    percent: { x: 672.43, y: 1536.62, w: 661.04, h: 165.37, fontSize: 126.15, color: GOLD, align: "center" },
+    gradeLabel: { x: 1153.23, y: 1541.37, w: 1896.11, h: 176.61, fontSize: 132.45, color: BLACK, align: "center" },
+    dua: { x: 774.59, y: 1735.75, w: 2474.54, h: 360.97, fontSize: 132.45, color: BLACK, align: "center" },
+    signature: { x: 1869.9, y: 2156.29, w: 1509.04, h: 135.94, fontSize: 101.49, color: GOLD, align: "right" },
+  },
+};
+
+// موضع الموجة الزخرفية على الحافة اليسرى — جزء من الخلفية الافتراضية فقط
+// (القوالب المخصصة تستخدم صورة خلفية كاملة بدلًا منها، لذا ليست جزءًا من CertificateLayout القابل للتخصيص)
+const WAVE_BOX = { x: -1289.02, y: 1095.37, w: 3507.54, h: 929.5 };
 
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 function toArabicDigits(value: number | string): string {
@@ -58,22 +97,16 @@ export type CertificateData = {
 /** يرسم شهادة تقدير كاملة على أي عنصر canvas (مرئي أو خارج الشاشة)، قابل لإعادة الاستخدام لأي عدد من الطالبات */
 export async function renderCertificateToCanvas(
   canvas: HTMLCanvasElement,
-  data: CertificateData
+  data: CertificateData,
+  template?: CertificateTemplateInput
 ): Promise<void> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
   const W = canvas.width;
   const H = canvas.height;
-  const scale = W / SLIDE_W;
-  const pxPerPt = W / (SLIDE_W / 914400) / 72;
-
-  const px = (box: Box) => ({
-    x: box.x * scale,
-    y: box.y * scale,
-    w: box.w * scale,
-    h: box.h * scale,
-  });
+  const layout = template?.layout ?? DEFAULT_CERTIFICATE_LAYOUT;
+  const hasCustomBackground = !!template?.backgroundUrl;
 
   try {
     await Promise.all([
@@ -84,54 +117,47 @@ export async function renderCertificateToCanvas(
     // نتابع حتى لو فشل التحميل المسبق، المتصفح سيستخدم خطًا بديلًا
   }
 
-  const [wave, title, logoJamiyah, logoAlaish, stamp] = await Promise.all([
-    loadImage("/certificate/bg-wave.png"),
+  const [background, wave, title, logoJamiyah, logoAlaish, stamp] = await Promise.all([
+    hasCustomBackground ? loadImage(template!.backgroundUrl!) : Promise.resolve(null),
+    hasCustomBackground ? Promise.resolve(null) : loadImage("/certificate/bg-wave.png"),
     loadImage("/certificate/title-shokr.png"),
     loadImage("/certificate/logo-jamiyah.png"),
     loadImage("/certificate/logo-alaish.png"),
     loadImage("/certificate/stamp.png"),
   ]);
 
-  // خلفية بيضاء
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, W, H);
-
-  // الموجة الزخرفية على الحافة اليسرى (مستديرة -90 درجة كما بالقالب الأصلي)
-  {
-    const b = BOXES.wave;
-    const cx = (b.x + b.w / 2) * scale;
-    const cy = (b.y + b.h / 2) * scale;
-    const w = b.w * scale;
-    const h = b.h * scale;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate((-90 * Math.PI) / 180);
-    ctx.drawImage(wave, -w / 2, -h / 2, w, h);
-    ctx.restore();
+  if (background) {
+    ctx.drawImage(background, 0, 0, W, H);
+  } else {
+    // خلفية بيضاء + الموجة الزخرفية على الحافة اليسرى (مستديرة -90 درجة كما بالقالب الأصلي)
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H);
+    if (wave) {
+      const cx = WAVE_BOX.x + WAVE_BOX.w / 2;
+      const cy = WAVE_BOX.y + WAVE_BOX.h / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((-90 * Math.PI) / 180);
+      ctx.drawImage(wave, -WAVE_BOX.w / 2, -WAVE_BOX.h / 2, WAVE_BOX.w, WAVE_BOX.h);
+      ctx.restore();
+    }
   }
 
-  // الشعارات وعنوان "شكر وتقدير"
-  const drawBoxImage = (img: HTMLImageElement, box: Box) => {
-    const b = px(box);
-    ctx.drawImage(img, b.x, b.y, b.w, b.h);
+  // الشعارات وعنوان "شكر وتقدير" — تُرسم إلا إن كان عرض/ارتفاع المربع صفرًا (إخفاء متعمَّد من القالب المخصص)
+  const drawBoxImage = (img: HTMLImageElement, box: ImageBox) => {
+    if (box.w <= 0 || box.h <= 0) return;
+    ctx.drawImage(img, box.x, box.y, box.w, box.h);
   };
-  drawBoxImage(title, BOXES.title);
-  drawBoxImage(logoJamiyah, BOXES.logoJamiyah);
-  drawBoxImage(logoAlaish, BOXES.logoAlaish);
-  drawBoxImage(stamp, BOXES.stamp);
+  drawBoxImage(title, layout.images.title);
+  drawBoxImage(logoJamiyah, layout.images.logoJamiyah);
+  drawBoxImage(logoAlaish, layout.images.logoAlaish);
+  drawBoxImage(stamp, layout.images.stamp);
 
   // نص بحجم يتقلّص تلقائيًا حتى يلائم عرض المربع (يحاكي خاصية autofit في PowerPoint)
-  const drawAutoFitText = (
-    text: string,
-    box: Box,
-    basePt: number,
-    color: string,
-    align: "center" | "right" = "center"
-  ) => {
-    const b = px(box);
-    let fontPx = basePt * pxPerPt;
-    const minPx = 14 * pxPerPt;
-    const maxWidth = b.w * 0.98;
+  const drawAutoFitText = (text: string, box: TextBox) => {
+    let fontPx = box.fontSize;
+    const minPx = Math.max(16, box.fontSize * 0.35);
+    const maxWidth = box.w * 0.98;
     ctx.direction = "rtl";
     ctx.textBaseline = "alphabetic";
     while (fontPx > minPx) {
@@ -140,25 +166,24 @@ export async function renderCertificateToCanvas(
       fontPx -= 1;
     }
     ctx.font = `${fontPx}px "${FONT}"`;
-    ctx.fillStyle = color;
-    const y = b.y + b.h * 0.78;
-    if (align === "center") {
+    ctx.fillStyle = box.color;
+    const y = box.y + box.h * 0.78;
+    if (box.align === "center") {
       ctx.textAlign = "center";
-      ctx.fillText(text, b.x + b.w / 2, y);
+      ctx.fillText(text, box.x + box.w / 2, y);
     } else {
       ctx.textAlign = "right";
-      ctx.fillText(text, b.x + b.w, y);
+      ctx.fillText(text, box.x + box.w, y);
     }
   };
 
   // نص متعدد الأسطر (يُستخدم لجملة الدعاء الطويلة)
-  const drawWrappedText = (text: string, box: Box, basePt: number, color: string) => {
-    const b = px(box);
-    const fontPx = basePt * pxPerPt;
+  const drawWrappedText = (text: string, box: TextBox) => {
+    const fontPx = box.fontSize;
     ctx.direction = "rtl";
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = color;
+    ctx.fillStyle = box.color;
     ctx.font = `${fontPx}px "${FONT}"`;
 
     const words = text.trim().split(/\s+/);
@@ -166,7 +191,7 @@ export async function renderCertificateToCanvas(
     let current = "";
     for (const word of words) {
       const attempt = current ? `${current} ${word}` : word;
-      if (ctx.measureText(attempt).width > b.w && current) {
+      if (ctx.measureText(attempt).width > box.w && current) {
         lines.push(current);
         current = word;
       } else {
@@ -177,9 +202,9 @@ export async function renderCertificateToCanvas(
 
     const lineHeight = fontPx * 1.45;
     const totalHeight = lineHeight * lines.length;
-    let y = b.y + b.h / 2 - totalHeight / 2 + fontPx * 0.85;
+    let y = box.y + box.h / 2 - totalHeight / 2 + fontPx * 0.85;
     for (const line of lines) {
-      ctx.fillText(line, b.x + b.w / 2, y);
+      ctx.fillText(line, box.x + box.w / 2, y);
       y += lineHeight;
     }
   };
@@ -188,20 +213,18 @@ export async function renderCertificateToCanvas(
   const tier = gradeTierLabel(percent);
   const percentText = `${toArabicDigits(percent)}٪`;
 
-  drawAutoFitText("يسر مقرأة العيـش الرَّغِيـد أن تهنئ الطالبة: ", BOXES.intro, 31.79, BLACK);
-  drawAutoFitText(data.studentName, BOXES.name, 45.39, GOLD);
-  drawAutoFitText("على إتمامها حفظ", BOXES.onCompletion, 31.79, BLACK);
-  drawAutoFitText(data.quota, BOXES.quota, 30.28, GOLD);
-  drawAutoFitText("وحصولها علىٰ تقدير          بنسبة", BOXES.gradeLabel, 31.79, BLACK);
-  drawAutoFitText(tier, BOXES.tier, 30.28, GOLD);
-  drawAutoFitText(percentText, BOXES.percent, 30.28, GOLD);
+  drawAutoFitText("يسر مقرأة العيـش الرَّغِيـد أن تهنئ الطالبة: ", layout.texts.intro);
+  drawAutoFitText(data.studentName, layout.texts.name);
+  drawAutoFitText("على إتمامها حفظ", layout.texts.onCompletion);
+  drawAutoFitText(data.quota, layout.texts.quota);
+  drawAutoFitText("وحصولها علىٰ تقدير          بنسبة", layout.texts.gradeLabel);
+  drawAutoFitText(tier, layout.texts.tier);
+  drawAutoFitText(percentText, layout.texts.percent);
   drawWrappedText(
     "سائلين الله لها التوفيق والسّداد وأن ينفعها ويرفعها بهذا الكتاب العظيم ويرزقها سعادة الدارين",
-    BOXES.dua,
-    31.79,
-    BLACK
+    layout.texts.dua
   );
-  drawAutoFitText("إدارة مقرأة العيـش الرَّغِيـد", BOXES.signature, 24.36, GOLD, "right");
+  drawAutoFitText("إدارة مقرأة العيـش الرَّغِيـد", layout.texts.signature);
 
   // إطار أسود خارجي
   ctx.strokeStyle = "#000000";

@@ -1,10 +1,11 @@
 import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhWeekDays } from "@/lib/timezone";
+import { riyadhWeekDays, riyadhToday } from "@/lib/timezone";
 import { ROLE_LABELS } from "@/components/layout/nav-items";
 import { StaffWeeklyGrid } from "@/components/attendance/StaffWeeklyGrid";
 import { LeaveRequestForm } from "@/components/attendance/LeaveRequestForm";
 import { LeaveRequestsTable } from "@/components/attendance/LeaveRequestsTable";
+import { ExportButton } from "@/components/export/ExportButton";
 import type { StaffAttendanceStatus } from "@/generated/prisma/client";
 
 const WEEKDAY_LABELS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
@@ -37,13 +38,28 @@ function toIso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function AttendancePage() {
+export default async function AttendancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   const user = await requireUser();
   const isStaff = user.role === "TEACHER" || user.role === "SUPERVISOR";
   const isAdmin = isAdminRole(user.role);
+  const canExportStudents = isAdmin || user.role === "SUPERVISOR";
+  const { from, to } = await searchParams;
 
   const weekDayDates = riyadhWeekDays();
   const weekDays = weekDayDates.map((d, i) => ({ iso: toIso(d), label: WEEKDAY_LABELS[i] }));
+
+  const exportDefaultTo = riyadhToday();
+  const exportDefaultFrom = riyadhToday();
+  exportDefaultFrom.setDate(exportDefaultFrom.getDate() - 30);
+  const exportFrom = from || toIso(exportDefaultFrom);
+  const exportTo = to || toIso(exportDefaultTo);
+  const exportQuery = new URLSearchParams({ from: exportFrom, to: exportTo }).toString();
+  const thisWeekFrom = weekDays[0]?.iso ?? toIso(riyadhToday());
+  const thisWeekTo = weekDays[weekDays.length - 1]?.iso ?? toIso(riyadhToday());
 
   const [myWeekAttendance, myLeaveRequests, pendingRequests, weeklyStaffSummary] = await Promise.all([
     isStaff
@@ -58,12 +74,12 @@ export default async function AttendancePage() {
           take: 20,
         })
       : Promise.resolve([]),
-    isAdmin || user.role === "SUPERVISOR"
+    (isAdmin || user.role === "SUPERVISOR") && !(user.role === "SUPERVISOR" && !user.supervisedTrackId)
       ? db.leaveRequest.findMany({
           where: {
             status: "PENDING",
             ...(user.role === "SUPERVISOR"
-              ? { user: { role: "TEACHER", teacherHalaqa: { supervisorId: user.id } } }
+              ? { user: { role: "TEACHER", teacherHalaqa: { trackId: user.supervisedTrackId } } }
               : {}),
           },
           include: { user: true },
@@ -153,6 +169,57 @@ export default async function AttendancePage() {
             </div>
           </div>
         </>
+      )}
+
+      {canExportStudents && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">تصدير حضور الطالبات</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+            حدّدي مدى التاريخ لتصدير سجل حضور وغياب الطالبات، أو الغائبات فقط
+          </p>
+          <form
+            method="get"
+            className="flex flex-wrap items-end gap-4 mb-4"
+          >
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">من تاريخ</label>
+              <input
+                type="date"
+                name="from"
+                defaultValue={exportFrom}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">إلى تاريخ</label>
+              <input
+                type="date"
+                name="to"
+                defaultValue={exportTo}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand text-white text-sm font-medium px-5 py-2 hover:bg-brand-dark transition"
+            >
+              تصفية
+            </button>
+            <a
+              href={`/attendance?from=${thisWeekFrom}&to=${thisWeekTo}`}
+              className="text-sm text-brand hover:underline px-2 py-2"
+            >
+              هذا الأسبوع
+            </a>
+          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButton href={`/api/export/attendance?${exportQuery}`} label="تصدير الحضور الكامل" emphasize />
+            <ExportButton
+              href={`/api/export/attendance?${exportQuery}&onlyAbsent=1`}
+              label="تصدير الغائبات فقط"
+            />
+          </div>
+        </div>
       )}
 
       {(isAdmin || user.role === "SUPERVISOR") && (

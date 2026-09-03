@@ -17,7 +17,7 @@ export default async function ReportsPage({
   const user = await requireRole("ADMIN", "SUPERVISOR");
   const params = await searchParams;
 
-  const halaqaScope = user.role === "SUPERVISOR" ? { supervisorId: user.id } : {};
+  const halaqaScope = user.role === "SUPERVISOR" ? { trackId: user.supervisedTrackId ?? "__no_track__" } : {};
 
   const defaultTo = riyadhToday();
   const defaultFrom = riyadhToday();

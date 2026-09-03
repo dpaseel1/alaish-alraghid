@@ -31,7 +31,7 @@ export default async function TeachersPage() {
     where: {
       role: "TEACHER",
       ...(user.role === "SUPERVISOR"
-        ? { teacherHalaqa: { supervisorId: user.id } }
+        ? { teacherHalaqa: { trackId: user.supervisedTrackId ?? "__no_track__" } }
         : {}),
     },
     include: { teacherHalaqa: { select: { name: true } } },
@@ -115,7 +115,7 @@ export default async function TeachersPage() {
 
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="font-semibold text-slate-800 dark:text-slate-100">كل المعلمات</h2>
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100">كل المعلمات ({others.length})</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

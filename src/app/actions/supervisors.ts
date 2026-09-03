@@ -14,6 +14,7 @@ import {
   nameSchema,
   nationalIdSchema,
   passwordSchema,
+  phoneSchema,
   requiredProfileFields,
 } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
@@ -24,6 +25,8 @@ const createSchema = z.object({
   name: nameSchema,
   nationalId: nationalIdSchema,
   password: passwordSchema,
+  phone: phoneSchema,
+  trackId: z.string().min(1, "الرجاء اختيار المسار"),
   ...requiredProfileFields,
 });
 
@@ -37,6 +40,8 @@ export async function createSupervisorAction(
     name: formData.get("name"),
     nationalId: formData.get("nationalId"),
     password: formData.get("password"),
+    phone: formData.get("phone"),
+    trackId: formData.get("trackId"),
     nationality: formData.get("nationality"),
     age: formData.get("age"),
     educationLevel: formData.get("educationLevel"),
@@ -53,6 +58,8 @@ export async function createSupervisorAction(
     name,
     nationalId,
     password,
+    phone,
+    trackId,
     nationality,
     age,
     educationLevel,
@@ -74,6 +81,8 @@ export async function createSupervisorAction(
       passwordHash: await hashPassword(password),
       role: "SUPERVISOR",
       status: "ACTIVE",
+      phone,
+      supervisedTrackId: trackId,
       nationality,
       age,
       educationLevel,

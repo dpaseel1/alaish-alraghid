@@ -24,7 +24,7 @@ export default async function StatisticsPage() {
 
   const halaqaScope: Record<string, unknown> = { isActive: true };
   if (user.role === "SUPERVISOR") {
-    halaqaScope.supervisorId = user.id;
+    halaqaScope.trackId = user.supervisedTrackId ?? "__no_track__";
   } else if (user.role === "TEACHER") {
     const own = await db.halaqa.findUnique({ where: { teacherId: user.id } });
     if (!own) {

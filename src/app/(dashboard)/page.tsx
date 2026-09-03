@@ -18,35 +18,35 @@ export default async function HomePage() {
 
   return (
     <AdminOrSupervisorHome
-      supervisorId={user.role === "SUPERVISOR" ? user.id : undefined}
+      trackId={user.role === "SUPERVISOR" ? (user.supervisedTrackId ?? undefined) : undefined}
       isAdmin={isAdminRole(user.role)}
     />
   );
 }
 
 async function AdminOrSupervisorHome({
-  supervisorId,
+  trackId,
   isAdmin,
 }: {
-  supervisorId?: string;
+  trackId?: string;
   isAdmin: boolean;
 }) {
-  const halaqaWhere = supervisorId ? { supervisorId } : {};
+  const halaqaWhere = trackId ? { trackId } : {};
   const onlineSince = new Date(Date.now() - ONLINE_THRESHOLD_MINUTES * 60 * 1000);
 
-  const [activeHalaqatCount, totalStudents, onlineTeachers, tracks, halaqat] =
+  const [activeHalaqatCount, totalStudents, onlineTeachers, tracks, halaqat, supervisorGroups] =
     await Promise.all([
       db.halaqa.count({ where: { ...halaqaWhere, isActive: true } }),
       db.student.count({
-        where: { isActive: true, halaqa: supervisorId ? { supervisorId } : undefined },
+        where: { isActive: true, halaqa: trackId ? { trackId } : undefined },
       }),
       db.user.count({
         where: {
           role: "TEACHER",
           status: "ACTIVE",
           lastSeenAt: { gte: onlineSince },
-          ...(supervisorId
-            ? { teacherHalaqa: { supervisorId } }
+          ...(trackId
+            ? { teacherHalaqa: { trackId } }
             : {}),
         },
       }),
@@ -57,11 +57,20 @@ async function AdminOrSupervisorHome({
           id: true,
           trackId: true,
           teacherId: true,
-          supervisorId: true,
           students: { where: { isActive: true }, select: { memorizedPagesTotal: true } },
         },
       }),
+      db.user.groupBy({
+        by: ["supervisedTrackId"],
+        where: { role: "SUPERVISOR", status: "ACTIVE", supervisedTrackId: { not: null } },
+        _count: { _all: true },
+      }),
     ]);
+
+  const supervisorsCountByTrack = new Map<string, number>();
+  for (const g of supervisorGroups) {
+    if (g.supervisedTrackId) supervisorsCountByTrack.set(g.supervisedTrackId, g._count._all);
+  }
 
   type TrackStats = {
     id: string | null;
@@ -89,7 +98,6 @@ async function AdminOrSupervisorHome({
   }
 
   const teacherSets = new Map<string | null, Set<string>>();
-  const supervisorSets = new Map<string | null, Set<string>>();
 
   for (const h of halaqat) {
     const key = h.trackId ?? null;
@@ -114,15 +122,11 @@ async function AdminOrSupervisorHome({
       if (!teacherSets.has(key)) teacherSets.set(key, new Set());
       teacherSets.get(key)!.add(h.teacherId);
     }
-    if (h.supervisorId) {
-      if (!supervisorSets.has(key)) supervisorSets.set(key, new Set());
-      supervisorSets.get(key)!.add(h.supervisorId);
-    }
   }
 
   for (const [key, stats] of statsByTrack) {
     stats.teachersCount = teacherSets.get(key)?.size ?? 0;
-    stats.supervisorsCount = supervisorSets.get(key)?.size ?? 0;
+    stats.supervisorsCount = key ? supervisorsCountByTrack.get(key) ?? 0 : 0;
   }
 
   const orderedStats = [
@@ -224,7 +228,6 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
   const halaqa = await db.halaqa.findUnique({
     where: { teacherId },
     include: {
-      supervisor: { select: { name: true } },
       students: { where: { isActive: true }, orderBy: { name: "asc" } },
     },
   });
@@ -256,7 +259,7 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
       <div>
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{halaqa.name}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          {halaqa.time} · المشرفة: {halaqa.supervisor?.name ?? "—"}
+          {halaqa.time} · المشرفة: {halaqa.supervisorName ?? "—"}
         </p>
       </div>
 
