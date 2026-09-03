@@ -79,6 +79,7 @@ export async function createHalaqaAction(
 
   revalidatePath("/halaqat");
   revalidatePath("/");
+  revalidatePath("/students");
   redirect(`/halaqat/${halaqa.id}`);
 }
 
@@ -137,6 +138,7 @@ export async function updateHalaqaAction(
   revalidatePath("/halaqat");
   revalidatePath(`/halaqat/${halaqaId}`);
   revalidatePath("/");
+  revalidatePath("/students");
   redirect(`/halaqat/${halaqaId}`);
 }
 
