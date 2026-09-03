@@ -40,6 +40,23 @@ export async function rejectTeacherAction(userId: string) {
   revalidatePath("/teachers");
 }
 
+export async function unrejectTeacherAction(userId: string) {
+  const actor = await requireRole("ADMIN", "SUPERVISOR");
+  const teacher = await db.user.update({
+    where: { id: userId },
+    data: { status: "ACTIVE" },
+  });
+  await logAudit({
+    actor,
+    action: "TEACHER_UNREJECT",
+    targetType: "User",
+    targetId: teacher.id,
+    targetLabel: teacher.name,
+    message: "ألغت رفض طلب تسجيل المعلمة ووافقت عليها",
+  });
+  revalidatePath("/teachers");
+}
+
 export async function suspendTeacherAction(userId: string) {
   const actor = await requireRole("ADMIN", "SUPERVISOR");
   const teacher = await db.user.update({

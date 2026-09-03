@@ -5,6 +5,7 @@ import {
   rejectTeacherAction,
   suspendTeacherAction,
   reactivateTeacherAction,
+  unrejectTeacherAction,
 } from "@/app/actions/teachers";
 import { RevealNationalId } from "@/components/teachers/RevealNationalId";
 import { TeacherProfileButton } from "@/components/teachers/TeacherProfileButton";
@@ -180,6 +181,13 @@ export default async function TeachersPage() {
                         <form action={reactivateTeacherAction.bind(null, t.id)}>
                           <button className="text-xs text-brand hover:underline">
                             إعادة التفعيل
+                          </button>
+                        </form>
+                      )}
+                      {t.status === "REJECTED" && (
+                        <form action={unrejectTeacherAction.bind(null, t.id)}>
+                          <button className="text-xs text-brand hover:underline">
+                            إلغاء الرفض
                           </button>
                         </form>
                       )}

@@ -88,6 +88,47 @@ export async function updateTrackAction(
   redirect(`/tracks/${trackId}`);
 }
 
+export async function updateTrackSupervisorsAction(
+  trackId: string,
+  _prev: TrackActionState | undefined,
+  formData: FormData
+): Promise<TrackActionState> {
+  const actor = await requireRole("ADMIN");
+
+  const track = await db.track.findUnique({ where: { id: trackId } });
+  if (!track) return { error: "المسار غير موجود" };
+
+  const selectedIds = formData.getAll("supervisorIds").map(String).filter(Boolean);
+
+  await db.$transaction([
+    db.user.updateMany({
+      where: { role: "SUPERVISOR", supervisedTrackId: trackId, id: { notIn: selectedIds } },
+      data: { supervisedTrackId: null },
+    }),
+    ...(selectedIds.length > 0
+      ? [
+          db.user.updateMany({
+            where: { id: { in: selectedIds }, role: "SUPERVISOR" },
+            data: { supervisedTrackId: trackId },
+          }),
+        ]
+      : []),
+  ]);
+
+  await logAudit({
+    actor,
+    action: "TRACK_SUPERVISORS_UPDATE",
+    targetType: "Track",
+    targetId: trackId,
+    targetLabel: track.name,
+    message: `حدّثت قائمة مشرفات المسار "${track.name}"`,
+  });
+
+  revalidatePath(`/tracks/${trackId}`);
+  revalidatePath(`/tracks/${trackId}/edit`);
+  return { success: "تم تحديث مشرفات المسار" };
+}
+
 export async function deleteTrackAction(trackId: string) {
   const actor = await requireRole("ADMIN");
 
