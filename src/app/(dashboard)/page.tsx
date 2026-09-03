@@ -31,26 +31,32 @@ async function AdminOrSupervisorHome({
   trackId?: string;
   isAdmin: boolean;
 }) {
-  const halaqaWhere = trackId ? { trackId } : {};
+  // المشرفة ترى مسارها فقط (حتى لو لم يُعيَّن لها مسار بعد، لا تُعرض لها بيانات المسارات الأخرى). المديرة/الإدارية ترى كل المسارات
+  const halaqaWhere = isAdmin ? (trackId ? { trackId } : {}) : { trackId: trackId ?? "__no_track__" };
   const onlineSince = new Date(Date.now() - ONLINE_THRESHOLD_MINUTES * 60 * 1000);
 
   const [activeHalaqatCount, totalStudents, onlineTeachers, tracks, halaqat, supervisorGroups] =
     await Promise.all([
       db.halaqa.count({ where: { ...halaqaWhere, isActive: true } }),
       db.student.count({
-        where: { isActive: true, halaqa: trackId ? { trackId } : undefined },
+        where: { isActive: true, halaqa: halaqaWhere },
       }),
       db.user.count({
         where: {
           role: "TEACHER",
           status: "ACTIVE",
           lastSeenAt: { gte: onlineSince },
-          ...(trackId
-            ? { teacherHalaqa: { trackId } }
-            : {}),
+          ...(isAdmin
+            ? trackId
+              ? { teacherHalaqa: { trackId } }
+              : {}
+            : { teacherHalaqa: { trackId: trackId ?? "__no_track__" } }),
         },
       }),
-      db.track.findMany({ orderBy: { createdAt: "asc" } }),
+      db.track.findMany({
+        where: isAdmin ? {} : { id: trackId ?? "__no_track__" },
+        orderBy: { createdAt: "asc" },
+      }),
       db.halaqa.findMany({
         where: halaqaWhere,
         select: {
@@ -170,7 +176,9 @@ async function AdminOrSupervisorHome({
 
         {orderedStats.length === 0 && (
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-slate-400 dark:text-slate-500">
-            لا توجد مسارات أو حلقات مضافة بعد
+            {!isAdmin && !trackId
+              ? "لم يُعيَّن لحسابك مسار بعد. تواصلي مع المديرة لربط حسابك بمسار"
+              : "لا توجد مسارات أو حلقات مضافة بعد"}
           </div>
         )}
 
