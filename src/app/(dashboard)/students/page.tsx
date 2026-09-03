@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
 import { HALAQA_DAYS, HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
 import { updateStudentAction, deleteStudentAction, reactivateStudentAction } from "@/app/actions/students";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
@@ -66,11 +66,13 @@ export default async function StudentsPage({
       );
     }
 
-    // إن حدّدت المديرة أيام انعقاد للحلقة، تُقتصر شبكة التحضير على تلك الأيام فقط ضمن الأسبوع الدراسي الحالي (الأحد-الخميس)
+    // إن حدّدت المديرة أيام انعقاد للحلقة (وقد تشمل الجمعة/السبت)، تُقتصر شبكة التحضير على تلك الأيام تحديدًا.
+    // إن لم تُحدَّد أيام، يُستخدم الأسبوع الدراسي الافتراضي (الأحد-الخميس) كما كان سابقًا
     const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : null;
-    const weekDayDates = riyadhWeekDays().filter(
-      (d) => !scheduledDays || scheduledDays.has(HALAQA_DAYS[d.getUTCDay()])
-    );
+    const fullWeek = riyadhFullWeekDays();
+    const weekDayDates = scheduledDays
+      ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
+      : fullWeek.slice(0, 5);
     const weekDays = weekDayDates.map((d) => ({
       iso: d.toISOString().slice(0, 10),
       label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],

@@ -20,11 +20,16 @@ export function riyadhToday(): Date {
 
 /** أيام الأسبوع الدراسي الحالي (الأحد إلى الخميس) بتوقيت الرياض، كمصفوفة من 5 تواريخ UTC-منتصف-ليل */
 export function riyadhWeekDays(): Date[] {
+  return riyadhFullWeekDays().slice(0, 5);
+}
+
+/** كل أيام الأسبوع الحالي (الأحد إلى السبت) بتوقيت الرياض، كمصفوفة من 7 تواريخ UTC-منتصف-ليل. تُستخدم للحلقات التي تنعقد أيام الجمعة/السبت */
+export function riyadhFullWeekDays(): Date[] {
   const today = riyadhToday();
   const weekday = today.getUTCDay(); // الأحد = 0 ... السبت = 6
   const sunday = new Date(today);
   sunday.setUTCDate(sunday.getUTCDate() - weekday);
-  return Array.from({ length: 5 }, (_, i) => {
+  return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(sunday);
     d.setUTCDate(d.getUTCDate() + i);
     return d;

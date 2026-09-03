@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
+import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { PrintButton } from "@/components/reports/PrintButton";
 import { TrophyIcon } from "@/components/icons";
 import type { Prisma } from "@/generated/prisma/client";
@@ -34,7 +35,7 @@ export default async function HonorBoardPage({
 
   const halaqaId = user.role === "TEACHER" ? undefined : params.halaqaId || undefined;
 
-  const weekDays = riyadhWeekDays();
+  const fullWeek = riyadhFullWeekDays();
 
   const [halaqatForSelect, students, weekStudents] = await Promise.all([
     user.role === "TEACHER"
@@ -68,9 +69,9 @@ export default async function HonorBoardPage({
       select: {
         id: true,
         name: true,
-        halaqa: { select: { name: true } },
+        halaqa: { select: { name: true, days: true } },
         attendanceRecords: {
-          where: { present: true, attendanceLog: { date: { in: weekDays } } },
+          where: { present: true, attendanceLog: { date: { in: fullWeek } } },
           select: { attendanceLog: { select: { date: true } } },
         },
       },
@@ -80,6 +81,11 @@ export default async function HonorBoardPage({
 
   const weekStars = weekStudents
     .map((s) => {
+      // أيام انعقاد الحلقة المتوقعة هذا الأسبوع: أيامها المحددة (وقد تشمل الجمعة/السبت)، أو الأسبوع الدراسي الافتراضي (الأحد-الخميس) إن لم تُحدَّد أيام
+      const scheduledDays = s.halaqa.days.length > 0 ? new Set(s.halaqa.days) : null;
+      const expectedDays = scheduledDays
+        ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
+        : fullWeek.slice(0, 5);
       const presentDays = new Set(
         s.attendanceRecords.map((a) => a.attendanceLog.date.getTime())
       );
@@ -87,7 +93,7 @@ export default async function HonorBoardPage({
         id: s.id,
         name: s.name,
         halaqaName: s.halaqa.name,
-        isStar: presentDays.size === weekDays.length,
+        isStar: expectedDays.length > 0 && expectedDays.every((d) => presentDays.has(d.getTime())),
       };
     })
     .filter((s) => s.isStar)
@@ -124,7 +130,7 @@ export default async function HonorBoardPage({
         <div className="px-5 py-4 border-b border-emerald-200 dark:border-emerald-900/50 flex items-center gap-2">
           <TrophyIcon className="h-6 w-6 text-emerald-700 dark:text-emerald-400" />
           <h2 className="font-semibold text-emerald-800 dark:text-emerald-400">
-            نجمات الأسبوع ({weekStars.length}) — الأحد إلى الخميس
+            نجمات الأسبوع ({weekStars.length}) — حسب أيام انعقاد كل حلقة
           </h2>
         </div>
         <div className="overflow-x-auto">

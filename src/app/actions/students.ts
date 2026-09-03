@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
-import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
 import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
@@ -435,7 +435,7 @@ export async function revealStudentNationalIdAction(
   }
 }
 
-/** تبديل حضور/غياب طالبة ليوم واحد ضمن الأسبوع الدراسي الحالي (الأحد-الخميس)، ومقيّد بأيام انعقاد الحلقة إن حُدِّدت */
+/** تبديل حضور/غياب طالبة ليوم واحد ضمن الأسبوع الحالي، مقيّد بأيام انعقاد الحلقة المحددة (وقد تشمل الجمعة/السبت) إن حُدِّدت، وإلا فالأسبوع الدراسي الافتراضي (الأحد-الخميس) */
 export async function toggleStudentAttendanceAction(
   studentId: string,
   dateIso: string,
@@ -450,12 +450,14 @@ export async function toggleStudentAttendanceAction(
   if (!student || student.halaqa.teacherId !== user.id) return;
 
   const date = new Date(dateIso);
-  const validDates = riyadhWeekDays().map((d) => d.getTime());
-  if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج الأسبوع الحالي
-
-  if (student.halaqa.days.length > 0 && !student.halaqa.days.includes(HALAQA_DAYS[date.getUTCDay()])) {
-    return; // منع تسجيل حضور ليوم لا تنعقد فيه الحلقة
-  }
+  // الأيام المسموح بها: أيام انعقاد الحلقة المحددة (وقد تشمل الجمعة/السبت) ضمن الأسبوع الحالي، أو الأسبوع الدراسي الافتراضي (الأحد-الخميس) إن لم تُحدَّد أيام
+  const scheduledDays = student.halaqa.days.length > 0 ? new Set(student.halaqa.days) : null;
+  const fullWeek = riyadhFullWeekDays();
+  const validDates = (scheduledDays
+    ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
+    : fullWeek.slice(0, 5)
+  ).map((d) => d.getTime());
+  if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج الأيام المسموحة
 
   const attendanceLog = await db.attendanceLog.upsert({
     where: { halaqaId_date: { halaqaId: student.halaqaId, date } },
