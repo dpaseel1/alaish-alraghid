@@ -5,7 +5,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireRole, isAdminRole } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
-import { riyadhWeekDays } from "@/lib/timezone";
+import { riyadhFullWeekDays } from "@/lib/timezone";
+import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import type { StaffAttendanceStatus, Role } from "@/generated/prisma/client";
 
 export type LeaveRequestActionState = { error?: string; success?: string };
@@ -18,14 +19,26 @@ const STAFF_ATTENDANCE_LABELS: Record<StaffAttendanceStatus, string> = {
   LEAVE: "إجازة",
 };
 
-/** تُنشئ/تحدّث سجل حضور المستخدمة نفسها ليوم ضمن الأسبوع الحالي فقط */
+/** تُنشئ/تحدّث سجل حضور المستخدمة نفسها ليوم ضمن أيام انعقاد حلقتها هذا الأسبوع (المعلمة)، أو الأحد-الخميس افتراضيًا (المشرفة، أو معلمة بلا أيام محددة) */
 export async function toggleStaffAttendanceAction(dateIso: string, status: StaffAttendanceStatus) {
   const user = await requireRole("TEACHER", "SUPERVISOR");
   if (!STAFF_ATTENDANCE_STATUSES.includes(status)) return;
 
   const date = new Date(dateIso);
-  const validDates = riyadhWeekDays().map((d) => d.getTime());
-  if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج الأسبوع الحالي
+  const fullWeek = riyadhFullWeekDays();
+
+  let validDates: number[];
+  if (user.role === "TEACHER") {
+    const halaqa = await db.halaqa.findUnique({ where: { teacherId: user.id }, select: { days: true } });
+    const scheduledDays = halaqa && halaqa.days.length > 0 ? new Set(halaqa.days) : null;
+    validDates = (scheduledDays ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()])) : fullWeek.slice(0, 5)).map(
+      (d) => d.getTime()
+    );
+  } else {
+    validDates = fullWeek.slice(0, 5).map((d) => d.getTime());
+  }
+
+  if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج أيام حلقتها هذا الأسبوع
 
   await db.staffAttendance.upsert({
     where: { userId_date: { userId: user.id, date } },

@@ -1,6 +1,7 @@
 import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhWeekDays, riyadhToday } from "@/lib/timezone";
+import { riyadhWeekDays, riyadhFullWeekDays, riyadhToday } from "@/lib/timezone";
+import { HALAQA_DAYS, HALAQA_DAY_LABELS } from "@/lib/halaqaDays";
 import { ROLE_LABELS } from "@/components/layout/nav-items";
 import { StaffWeeklyGrid } from "@/components/attendance/StaffWeeklyGrid";
 import { LeaveRequestForm } from "@/components/attendance/LeaveRequestForm";
@@ -52,6 +53,20 @@ export default async function AttendancePage({
   const weekDayDates = riyadhWeekDays();
   const weekDays = weekDayDates.map((d, i) => ({ iso: toIso(d), label: WEEKDAY_LABELS[i] }));
 
+  // حضور المعلمة الشخصي مقيّد بأيام انعقاد حلقتها (وقد تشمل الجمعة/السبت)؛ المشرفة أو المعلمة بلا أيام محددة تبقى على الأحد-الخميس
+  const myHalaqa =
+    user.role === "TEACHER"
+      ? await db.halaqa.findUnique({ where: { teacherId: user.id }, select: { days: true } })
+      : null;
+  const myScheduledDays = myHalaqa && myHalaqa.days.length > 0 ? new Set(myHalaqa.days) : null;
+  const fullWeek = riyadhFullWeekDays();
+  const myWeekDayDates = myScheduledDays
+    ? fullWeek.filter((d) => myScheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
+    : weekDayDates;
+  const myWeekDays = myScheduledDays
+    ? myWeekDayDates.map((d) => ({ iso: toIso(d), label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()]] }))
+    : weekDays;
+
   const exportDefaultTo = riyadhToday();
   const exportDefaultFrom = riyadhToday();
   exportDefaultFrom.setDate(exportDefaultFrom.getDate() - 30);
@@ -64,7 +79,7 @@ export default async function AttendancePage({
   const [myWeekAttendance, myLeaveRequests, pendingRequests, weeklyStaffSummary] = await Promise.all([
     isStaff
       ? db.staffAttendance.findMany({
-          where: { userId: user.id, date: { in: weekDayDates } },
+          where: { userId: user.id, date: { in: myWeekDayDates } },
         })
       : Promise.resolve([]),
     isStaff
@@ -114,9 +129,11 @@ export default async function AttendancePage({
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
             <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">حضوري هذا الأسبوع</h2>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-              سجّلي حضورك يوميًا، ويمكنك تعديل السجل خلال الأسبوع الحالي
+              {myScheduledDays
+                ? "سجّلي حضورك في أيام انعقاد حلقتك، ويمكنك تعديل السجل خلال الأسبوع الحالي"
+                : "سجّلي حضورك يوميًا، ويمكنك تعديل السجل خلال الأسبوع الحالي"}
             </p>
-            <StaffWeeklyGrid weekDays={weekDays} attendance={attendanceMap} />
+            <StaffWeeklyGrid weekDays={myWeekDays} attendance={attendanceMap} />
           </div>
 
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
