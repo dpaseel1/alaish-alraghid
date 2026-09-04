@@ -249,13 +249,24 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
     );
   }
 
-  const [attendanceDays, pagesAgg] = await Promise.all([
-    db.attendanceLog.count({ where: { halaqaId: halaqa.id, teacherPresent: true, hasRecitation: false } }),
+  // الساعة التطوعية تُحسب فقط ليوم سجّلت فيه المعلمة حضورها الشخصي (حاضرة) + سجّلت بيانات الحلقة لنفس اليوم، ولم يُسجَّل فيه سرد
+  const [submittedLogs, presentAttendance, pagesAgg] = await Promise.all([
+    db.attendanceLog.findMany({
+      where: { halaqaId: halaqa.id, dataSubmitted: true, hasRecitation: false },
+      select: { date: true },
+    }),
+    db.staffAttendance.findMany({
+      where: { userId: teacherId, status: "PRESENT" },
+      select: { date: true },
+    }),
     db.memorizationRecord.aggregate({
       _sum: { pagesMemorized: true },
       where: { student: { halaqaId: halaqa.id } },
     }),
   ]);
+
+  const presentDates = new Set(presentAttendance.map((a) => a.date.getTime()));
+  const attendanceDays = submittedLogs.filter((l) => presentDates.has(l.date.getTime())).length;
 
   const volunteerHours = attendanceDays * 1;
   const pagesRead = pagesAgg._sum.pagesMemorized ?? 0;
