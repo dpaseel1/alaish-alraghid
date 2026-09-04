@@ -84,11 +84,14 @@ export default async function StudentsPage({
     });
 
     const weekAttendance: Record<string, Record<string, boolean>> = {};
+    const weekRecitation: Record<string, Record<string, boolean>> = {};
     for (const log of weekLogs) {
       const dateIso = log.date.toISOString().slice(0, 10);
       for (const a of log.studentAttendance) {
         weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
         weekAttendance[a.studentId][dateIso] = a.present;
+        weekRecitation[a.studentId] = weekRecitation[a.studentId] ?? {};
+        weekRecitation[a.studentId][dateIso] = a.recited;
       }
     }
 
@@ -119,6 +122,8 @@ export default async function StudentsPage({
                 students={halaqa.students}
                 weekDays={weekDays}
                 weekAttendance={weekAttendance}
+                weekRecitation={weekRecitation}
+                recitationEnabled={halaqa.recitationEnabled}
                 alreadySubmitted={todayLog?.dataSubmitted ?? false}
               />
             </div>
@@ -165,6 +170,9 @@ export default async function StudentsPage({
                   <th className="px-5 py-3 font-medium">الاسم</th>
                   <th className="px-5 py-3 font-medium">الجنسية</th>
                   <th className="px-5 py-3 font-medium">إجمالي الأوجه المحفوظة</th>
+                  {halaqa.recitationEnabled && (
+                    <th className="px-5 py-3 font-medium">عدد أوجه المراجعة</th>
+                  )}
                   <th className="px-5 py-3 font-medium">النصاب الحالي</th>
                   <th className="px-5 py-3 font-medium">إجراءات</th>
                 </tr>
@@ -172,7 +180,7 @@ export default async function StudentsPage({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {halaqa.students.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                    <td colSpan={halaqa.recitationEnabled ? 6 : 5} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                       {isArchiveView ? "لا توجد طالبات مؤرشفات" : "لا توجد طالبات مضافات بعد"}
                     </td>
                   </tr>
@@ -183,6 +191,7 @@ export default async function StudentsPage({
                     student={s}
                     canManage
                     canRevealNationalId={false}
+                    showReviewedPages={halaqa.recitationEnabled}
                     updateAction={updateStudentAction.bind(null, s.id)}
                     deleteAction={deleteStudentAction.bind(null, s.id)}
                     isArchived={isArchiveView}
@@ -265,6 +274,9 @@ export default async function StudentsPage({
                     <th className="px-5 py-3 font-medium">الاسم</th>
                     <th className="px-5 py-3 font-medium">الجنسية</th>
                     <th className="px-5 py-3 font-medium">إجمالي الأوجه المحفوظة</th>
+                    {selectedHalaqa.recitationEnabled && (
+                      <th className="px-5 py-3 font-medium">عدد أوجه المراجعة</th>
+                    )}
                     <th className="px-5 py-3 font-medium">النصاب الحالي</th>
                     <th className="px-5 py-3 font-medium">رقم الهوية/الإقامة</th>
                     <th className="px-5 py-3 font-medium">إجراءات</th>
@@ -273,7 +285,7 @@ export default async function StudentsPage({
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {selectedHalaqa.students.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                      <td colSpan={selectedHalaqa.recitationEnabled ? 7 : 6} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                         {isArchiveView ? "لا توجد طالبات مؤرشفات" : "لا توجد طالبات مضافات بعد"}
                       </td>
                     </tr>
@@ -284,6 +296,7 @@ export default async function StudentsPage({
                       student={s}
                       canManage
                       canRevealNationalId
+                      showReviewedPages={selectedHalaqa.recitationEnabled}
                       updateAction={updateStudentAction.bind(null, s.id)}
                       deleteAction={deleteStudentAction.bind(null, s.id)}
                       isArchived={isArchiveView}

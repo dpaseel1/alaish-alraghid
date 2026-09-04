@@ -45,6 +45,7 @@ export async function createHalaqaAction(
   }
 
   const { name, time, category, teacherId, supervisorName, days } = parsed.data;
+  const recitationEnabled = formData.get("recitationEnabled") === "on";
 
   // المشرفة تُنشئ حلقات ضمن مسارها فقط (يُفرض من الجلسة، وليس من الفورم)، والمديرة تختار المسار
   let trackId: string | null;
@@ -75,6 +76,7 @@ export async function createHalaqaAction(
       supervisorName: supervisorName || null,
       trackId,
       days,
+      recitationEnabled,
       order: (maxOrder._max.order ?? -1) + 1,
     },
   });
@@ -122,6 +124,7 @@ export async function updateHalaqaAction(
   }
 
   const { name, time, category, teacherId, supervisorName, days } = parsed.data;
+  const recitationEnabled = formData.get("recitationEnabled") === "on";
 
   if (teacherId) {
     const existing = await db.halaqa.findUnique({ where: { teacherId } });
@@ -134,7 +137,16 @@ export async function updateHalaqaAction(
 
   await db.halaqa.update({
     where: { id: halaqaId },
-    data: { name, time, category, teacherId: teacherId || null, supervisorName: supervisorName || null, trackId, days },
+    data: {
+      name,
+      time,
+      category,
+      teacherId: teacherId || null,
+      supervisorName: supervisorName || null,
+      trackId,
+      days,
+      recitationEnabled,
+    },
   });
 
   await logAudit({

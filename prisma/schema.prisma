@@ -128,6 +128,7 @@ model Halaqa {
   teacher      User?           @relation("TeacherHalaqa", fields: [teacherId], references: [id])
   supervisorName String? // اسم مشرفة الحلقة (نص حر، بدون حساب دخول)
   days           String[]      @default([]) // أيام انعقاد الحلقة: SUN/MON/TUE/WED/THU/FRI/SAT
+  recitationEnabled Boolean      @default(false) // تفعيل خانة السرد: تُظهر للمعلمة خانة سرد لكل طالبة
   order        Int             @default(0) // ترتيب العرض اليدوي، تُحرَّكه المديرة/المشرفة بالأسهم في صفحة الحلقات
   trackId      String?
   track        Track?          @relation(fields: [trackId], references: [id])
@@ -155,6 +156,7 @@ model Student {
   residence           String? // مقر الإقامة
   memorizedAmount     String? // مقدار الحفظ من القرآن الكريم (وصف عام عند التسجيل)
   memorizedPagesTotal Int      @default(0) // إجمالي عدد الأوجه المحفوظة
+  reviewedPagesTotal  Int      @default(0) // عدد أوجه المراجعة (تُجمع تلقائيًا عند تسجيل "سردت")
   currentQuota        String? // نصاب الحفظ الحالي
   notes               String?
   isActive            Boolean  @default(true)
@@ -206,6 +208,7 @@ model AttendanceLog {
   teacherPresent Boolean   @default(true)
   dataSubmitted  Boolean   @default(false)
   submittedAt    DateTime?
+  hasRecitation  Boolean   @default(false) // true إذا سردت طالبة واحدة أو أكثر هذا اليوم - يُستثنى من ساعات التطوع
   createdAt      DateTime  @default(now())
 
   studentAttendance StudentAttendance[]
@@ -221,6 +224,8 @@ model StudentAttendance {
   studentId       String
   student         Student       @relation(fields: [studentId], references: [id])
   present         Boolean       @default(true)
+  recited             Boolean @default(false) // سردت: راجعت محفوظ الأسبوع كاملًا
+  reviewPagesRecorded Int     @default(0) // لقطة عدد الأوجه المحسوبة عند تسجيل السرد (لضبط التراجع الصحيح)
 
   @@unique([attendanceLogId, studentId])
 }

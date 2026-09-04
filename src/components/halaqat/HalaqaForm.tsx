@@ -30,6 +30,7 @@ export function HalaqaForm({
     supervisorName?: string | null;
     trackId?: string | null;
     days?: string[];
+    recitationEnabled?: boolean;
   };
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -88,6 +89,20 @@ export function HalaqaForm({
             </label>
           ))}
         </div>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            name="recitationEnabled"
+            defaultChecked={initial?.recitationEnabled}
+          />
+          تفعيل خانة السرد
+        </label>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          عند التفعيل، تظهر للمعلمة خانة لكل طالبة لتسجيل سردها اليومي
+        </p>
       </div>
 
       <div>

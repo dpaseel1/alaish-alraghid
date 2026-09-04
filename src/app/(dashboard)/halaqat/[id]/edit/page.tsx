@@ -57,6 +57,7 @@ export default async function EditHalaqaPage({
             supervisorName: halaqa.supervisorName,
             trackId: halaqa.trackId,
             days: halaqa.days,
+            recitationEnabled: halaqa.recitationEnabled,
           }}
         />
       </div>

@@ -22,7 +22,8 @@ const STAFF_ATTENDANCE_LABELS: Record<StaffAttendanceStatus, string> = {
 /** تُنشئ/تحدّث سجل حضور المستخدمة نفسها ليوم ضمن أيام انعقاد حلقتها هذا الأسبوع (المعلمة)، أو الأحد-الخميس افتراضيًا (المشرفة، أو معلمة بلا أيام محددة) */
 export async function toggleStaffAttendanceAction(dateIso: string, status: StaffAttendanceStatus) {
   const user = await requireRole("TEACHER", "SUPERVISOR");
-  if (!STAFF_ATTENDANCE_STATUSES.includes(status)) return;
+  // الإجازة لا تُضبط ذاتيًا، بل تلقائيًا فقط عند موافقة المديرة/المشرفة على طلب إجازة
+  if (status === "LEAVE" || !STAFF_ATTENDANCE_STATUSES.includes(status)) return;
 
   const date = new Date(dateIso);
   const fullWeek = riyadhFullWeekDays();

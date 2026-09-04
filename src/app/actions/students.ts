@@ -495,3 +495,82 @@ export async function toggleStudentAttendanceAction(
   revalidatePath("/");
   revalidatePath("/honor-board");
 }
+
+/** تبديل تسجيل "سردت" لطالبة ليوم واحد (متاح فقط للحلقات المفعّلة لديها خانة السرد) - عند التفعيل تُحسب أوجه مراجعتها الحالية ضمن "عدد أوجه المراجعة"، وتُستثنى تلك الجلسة من ساعات تطوع المعلمة */
+export async function toggleStudentRecitationAction(studentId: string, dateIso: string) {
+  const user = await requireRole("TEACHER");
+
+  const student = await db.student.findUnique({
+    where: { id: studentId },
+    include: { halaqa: true },
+  });
+  if (!student || student.halaqa.teacherId !== user.id) return;
+  if (!student.halaqa.recitationEnabled) return;
+
+  const date = new Date(dateIso);
+  const scheduledDays = student.halaqa.days.length > 0 ? new Set(student.halaqa.days) : null;
+  const fullWeek = riyadhFullWeekDays();
+  const validDates = (scheduledDays
+    ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
+    : fullWeek.slice(0, 5)
+  ).map((d) => d.getTime());
+  if (!validDates.includes(date.getTime())) return;
+
+  const attendanceLog = await db.attendanceLog.upsert({
+    where: { halaqaId_date: { halaqaId: student.halaqaId, date } },
+    create: {
+      halaqaId: student.halaqaId,
+      date,
+      teacherPresent: true,
+      dataSubmitted: true,
+      submittedAt: new Date(),
+    },
+    update: { dataSubmitted: true, submittedAt: new Date() },
+  });
+
+  const existing = await db.studentAttendance.findUnique({
+    where: { attendanceLogId_studentId: { attendanceLogId: attendanceLog.id, studentId } },
+  });
+
+  const nextRecited = !existing?.recited;
+  const reviewPages = nextRecited ? student.memorizedPagesTotal : 0;
+  const pagesDelta = reviewPages - (existing?.reviewPagesRecorded ?? 0);
+
+  await db.studentAttendance.upsert({
+    where: { attendanceLogId_studentId: { attendanceLogId: attendanceLog.id, studentId } },
+    create: {
+      attendanceLogId: attendanceLog.id,
+      studentId,
+      recited: nextRecited,
+      reviewPagesRecorded: reviewPages,
+    },
+    update: { recited: nextRecited, reviewPagesRecorded: reviewPages },
+  });
+
+  if (pagesDelta !== 0) {
+    await db.student.update({
+      where: { id: studentId },
+      data: { reviewedPagesTotal: { increment: pagesDelta } },
+    });
+  }
+
+  const remainingRecited = await db.studentAttendance.count({
+    where: { attendanceLogId: attendanceLog.id, recited: true },
+  });
+  await db.attendanceLog.update({
+    where: { id: attendanceLog.id },
+    data: { hasRecitation: remainingRecited > 0 },
+  });
+
+  await logAudit({
+    actor: user,
+    action: "STUDENT_RECITATION_TOGGLE",
+    targetType: "Student",
+    targetId: student.id,
+    targetLabel: student.name,
+    message: `${nextRecited ? "سجّلت" : "ألغت"} سرد الطالبة ليوم ${dateIso}`,
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+}

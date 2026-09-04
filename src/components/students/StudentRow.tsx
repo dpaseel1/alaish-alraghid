@@ -12,6 +12,7 @@ type Student = {
   name: string;
   nationality: string;
   memorizedPagesTotal: number;
+  reviewedPagesTotal?: number;
   currentQuota: string | null;
   nationalIdLastFour?: string | null;
   age?: number | null;
@@ -28,6 +29,7 @@ export function StudentRow({
   halaqaName,
   canManage,
   canRevealNationalId,
+  showReviewedPages,
   updateAction,
   deleteAction,
   isArchived,
@@ -38,6 +40,7 @@ export function StudentRow({
   halaqaName?: string;
   canManage: boolean;
   canRevealNationalId?: boolean;
+  showReviewedPages?: boolean;
   updateAction: (
     prev: StudentActionState | undefined,
     formData: FormData
@@ -61,6 +64,7 @@ export function StudentRow({
     (showHalaqa ? 1 : 0) +
     1 + // الجنسية
     1 + // الأوجه المحفوظة
+    (showReviewedPages ? 1 : 0) +
     1 + // النصاب
     (canRevealNationalId ? 1 : 0) +
     (canManage ? 1 : 0);
@@ -257,6 +261,9 @@ export function StudentRow({
       )}
       <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{student.nationality}</td>
       <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{student.memorizedPagesTotal}</td>
+      {showReviewedPages && (
+        <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{student.reviewedPagesTotal ?? 0}</td>
+      )}
       <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{student.currentQuota ?? "—"}</td>
       {canRevealNationalId && (
         <td className="px-5 py-3">

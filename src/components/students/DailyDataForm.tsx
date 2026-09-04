@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import {
   submitDailyDataAction,
   toggleStudentAttendanceAction,
+  toggleStudentRecitationAction,
   type StudentActionState,
 } from "@/app/actions/students";
 
@@ -23,11 +24,15 @@ export function DailyDataForm({
   students,
   weekDays,
   weekAttendance,
+  weekRecitation,
+  recitationEnabled,
   alreadySubmitted,
 }: {
   students: Student[];
   weekDays: WeekDay[];
   weekAttendance: Record<string, Record<string, boolean>>;
+  weekRecitation?: Record<string, Record<string, boolean>>;
+  recitationEnabled?: boolean;
   alreadySubmitted: boolean;
 }) {
   const [state, formAction, pending] = useActionState(
@@ -40,6 +45,11 @@ export function DailyDataForm({
       {students.length > 0 && weekDays.length === 0 && (
         <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-4 py-3">
           لا يوجد يوم من أيام انعقاد الحلقة ضمن الأسبوع الدراسي الحالي (الأحد-الخميس)، لذا لا تظهر شبكة تحضير هذا الأسبوع.
+        </p>
+      )}
+      {students.length > 0 && weekDays.length > 0 && recitationEnabled && (
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          ✓/✕ حضور وغياب · <span className="text-violet-600 dark:text-violet-400 font-bold">س</span> سردت (راجعت كامل محفوظها هذا اليوم)
         </p>
       )}
       {students.length > 0 && weekDays.length > 0 && (
@@ -97,6 +107,23 @@ export function DailyDataForm({
                                   ✕
                                 </button>
                               </form>
+                              {recitationEnabled && (
+                                <form
+                                  action={toggleStudentRecitationAction.bind(null, s.id, day.iso)}
+                                >
+                                  <button
+                                    type="submit"
+                                    title="سردت"
+                                    className={
+                                      weekRecitation?.[s.id]?.[day.iso]
+                                        ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white text-xs font-bold"
+                                        : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 text-xs font-bold"
+                                    }
+                                  >
+                                    س
+                                  </button>
+                                </form>
+                              )}
                             </div>
                           </div>
                         );

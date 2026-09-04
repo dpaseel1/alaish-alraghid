@@ -250,7 +250,7 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
   }
 
   const [attendanceDays, pagesAgg] = await Promise.all([
-    db.attendanceLog.count({ where: { halaqaId: halaqa.id, teacherPresent: true } }),
+    db.attendanceLog.count({ where: { halaqaId: halaqa.id, teacherPresent: true, hasRecitation: false } }),
     db.memorizationRecord.aggregate({
       _sum: { pagesMemorized: true },
       where: { student: { halaqaId: halaqa.id } },
@@ -316,13 +316,16 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
                 <th className="px-5 py-3 font-medium">الاسم</th>
                 <th className="px-5 py-3 font-medium">الجنسية</th>
                 <th className="px-5 py-3 font-medium">إجمالي الأوجه المحفوظة</th>
+                {halaqa.recitationEnabled && (
+                  <th className="px-5 py-3 font-medium">عدد أوجه المراجعة</th>
+                )}
                 <th className="px-5 py-3 font-medium">النصاب الحالي</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {halaqa.students.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={halaqa.recitationEnabled ? 5 : 4} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد طالبات مضافات بعد
                   </td>
                 </tr>
@@ -332,6 +335,9 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
                   <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.nationality}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.memorizedPagesTotal}</td>
+                  {halaqa.recitationEnabled && (
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.reviewedPagesTotal}</td>
+                  )}
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.currentQuota ?? "—"}</td>
                 </tr>
               ))}
