@@ -7,6 +7,7 @@ import {
   toggleStudentRecitationAction,
   type StudentActionState,
 } from "@/app/actions/students";
+import { CheckIcon, XIcon } from "@/components/icons";
 
 type Student = {
   id: string;
@@ -49,8 +50,8 @@ export function DailyDataForm({
       )}
       {students.length > 0 && weekDays.length > 0 && recitationEnabled && (
         <p className="text-xs text-slate-400 dark:text-slate-500">
-          ✓/✕ حضور وغياب · خانة{" "}
-          <span className="text-violet-600 dark:text-violet-400 font-bold">السرد</span> ✅/❌ راجعت محفوظ الأسبوع كاملًا
+          حضور وغياب · خانة{" "}
+          <span className="text-violet-600 dark:text-violet-400 font-bold">السرد</span> راجعت محفوظ الأسبوع كاملًا
         </p>
       )}
       {students.length > 0 && weekDays.length > 0 && (
@@ -86,11 +87,11 @@ export function DailyDataForm({
                                   title="حضور"
                                   className={
                                     present === true
-                                      ? "flex h-7 w-7 items-center justify-center bg-emerald-600 text-white text-xs font-bold"
-                                      : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-xs font-bold"
+                                      ? "flex h-7 w-7 items-center justify-center bg-emerald-600 text-white"
+                                      : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600"
                                   }
                                 >
-                                  ✓
+                                  <CheckIcon className="h-4 w-4" />
                                 </button>
                               </form>
                               <form
@@ -101,11 +102,11 @@ export function DailyDataForm({
                                   title="غياب"
                                   className={
                                     present === false
-                                      ? "flex h-7 w-7 items-center justify-center bg-red-600 text-white text-xs font-bold"
-                                      : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-bold"
+                                      ? "flex h-7 w-7 items-center justify-center bg-red-600 text-white"
+                                      : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600"
                                   }
                                 >
-                                  ✕
+                                  <XIcon className="h-4 w-4" />
                                 </button>
                               </form>
                             </div>
@@ -124,11 +125,11 @@ export function DailyDataForm({
                                 title="سردت"
                                 className={
                                   weekRecitation?.[s.id]
-                                    ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white text-xs"
-                                    : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 text-xs"
+                                    ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white"
+                                    : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 hover:text-violet-600"
                                 }
                               >
-                                ✅
+                                <CheckIcon className="h-4 w-4" />
                               </button>
                             </form>
                             <form action={toggleStudentRecitationAction.bind(null, s.id, false)}>
@@ -137,11 +138,11 @@ export function DailyDataForm({
                                 title="لم تسرد"
                                 className={
                                   !weekRecitation?.[s.id]
-                                    ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white text-xs"
-                                    : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs"
+                                    ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white"
+                                    : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
                                 }
                               >
-                                ❌
+                                <XIcon className="h-4 w-4" />
                               </button>
                             </form>
                           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { toggleStaffAttendanceAction } from "@/app/actions/staffAttendance";
+import { CheckIcon, XIcon } from "@/components/icons";
 import type { StaffAttendanceStatus } from "@/generated/prisma/client";
 
 type WeekDay = { iso: string; label: string };
@@ -36,26 +37,26 @@ export function StaffWeeklyGrid({
                     <button
                       type="submit"
                       title="حاضرة"
-                      className={`flex h-7 w-7 items-center justify-center text-sm font-bold ${
+                      className={`flex h-7 w-7 items-center justify-center ${
                         current === "PRESENT"
                           ? "bg-emerald-600 text-white"
-                          : "bg-white dark:bg-slate-800 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                          : "bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600"
                       }`}
                     >
-                      ✓
+                      <CheckIcon className="h-4 w-4" />
                     </button>
                   </form>
                   <form action={toggleStaffAttendanceAction.bind(null, day.iso, "ABSENT_UNEXCUSED")}>
                     <button
                       type="submit"
                       title="غائبة"
-                      className={`flex h-7 w-7 items-center justify-center text-sm font-bold ${
+                      className={`flex h-7 w-7 items-center justify-center ${
                         IS_ABSENT(current)
                           ? "bg-red-600 text-white"
-                          : "bg-white dark:bg-slate-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                          : "bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600"
                       }`}
                     >
-                      ✗
+                      <XIcon className="h-4 w-4" />
                     </button>
                   </form>
                 </div>
