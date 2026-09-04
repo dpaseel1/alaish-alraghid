@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { riyadhToday, riyadhWeekDays } from "@/lib/timezone";
+import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { TrendChart } from "@/components/statistics/TrendChart";
 import { MemorizationChart } from "@/components/reports/MemorizationChart";
@@ -45,7 +46,7 @@ export default async function StatisticsPage() {
   const [halaqat, students, memorizationRecords, attendanceRecords, submittedTodayLogs] = await Promise.all([
     db.halaqa.findMany({
       where: halaqaScope,
-      select: { id: true, name: true, trackId: true, track: { select: { name: true } } },
+      select: { id: true, name: true, trackId: true, track: { select: { name: true } }, days: true },
       orderBy: { name: "asc" },
     }),
     db.student.findMany({
@@ -85,7 +86,12 @@ export default async function StatisticsPage() {
     : 0;
 
   const submittedTodaySet = new Set(submittedTodayLogs.map((l) => l.halaqaId));
-  const halaqatWithoutTodayData = halaqat.filter((h) => !submittedTodaySet.has(h.id)).length;
+  const todayCode = HALAQA_DAYS[today.getUTCDay()];
+  const unsubmittedHalaqatToday = halaqat.filter((h) => {
+    const scheduledDays = h.days.length > 0 ? new Set(h.days) : null;
+    const isScheduledToday = scheduledDays ? scheduledDays.has(todayCode) : today.getUTCDay() <= 4;
+    return isScheduledToday && !submittedTodaySet.has(h.id);
+  });
 
   // ===== اتجاه الأداء عبر الوقت (12 أسبوعًا) =====
   const weekBuckets: { start: Date; label: string }[] = Array.from({ length: WEEKS_COUNT }, (_, i) => {
@@ -158,8 +164,18 @@ export default async function StatisticsPage() {
         <StatCard label="الحلقات النشطة" value={halaqat.length} icon={<MosqueIcon className="h-6 w-6" />} />
         <StatCard
           label="حلقات لم تُسجّل بيانات اليوم"
-          value={halaqatWithoutTodayData}
+          value={unsubmittedHalaqatToday.length}
           icon={<LogIcon className="h-6 w-6" />}
+          detailsLabel={unsubmittedHalaqatToday.length > 0 ? "عرض الأسماء" : undefined}
+          detailsContent={
+            unsubmittedHalaqatToday.length > 0 ? (
+              <ul className="space-y-1 list-disc pr-4">
+                {unsubmittedHalaqatToday.map((h) => (
+                  <li key={h.id}>{h.name}</li>
+                ))}
+              </ul>
+            ) : undefined
+          }
         />
       </div>
 

@@ -13,7 +13,7 @@ function toDateInputValue(d: Date) {
 export default async function HonorBoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ halaqaId?: string; from?: string; to?: string; minSessions?: string }>;
+  searchParams: Promise<{ halaqaId?: string; from?: string; to?: string }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
@@ -26,8 +26,6 @@ export default async function HonorBoardPage({
   fromDate.setHours(0, 0, 0, 0);
   const toDate = params.to ? new Date(params.to) : defaultTo;
   toDate.setHours(23, 59, 59, 999);
-
-  const minSessions = Math.max(1, parseInt(params.minSessions ?? "3", 10) || 3);
 
   let halaqaWhere: Prisma.HalaqaWhereInput = {};
   if (user.role === "TEACHER") halaqaWhere = { teacherId: user.id };
@@ -111,7 +109,7 @@ export default async function HonorBoardPage({
         presentCount,
       };
     })
-    .filter((s) => s.total >= minSessions && s.presentCount === s.total)
+    .filter((s) => s.total >= 1 && s.presentCount === s.total)
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "ar"));
 
   return (
@@ -199,18 +197,6 @@ export default async function HonorBoardPage({
             name="to"
             defaultValue={toDateInputValue(toDate)}
             className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-            حد أدنى لعدد الأيام المسجّلة
-          </label>
-          <input
-            type="number"
-            name="minSessions"
-            min={1}
-            defaultValue={minSessions}
-            className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-32"
           />
         </div>
         <button
