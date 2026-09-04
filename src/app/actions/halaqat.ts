@@ -64,8 +64,19 @@ export async function createHalaqaAction(
     }
   }
 
+  const maxOrder = await db.halaqa.aggregate({ _max: { order: true } });
+
   const halaqa = await db.halaqa.create({
-    data: { name, time, category, teacherId: teacherId || null, supervisorName: supervisorName || null, trackId, days },
+    data: {
+      name,
+      time,
+      category,
+      teacherId: teacherId || null,
+      supervisorName: supervisorName || null,
+      trackId,
+      days,
+      order: (maxOrder._max.order ?? -1) + 1,
+    },
   });
 
   await logAudit({
@@ -164,6 +175,41 @@ export async function toggleHalaqaActiveAction(halaqaId: string) {
 
   revalidatePath("/halaqat");
   revalidatePath("/");
+}
+
+/** تُحرّك الحلقة خطوة للأعلى أو للأسفل ضمن ترتيب العرض، بتبديل قيمة الترتيب مع الحلقة المجاورة في نفس نطاق الرؤية (نشطة/مؤرشفة، ومسار المشرفة إن وُجد) */
+export async function moveHalaqaAction(halaqaId: string, direction: "up" | "down") {
+  const user = await requireRole("ADMIN", "SUPERVISOR");
+  const halaqa = await db.halaqa.findUnique({ where: { id: halaqaId } });
+  if (!halaqa) return;
+  if (user.role === "SUPERVISOR" && halaqa.trackId !== user.supervisedTrackId) return;
+
+  const scopeWhere = {
+    isActive: halaqa.isActive,
+    ...(user.role === "SUPERVISOR" ? { trackId: user.supervisedTrackId } : {}),
+  };
+
+  const neighbor = await db.halaqa.findFirst({
+    where: {
+      ...scopeWhere,
+      OR:
+        direction === "up"
+          ? [{ order: { lt: halaqa.order } }, { order: halaqa.order, createdAt: { lt: halaqa.createdAt } }]
+          : [{ order: { gt: halaqa.order } }, { order: halaqa.order, createdAt: { gt: halaqa.createdAt } }],
+    },
+    orderBy:
+      direction === "up" ? [{ order: "desc" }, { createdAt: "desc" }] : [{ order: "asc" }, { createdAt: "asc" }],
+  });
+  if (!neighbor) return;
+
+  await db.$transaction([
+    db.halaqa.update({ where: { id: halaqa.id }, data: { order: neighbor.order } }),
+    db.halaqa.update({ where: { id: neighbor.id }, data: { order: halaqa.order } }),
+  ]);
+
+  revalidatePath("/halaqat");
+  revalidatePath("/");
+  if (halaqa.trackId) revalidatePath(`/tracks/${halaqa.trackId}`);
 }
 
 /** حذف الحلقة نهائيًا - يُمنع إذا كان لديها طالبات أو سجلات حضور مرتبطة، لحماية بيانات الطالبات من الضياع */

@@ -6,6 +6,7 @@ import { HALAQA_CATEGORY_LABELS } from "@/lib/halaqaCategory";
 import { HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
 import { DeleteHalaqaButton } from "@/components/halaqat/DeleteHalaqaButton";
 import { ToggleHalaqaActiveButton } from "@/components/halaqat/ToggleHalaqaActiveButton";
+import { moveHalaqaAction } from "@/app/actions/halaqat";
 
 export default async function HalaqatPage({
   searchParams,
@@ -37,8 +38,10 @@ export default async function HalaqatPage({
       teacher: { select: { name: true } },
       _count: { select: { students: true } },
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
   });
+
+  const canReorder = user.role === "ADMIN" || user.role === "SUPERVISOR" || user.role === "DEVELOPER";
 
   return (
     <div className="space-y-6">
@@ -89,6 +92,7 @@ export default async function HalaqatPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
+                {canReorder && <th className="px-5 py-3 font-medium">الترتيب</th>}
                 <th className="px-5 py-3 font-medium">اسم الحلقة</th>
                 <th className="px-5 py-3 font-medium">التصنيف</th>
                 <th className="px-5 py-3 font-medium">المعلمة</th>
@@ -103,13 +107,39 @@ export default async function HalaqatPage({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {halaqat.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={canReorder ? 10 : 9} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     {isArchiveView ? "لا توجد حلقات مؤرشفة" : "لا توجد حلقات مضافة بعد"}
                   </td>
                 </tr>
               )}
-              {halaqat.map((h) => (
+              {halaqat.map((h, i) => (
                 <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                  {canReorder && (
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1">
+                        <form action={moveHalaqaAction.bind(null, h.id, "up")}>
+                          <button
+                            type="submit"
+                            disabled={i === 0}
+                            title="تحريك للأعلى"
+                            className="flex h-6 w-6 items-center justify-center rounded text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-brand disabled:opacity-30 disabled:pointer-events-none"
+                          >
+                            ▲
+                          </button>
+                        </form>
+                        <form action={moveHalaqaAction.bind(null, h.id, "down")}>
+                          <button
+                            type="submit"
+                            disabled={i === halaqat.length - 1}
+                            title="تحريك للأسفل"
+                            className="flex h-6 w-6 items-center justify-center rounded text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-brand disabled:opacity-30 disabled:pointer-events-none"
+                          >
+                            ▼
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  )}
                   <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{h.name}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
                     {h.category ? HALAQA_CATEGORY_LABELS[h.category] : "—"}

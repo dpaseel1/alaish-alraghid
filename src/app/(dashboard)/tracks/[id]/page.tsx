@@ -36,7 +36,7 @@ export default async function TrackDetailPage({
         teacher: { select: { name: true } },
         students: { where: { isActive: true }, select: { memorizedPagesTotal: true } },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     }),
     isUnassigned
       ? Promise.resolve([])
@@ -128,6 +128,7 @@ export default async function TrackDetailPage({
                 <th className="px-5 py-3 font-medium">المعلمة</th>
                 <th className="px-5 py-3 font-medium">المشرفة</th>
                 <th className="px-5 py-3 font-medium">عدد الطالبات</th>
+                <th className="px-5 py-3 font-medium">الأوجه المحفوظة</th>
                 <th className="px-5 py-3 font-medium">وقت الحلقة</th>
                 <th className="px-5 py-3 font-medium">إجراءات</th>
               </tr>
@@ -135,7 +136,7 @@ export default async function TrackDetailPage({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {halaqat.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={7} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد حلقات ضمن هذا المسار بعد
                   </td>
                 </tr>
@@ -146,6 +147,9 @@ export default async function TrackDetailPage({
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.teacher?.name ?? "—"}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.supervisorName ?? "—"}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.students.length}</td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
+                    {h.students.reduce((sum, s) => sum + s.memorizedPagesTotal, 0)}
+                  </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.time}</td>
                   <td className="px-5 py-3">
                     <Link href={`/halaqat/${h.id}`} className="text-brand hover:underline ml-3">

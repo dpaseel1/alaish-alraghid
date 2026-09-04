@@ -128,6 +128,7 @@ model Halaqa {
   teacher      User?           @relation("TeacherHalaqa", fields: [teacherId], references: [id])
   supervisorName String? // اسم مشرفة الحلقة (نص حر، بدون حساب دخول)
   days           String[]      @default([]) // أيام انعقاد الحلقة: SUN/MON/TUE/WED/THU/FRI/SAT
+  order        Int             @default(0) // ترتيب العرض اليدوي، تُحرَّكه المديرة/المشرفة بالأسهم في صفحة الحلقات
   trackId      String?
   track        Track?          @relation(fields: [trackId], references: [id])
   createdAt    DateTime        @default(now())
