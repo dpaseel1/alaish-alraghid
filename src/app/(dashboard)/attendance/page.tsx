@@ -25,13 +25,15 @@ const LEAVE_STATUS_LABELS: Record<string, string> = {
 
 const STAFF_STATUS_LABELS: Record<StaffAttendanceStatus, string> = {
   PRESENT: "حاضرة",
-  ABSENT: "غائبة",
+  ABSENT_EXCUSED: "غياب بعذر",
+  ABSENT_UNEXCUSED: "غياب بدون عذر",
   LEAVE: "إجازة",
 };
 
 const STAFF_STATUS_STYLES: Record<StaffAttendanceStatus, string> = {
   PRESENT: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400",
-  ABSENT: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400",
+  ABSENT_EXCUSED: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400",
+  ABSENT_UNEXCUSED: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400",
   LEAVE: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400",
 };
 

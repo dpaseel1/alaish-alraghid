@@ -249,7 +249,8 @@ model WeeklyRecitation {
 
 enum StaffAttendanceStatus {
   PRESENT // حاضرة
-  ABSENT // غائبة
+  ABSENT_EXCUSED // غياب بعذر
+  ABSENT_UNEXCUSED // غياب بدون عذر
   LEAVE // إجازة (تُضبط تلقائيًا عند قبول طلب إجازة)
 }
 

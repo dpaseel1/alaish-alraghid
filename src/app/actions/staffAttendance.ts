@@ -11,11 +11,17 @@ import type { StaffAttendanceStatus, Role } from "@/generated/prisma/client";
 
 export type LeaveRequestActionState = { error?: string; success?: string };
 
-const STAFF_ATTENDANCE_STATUSES: StaffAttendanceStatus[] = ["PRESENT", "ABSENT", "LEAVE"];
+const STAFF_ATTENDANCE_STATUSES: StaffAttendanceStatus[] = [
+  "PRESENT",
+  "ABSENT_EXCUSED",
+  "ABSENT_UNEXCUSED",
+  "LEAVE",
+];
 
 const STAFF_ATTENDANCE_LABELS: Record<StaffAttendanceStatus, string> = {
   PRESENT: "حاضرة",
-  ABSENT: "غائبة",
+  ABSENT_EXCUSED: "غياب بعذر",
+  ABSENT_UNEXCUSED: "غياب بدون عذر",
   LEAVE: "إجازة",
 };
 
