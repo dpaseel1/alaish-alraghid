@@ -34,7 +34,7 @@ export default async function TrackDetailPage({
       where: halaqaWhere,
       include: {
         teacher: { select: { name: true } },
-        students: { where: { isActive: true }, select: { memorizedPagesTotal: true } },
+        students: { where: { isActive: true }, select: { memorizedPagesTotal: true, reviewedPagesTotal: true } },
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     }),
@@ -52,6 +52,10 @@ export default async function TrackDetailPage({
   const studentsCount = halaqat.reduce((sum, h) => sum + h.students.length, 0);
   const memorizedTotal = halaqat.reduce(
     (sum, h) => sum + h.students.reduce((s, st) => s + st.memorizedPagesTotal, 0),
+    0
+  );
+  const reviewedTotal = halaqat.reduce(
+    (sum, h) => sum + h.students.reduce((s, st) => s + st.reviewedPagesTotal, 0),
     0
   );
 
@@ -92,7 +96,10 @@ export default async function TrackDetailPage({
         <StatCard label="عدد الطالبات" value={studentsCount} icon={<BookIcon className="h-6 w-6" />} />
       </div>
 
-      <StatCard label="إجمالي الأوجه المحفوظة" value={memorizedTotal} icon={<BookIcon className="h-6 w-6" />} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <StatCard label="إجمالي الأوجه المحفوظة" value={memorizedTotal} icon={<BookIcon className="h-6 w-6" />} />
+        <StatCard label="إجمالي أوجه المراجعة" value={reviewedTotal} icon={<BookIcon className="h-6 w-6" />} />
+      </div>
 
       {!isUnassigned && (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
@@ -129,6 +136,7 @@ export default async function TrackDetailPage({
                 <th className="px-5 py-3 font-medium">المشرفة</th>
                 <th className="px-5 py-3 font-medium">عدد الطالبات</th>
                 <th className="px-5 py-3 font-medium">الأوجه المحفوظة</th>
+                <th className="px-5 py-3 font-medium">أوجه المراجعة</th>
                 <th className="px-5 py-3 font-medium">وقت الحلقة</th>
                 <th className="px-5 py-3 font-medium">إجراءات</th>
               </tr>
@@ -136,7 +144,7 @@ export default async function TrackDetailPage({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {halaqat.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={8} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد حلقات ضمن هذا المسار بعد
                   </td>
                 </tr>
@@ -149,6 +157,9 @@ export default async function TrackDetailPage({
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.students.length}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
                     {h.students.reduce((sum, s) => sum + s.memorizedPagesTotal, 0)}
+                  </td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
+                    {h.students.reduce((sum, s) => sum + s.reviewedPagesTotal, 0)}
                   </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{h.time}</td>
                   <td className="px-5 py-3">

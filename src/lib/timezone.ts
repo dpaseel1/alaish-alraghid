@@ -35,3 +35,8 @@ export function riyadhFullWeekDays(): Date[] {
     return d;
   });
 }
+
+/** بداية الأسبوع الحالي (الأحد) بتوقيت الرياض، كتاريخ UTC-منتصف-ليل - يُستخدم كمفتاح تجميع أسبوعي (مثل خانة السرد) */
+export function riyadhWeekStart(): Date {
+  return riyadhFullWeekDays()[0];
+}

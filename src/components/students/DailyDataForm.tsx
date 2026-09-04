@@ -31,7 +31,7 @@ export function DailyDataForm({
   students: Student[];
   weekDays: WeekDay[];
   weekAttendance: Record<string, Record<string, boolean>>;
-  weekRecitation?: Record<string, Record<string, boolean>>;
+  weekRecitation?: Record<string, boolean>;
   recitationEnabled?: boolean;
   alreadySubmitted: boolean;
 }) {
@@ -49,7 +49,8 @@ export function DailyDataForm({
       )}
       {students.length > 0 && weekDays.length > 0 && recitationEnabled && (
         <p className="text-xs text-slate-400 dark:text-slate-500">
-          ✓/✕ حضور وغياب · <span className="text-violet-600 dark:text-violet-400 font-bold">س</span> سردت (راجعت كامل محفوظها هذا اليوم)
+          ✓/✕ حضور وغياب · خانة{" "}
+          <span className="text-violet-600 dark:text-violet-400 font-bold">السرد</span> ✅/❌ راجعت محفوظ الأسبوع كاملًا
         </p>
       )}
       {students.length > 0 && weekDays.length > 0 && (
@@ -107,27 +108,45 @@ export function DailyDataForm({
                                   ✕
                                 </button>
                               </form>
-                              {recitationEnabled && (
-                                <form
-                                  action={toggleStudentRecitationAction.bind(null, s.id, day.iso)}
-                                >
-                                  <button
-                                    type="submit"
-                                    title="سردت"
-                                    className={
-                                      weekRecitation?.[s.id]?.[day.iso]
-                                        ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white text-xs font-bold"
-                                        : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 text-xs font-bold"
-                                    }
-                                  >
-                                    س
-                                  </button>
-                                </form>
-                              )}
                             </div>
                           </div>
                         );
                       })}
+                      {recitationEnabled && (
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
+                            السرد
+                          </span>
+                          <div className="flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
+                            <form action={toggleStudentRecitationAction.bind(null, s.id, true)}>
+                              <button
+                                type="submit"
+                                title="سردت"
+                                className={
+                                  weekRecitation?.[s.id]
+                                    ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white text-xs"
+                                    : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 text-xs"
+                                }
+                              >
+                                ✅
+                              </button>
+                            </form>
+                            <form action={toggleStudentRecitationAction.bind(null, s.id, false)}>
+                              <button
+                                type="submit"
+                                title="لم تسرد"
+                                className={
+                                  !weekRecitation?.[s.id]
+                                    ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white text-xs"
+                                    : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs"
+                                }
+                              >
+                                ❌
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </td>
                 </tr>

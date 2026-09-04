@@ -249,10 +249,10 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
     );
   }
 
-  // الساعة التطوعية تُحسب فقط ليوم سجّلت فيه المعلمة حضورها الشخصي (حاضرة) + سجّلت بيانات الحلقة لنفس اليوم، ولم يُسجَّل فيه سرد
+  // الساعة التطوعية تُحسب فقط ليوم سجّلت فيه المعلمة حضورها الشخصي (حاضرة) + سجّلت بيانات الحلقة لنفس اليوم
   const [submittedLogs, presentAttendance, pagesAgg] = await Promise.all([
     db.attendanceLog.findMany({
-      where: { halaqaId: halaqa.id, dataSubmitted: true, hasRecitation: false },
+      where: { halaqaId: halaqa.id, dataSubmitted: true },
       select: { date: true },
     }),
     db.staffAttendance.findMany({

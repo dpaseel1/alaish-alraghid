@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
-import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays, riyadhWeekStart } from "@/lib/timezone";
 import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
@@ -496,8 +496,8 @@ export async function toggleStudentAttendanceAction(
   revalidatePath("/honor-board");
 }
 
-/** تبديل تسجيل "سردت" لطالبة ليوم واحد (متاح فقط للحلقات المفعّلة لديها خانة السرد) - عند التفعيل تُحسب أوجه مراجعتها الحالية ضمن "عدد أوجه المراجعة"، وتُستثنى تلك الجلسة من ساعات تطوع المعلمة */
-export async function toggleStudentRecitationAction(studentId: string, dateIso: string) {
+/** تضبط تسجيل "سردت" لطالبة لأسبوعها الحالي (متاح فقط للحلقات المفعّلة لديها خانة السرد) - عند التفعيل تُحسب أوجه الحفظ المسجَّلة لها هذا الأسبوع تحديدًا ضمن "عدد أوجه المراجعة" */
+export async function toggleStudentRecitationAction(studentId: string, recited: boolean) {
   const user = await requireRole("TEACHER");
 
   const student = await db.student.findUnique({
@@ -507,44 +507,28 @@ export async function toggleStudentRecitationAction(studentId: string, dateIso: 
   if (!student || student.halaqa.teacherId !== user.id) return;
   if (!student.halaqa.recitationEnabled) return;
 
-  const date = new Date(dateIso);
-  const scheduledDays = student.halaqa.days.length > 0 ? new Set(student.halaqa.days) : null;
-  const fullWeek = riyadhFullWeekDays();
-  const validDates = (scheduledDays
-    ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
-    : fullWeek.slice(0, 5)
-  ).map((d) => d.getTime());
-  if (!validDates.includes(date.getTime())) return;
+  const weekStart = riyadhWeekStart();
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
-  const attendanceLog = await db.attendanceLog.upsert({
-    where: { halaqaId_date: { halaqaId: student.halaqaId, date } },
-    create: {
-      halaqaId: student.halaqaId,
-      date,
-      teacherPresent: true,
-      dataSubmitted: true,
-      submittedAt: new Date(),
-    },
-    update: { dataSubmitted: true, submittedAt: new Date() },
+  const existing = await db.weeklyRecitation.findUnique({
+    where: { studentId_weekStart: { studentId, weekStart } },
   });
 
-  const existing = await db.studentAttendance.findUnique({
-    where: { attendanceLogId_studentId: { attendanceLogId: attendanceLog.id, studentId } },
-  });
+  let pagesRecorded = 0;
+  if (recited) {
+    const agg = await db.memorizationRecord.aggregate({
+      _sum: { pagesMemorized: true },
+      where: { studentId, date: { gte: weekStart, lt: weekEnd } },
+    });
+    pagesRecorded = agg._sum.pagesMemorized ?? 0;
+  }
+  const pagesDelta = pagesRecorded - (existing?.pagesRecorded ?? 0);
 
-  const nextRecited = !existing?.recited;
-  const reviewPages = nextRecited ? student.memorizedPagesTotal : 0;
-  const pagesDelta = reviewPages - (existing?.reviewPagesRecorded ?? 0);
-
-  await db.studentAttendance.upsert({
-    where: { attendanceLogId_studentId: { attendanceLogId: attendanceLog.id, studentId } },
-    create: {
-      attendanceLogId: attendanceLog.id,
-      studentId,
-      recited: nextRecited,
-      reviewPagesRecorded: reviewPages,
-    },
-    update: { recited: nextRecited, reviewPagesRecorded: reviewPages },
+  await db.weeklyRecitation.upsert({
+    where: { studentId_weekStart: { studentId, weekStart } },
+    create: { studentId, weekStart, recited, pagesRecorded, recordedById: user.id },
+    update: { recited, pagesRecorded, recordedById: user.id },
   });
 
   if (pagesDelta !== 0) {
@@ -554,23 +538,16 @@ export async function toggleStudentRecitationAction(studentId: string, dateIso: 
     });
   }
 
-  const remainingRecited = await db.studentAttendance.count({
-    where: { attendanceLogId: attendanceLog.id, recited: true },
-  });
-  await db.attendanceLog.update({
-    where: { id: attendanceLog.id },
-    data: { hasRecitation: remainingRecited > 0 },
-  });
-
   await logAudit({
     actor: user,
     action: "STUDENT_RECITATION_TOGGLE",
     targetType: "Student",
     targetId: student.id,
     targetLabel: student.name,
-    message: `${nextRecited ? "سجّلت" : "ألغت"} سرد الطالبة ليوم ${dateIso}`,
+    message: `${recited ? "سجّلت" : "ألغت"} سرد الطالبة لأسبوع ${weekStart.toISOString().slice(0, 10)}`,
   });
 
   revalidatePath("/students");
   revalidatePath("/");
+  revalidatePath("/statistics");
 }

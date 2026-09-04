@@ -166,6 +166,7 @@ model Student {
   memorizationRecords MemorizationRecord[]
   examGrades          ExamGrade[]
   attendanceRecords   StudentAttendance[]
+  weeklyRecitations   WeeklyRecitation[]
 
   @@index([halaqaId])
 }
@@ -208,7 +209,6 @@ model AttendanceLog {
   teacherPresent Boolean   @default(true)
   dataSubmitted  Boolean   @default(false)
   submittedAt    DateTime?
-  hasRecitation  Boolean   @default(false) // true إذا سردت طالبة واحدة أو أكثر هذا اليوم - يُستثنى من ساعات التطوع
   createdAt      DateTime  @default(now())
 
   studentAttendance StudentAttendance[]
@@ -224,10 +224,25 @@ model StudentAttendance {
   studentId       String
   student         Student       @relation(fields: [studentId], references: [id])
   present         Boolean       @default(true)
-  recited             Boolean @default(false) // سردت: راجعت محفوظ الأسبوع كاملًا
-  reviewPagesRecorded Int     @default(0) // لقطة عدد الأوجه المحسوبة عند تسجيل السرد (لضبط التراجع الصحيح)
 
   @@unique([attendanceLogId, studentId])
+}
+
+// خانة السرد الأسبوعية: تسجيل واحد لكل طالبة لكل أسبوع (بدل تسجيل يومي) - عند تفعيل "سردت"
+// تُحسب أوجه الحفظ المسجَّلة لها هذا الأسبوع تحديدًا (لا الإجمالي التراكمي) ضمن "عدد أوجه المراجعة"
+model WeeklyRecitation {
+  id            String   @id @default(cuid())
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id])
+  weekStart     DateTime // بداية الأسبوع (الأحد) بتوقيت الرياض
+  recited       Boolean  @default(false)
+  pagesRecorded Int      @default(0) // لقطة أوجه الحفظ المسجَّلة هذا الأسبوع وقت التأشير (لضبط التراجع الصحيح)
+  recordedById  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([studentId, weekStart])
+  @@index([weekStart])
 }
 
 // ============ حضور وإجازات الطاقم (المعلمات/المشرفات) ============

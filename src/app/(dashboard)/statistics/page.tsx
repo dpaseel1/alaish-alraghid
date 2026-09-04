@@ -51,7 +51,7 @@ export default async function StatisticsPage() {
     }),
     db.student.findMany({
       where: { isActive: true, halaqa: halaqaScope },
-      select: { id: true, halaqaId: true, memorizedPagesTotal: true },
+      select: { id: true, halaqaId: true, memorizedPagesTotal: true, reviewedPagesTotal: true },
     }),
     db.memorizationRecord.findMany({
       where: { date: { gte: rangeStart }, student: { isActive: true, halaqa: halaqaScope } },
@@ -75,6 +75,7 @@ export default async function StatisticsPage() {
   const avgPages = totalStudents
     ? Math.round((students.reduce((sum, s) => sum + s.memorizedPagesTotal, 0) / totalStudents) * 10) / 10
     : 0;
+  const totalReviewedPages = students.reduce((sum, s) => sum + s.reviewedPagesTotal, 0);
 
   const last30Start = new Date(today);
   last30Start.setUTCDate(last30Start.getUTCDate() - 29);
@@ -149,12 +150,17 @@ export default async function StatisticsPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard label="الطالبات النشطات" value={totalStudents} icon={<BookIcon className="h-6 w-6" />} />
         <StatCard
           label="متوسط الأوجه المحفوظة/طالبة"
           value={avgPages}
           icon={<TrophyIcon className="h-6 w-6" />}
+        />
+        <StatCard
+          label="إجمالي أوجه المراجعة"
+          value={totalReviewedPages}
+          icon={<BookIcon className="h-6 w-6" />}
         />
         <StatCard
           label="نسبة الحضور (٣٠ يوم)"

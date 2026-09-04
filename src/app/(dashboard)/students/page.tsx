@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays, riyadhWeekStart } from "@/lib/timezone";
 import { HALAQA_DAYS, HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
 import { updateStudentAction, deleteStudentAction, reactivateStudentAction } from "@/app/actions/students";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
@@ -84,15 +84,21 @@ export default async function StudentsPage({
     });
 
     const weekAttendance: Record<string, Record<string, boolean>> = {};
-    const weekRecitation: Record<string, Record<string, boolean>> = {};
     for (const log of weekLogs) {
       const dateIso = log.date.toISOString().slice(0, 10);
       for (const a of log.studentAttendance) {
         weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
         weekAttendance[a.studentId][dateIso] = a.present;
-        weekRecitation[a.studentId] = weekRecitation[a.studentId] ?? {};
-        weekRecitation[a.studentId][dateIso] = a.recited;
       }
+    }
+
+    const weekRecitation: Record<string, boolean> = {};
+    if (halaqa.recitationEnabled) {
+      const recitations = await db.weeklyRecitation.findMany({
+        where: { weekStart: riyadhWeekStart(), student: { halaqaId: halaqa.id } },
+        select: { studentId: true, recited: true },
+      });
+      for (const r of recitations) weekRecitation[r.studentId] = r.recited;
     }
 
     const todayIso = riyadhToday().toISOString().slice(0, 10);
