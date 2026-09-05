@@ -22,6 +22,15 @@ const studentSchema = z.object({
   ...requiredStudentProfileFields,
 });
 
+/** الأيام المسموح بها لتسجيل الحضور: أيام انعقاد الحلقة المحددة ضمن الأسبوع الحالي، أو الأسبوع الدراسي الافتراضي (الأحد-الخميس) إن لم تُحدَّد أيام */
+function getValidHalaqaDates(days: string[]): number[] {
+  const scheduledDays = days.length > 0 ? new Set(days) : null;
+  const fullWeek = riyadhFullWeekDays();
+  return (
+    scheduledDays ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()])) : fullWeek.slice(0, 5)
+  ).map((d) => d.getTime());
+}
+
 async function assertHalaqaAccess(halaqaId: string) {
   const user = await requireUser();
   const halaqa = await db.halaqa.findUnique({ where: { id: halaqaId } });
@@ -450,13 +459,7 @@ export async function toggleStudentAttendanceAction(
   if (!student || student.halaqa.teacherId !== user.id) return;
 
   const date = new Date(dateIso);
-  // الأيام المسموح بها: أيام انعقاد الحلقة المحددة (وقد تشمل الجمعة/السبت) ضمن الأسبوع الحالي، أو الأسبوع الدراسي الافتراضي (الأحد-الخميس) إن لم تُحدَّد أيام
-  const scheduledDays = student.halaqa.days.length > 0 ? new Set(student.halaqa.days) : null;
-  const fullWeek = riyadhFullWeekDays();
-  const validDates = (scheduledDays
-    ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
-    : fullWeek.slice(0, 5)
-  ).map((d) => d.getTime());
+  const validDates = getValidHalaqaDates(student.halaqa.days);
   if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج الأيام المسموحة
 
   const attendanceLog = await db.attendanceLog.upsert({
@@ -494,6 +497,113 @@ export async function toggleStudentAttendanceAction(
   revalidatePath("/students");
   revalidatePath("/");
   revalidatePath("/honor-board");
+}
+
+export type ImportAttendanceResult = {
+  successCount: number;
+  failures: { row: number; message: string }[];
+  error?: string;
+};
+
+/** استيراد حضور يوم واحد لكل طالبات الحلقة من ملف Excel بعمودين (الاسم، هل استمعت للدرس كاملاً: نعم/لا)، كبديل عن التسجيل اليدوي لنفس اليوم */
+export async function importAttendanceExcelAction(
+  _prev: ImportAttendanceResult | undefined,
+  formData: FormData
+): Promise<ImportAttendanceResult> {
+  const user = await requireRole("TEACHER");
+
+  const halaqa = await db.halaqa.findUnique({
+    where: { teacherId: user.id },
+    include: { students: { where: { isActive: true } } },
+  });
+  if (!halaqa) return { successCount: 0, failures: [], error: "لا توجد حلقة مرتبطة بحسابك" };
+
+  const dateIso = String(formData.get("dateIso") ?? "");
+  const date = new Date(dateIso);
+  const validDates = getValidHalaqaDates(halaqa.days);
+  if (!dateIso || !validDates.includes(date.getTime())) {
+    return { successCount: 0, failures: [], error: "الرجاء اختيار يوم صحيح من أيام انعقاد الحلقة هذا الأسبوع" };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { successCount: 0, failures: [], error: "الرجاء اختيار ملف Excel" };
+  }
+
+  let rows: unknown[][];
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const wb = XLSX.read(buffer, { type: "buffer" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
+  } catch {
+    return { successCount: 0, failures: [], error: "تعذّر قراءة الملف، تأكدي أنه بصيغة Excel صحيحة" };
+  }
+
+  const studentsByName = new Map(halaqa.students.map((s) => [s.name.trim(), s]));
+  const failures: { row: number; message: string }[] = [];
+  const results: { studentId: string; present: boolean }[] = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const name = String(row?.[0] ?? "").trim();
+    const answer = String(row?.[1] ?? "").trim();
+    if (!name && !answer) continue; // صف فارغ
+
+    if (!name) {
+      failures.push({ row: i + 1, message: "اسم الطالبة فارغ" });
+      continue;
+    }
+
+    const student = studentsByName.get(name);
+    if (!student) {
+      failures.push({ row: i + 1, message: `"${name}" غير موجودة ضمن طالبات الحلقة` });
+      continue;
+    }
+
+    if (answer === "نعم") {
+      results.push({ studentId: student.id, present: true });
+    } else if (answer === "لا") {
+      results.push({ studentId: student.id, present: false });
+    } else {
+      failures.push({ row: i + 1, message: `قيمة غير معروفة في عمود الحضور لـ"${name}" (يجب أن تكون نعم أو لا)` });
+    }
+  }
+
+  if (results.length > 0) {
+    const attendanceLog = await db.attendanceLog.upsert({
+      where: { halaqaId_date: { halaqaId: halaqa.id, date } },
+      create: { halaqaId: halaqa.id, date, teacherPresent: true, dataSubmitted: true, submittedAt: new Date() },
+      update: { dataSubmitted: true, submittedAt: new Date() },
+    });
+
+    await Promise.all(
+      results.map((r) =>
+        db.studentAttendance.upsert({
+          where: { attendanceLogId_studentId: { attendanceLogId: attendanceLog.id, studentId: r.studentId } },
+          create: { attendanceLogId: attendanceLog.id, studentId: r.studentId, present: r.present },
+          update: { present: r.present },
+        })
+      )
+    );
+
+    await logAudit({
+      actor: user,
+      action: "STUDENT_ATTENDANCE_IMPORT",
+      targetType: "Halaqa",
+      targetId: halaqa.id,
+      targetLabel: halaqa.name,
+      message: `استوردت حضور ${results.length} طالبة من ملف Excel ليوم ${dateIso}${
+        failures.length ? ` (${failures.length} صف مرفوض)` : ""
+      }`,
+    });
+
+    revalidatePath("/students");
+    revalidatePath("/");
+    revalidatePath("/honor-board");
+  }
+
+  return { successCount: results.length, failures };
 }
 
 /** تضبط تسجيل "سردت" لطالبة لأسبوعها الحالي (متاح فقط للحلقات المفعّلة لديها خانة السرد) - عند التفعيل تُحسب أوجه الحفظ المسجَّلة لها هذا الأسبوع تحديدًا ضمن "عدد أوجه المراجعة" */

@@ -8,6 +8,7 @@ import { AddStudentForm } from "@/components/students/AddStudentForm";
 import { ImportStudentsForm } from "@/components/students/ImportStudentsForm";
 import { StudentRow } from "@/components/students/StudentRow";
 import { DailyDataForm } from "@/components/students/DailyDataForm";
+import { ImportAttendanceForm } from "@/components/students/ImportAttendanceForm";
 import { ExamGradesCard } from "@/components/students/ExamGradesCard";
 import { HalaqaSelect } from "@/components/students/HalaqaSelect";
 import { ExportButton } from "@/components/export/ExportButton";
@@ -133,6 +134,8 @@ export default async function StudentsPage({
                 alreadySubmitted={todayLog?.dataSubmitted ?? false}
               />
             </div>
+
+            <ImportAttendanceForm weekDays={weekDays} />
 
             <ExamGradesCard
               students={halaqa.students.map((s) => ({
