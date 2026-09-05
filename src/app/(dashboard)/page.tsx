@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
+import { riyadhHijriMonthRange } from "@/lib/timezone";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { CircularProgress } from "@/components/dashboard/CircularProgress";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
@@ -249,8 +250,10 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
     );
   }
 
+  const { start: hijriMonthStart, end: hijriMonthEnd, monthLabel: hijriMonthLabel } = riyadhHijriMonthRange();
+
   // الساعة التطوعية تُحسب فقط ليوم سجّلت فيه المعلمة حضورها الشخصي (حاضرة) + سجّلت بيانات الحلقة لنفس اليوم
-  const [submittedLogs, presentAttendance, pagesAgg] = await Promise.all([
+  const [submittedLogs, presentAttendance, memorizedAgg, reviewedAgg] = await Promise.all([
     db.attendanceLog.findMany({
       where: { halaqaId: halaqa.id, dataSubmitted: true },
       select: { date: true },
@@ -261,7 +264,11 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
     }),
     db.memorizationRecord.aggregate({
       _sum: { pagesMemorized: true },
-      where: { student: { halaqaId: halaqa.id } },
+      where: { student: { halaqaId: halaqa.id }, date: { gte: hijriMonthStart, lt: hijriMonthEnd } },
+    }),
+    db.weeklyRecitation.aggregate({
+      _sum: { pagesRecorded: true },
+      where: { weekStart: { gte: hijriMonthStart, lt: hijriMonthEnd }, student: { halaqaId: halaqa.id } },
     }),
   ]);
 
@@ -269,7 +276,8 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
   const attendanceDays = submittedLogs.filter((l) => presentDates.has(l.date.getTime())).length;
 
   const volunteerHours = attendanceDays * 1;
-  const pagesRead = pagesAgg._sum.pagesMemorized ?? 0;
+  const pagesMemorizedThisMonth = memorizedAgg._sum.pagesMemorized ?? 0;
+  const pagesReviewedThisMonth = reviewedAgg._sum.pagesRecorded ?? 0;
 
   return (
     <div className="space-y-6">
@@ -295,14 +303,27 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
             icon={<AwardIcon className="h-5 w-5 text-emerald-500" />}
           />
           <CircularProgress
-            label="الأوجه المقروءة"
-            value={pagesRead}
+            label="عدد أوجه الحفظ"
+            periodLabel={`خلال شهر ${hijriMonthLabel}`}
+            value={pagesMemorizedThisMonth}
             unit="وجه"
             milestone={604}
             colorClass="stroke-amber-500"
             trackClass="stroke-amber-100 dark:stroke-amber-950/40"
             icon={<BookIcon className="h-5 w-5 text-amber-500" />}
           />
+          {halaqa.recitationEnabled && (
+            <CircularProgress
+              label="عدد أوجه المراجعة"
+              periodLabel={`خلال شهر ${hijriMonthLabel}`}
+              value={pagesReviewedThisMonth}
+              unit="وجه"
+              milestone={604}
+              colorClass="stroke-violet-500"
+              trackClass="stroke-violet-100 dark:stroke-violet-950/40"
+              icon={<BookIcon className="h-5 w-5 text-violet-500" />}
+            />
+          )}
         </div>
       </div>
 

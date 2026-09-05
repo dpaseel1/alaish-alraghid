@@ -5,6 +5,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function CircularProgress({
   label,
+  periodLabel,
   value,
   unit,
   milestone,
@@ -13,6 +14,7 @@ export function CircularProgress({
   icon,
 }: {
   label: string;
+  periodLabel?: string;
   value: number;
   unit: string;
   milestone: number;
@@ -51,6 +53,9 @@ export function CircularProgress({
       </div>
       <div>
         <p className="font-semibold text-slate-800 dark:text-slate-100">{label}</p>
+        {periodLabel && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">{periodLabel}</p>
+        )}
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {value} {unit}
         </p>
