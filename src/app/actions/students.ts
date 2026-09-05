@@ -505,7 +505,7 @@ export type ImportAttendanceResult = {
   error?: string;
 };
 
-/** استيراد حضور يوم واحد لكل طالبات الحلقة من ملف Excel بعمودين (الاسم، هل استمعت للدرس كاملاً: نعم/لا)، كبديل عن التسجيل اليدوي لنفس اليوم */
+/** استيراد حضور يوم واحد لكل طالبات الحلقة من ملف Excel بعمودين (اسم الطالبة، وعمود إجابة نعم/لا يختلف نصّ سؤاله من حلقة لأخرى)، كبديل عن التسجيل اليدوي لنفس اليوم */
 export async function importAttendanceExcelAction(
   _prev: ImportAttendanceResult | undefined,
   formData: FormData

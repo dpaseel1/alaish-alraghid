@@ -29,8 +29,8 @@ export function ImportAttendanceForm({
       {open && (
         <div className="mt-4 space-y-4">
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            الملف يحتوي عمودين: اسم الطالبة، وهل استمعت للدرس كاملًا (نعم/لا). الإجابة &quot;نعم&quot; تُسجَّل
-            حضورًا، و&quot;لا&quot; تُسجَّل غيابًا.
+            الملف يحتوي عمودين: اسم الطالبة، وعمود إجابة بنعم/لا (نص السؤال نفسه لا يهم ويختلف من حلقة لأخرى).
+            الإجابة &quot;نعم&quot; تُسجَّل حضورًا، و&quot;لا&quot; تُسجَّل غيابًا.
           </p>
 
           <form action={formAction} className="flex flex-wrap items-end gap-3">
