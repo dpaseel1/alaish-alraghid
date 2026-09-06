@@ -247,16 +247,20 @@ export async function importStudentsAction(
   const failures: { row: number; message: string }[] = [];
   let successCount = 0;
 
+  // خلايا Excel الرقمية (مثل رقم الهوية) تُقرأ كأرقام JS لا كنصوص، فتُحوَّل لنص هنا
+  // كي تتوافق مع مخططات zod التي تتوقع نصوصًا (نفس ما يُدخله المستخدم يدويًا من نموذج HTML)
+  const cell = (v: unknown): string => (v === undefined || v === null ? "" : String(v).trim());
+
   for (let i = 0; i < dataRows.length; i++) {
     const row = dataRows[i];
     const parsed = importRowSchema.safeParse({
-      name: row[columnMapping.name],
-      nationality: row[columnMapping.nationality],
-      nationalId: row[columnMapping.nationalId],
-      age: row[columnMapping.age],
-      educationLevel: row[columnMapping.educationLevel],
-      residence: row[columnMapping.residence],
-      memorizedAmount: row[columnMapping.memorizedAmount],
+      name: cell(row[columnMapping.name]),
+      nationality: cell(row[columnMapping.nationality]),
+      nationalId: cell(row[columnMapping.nationalId]),
+      age: cell(row[columnMapping.age]),
+      educationLevel: cell(row[columnMapping.educationLevel]),
+      residence: cell(row[columnMapping.residence]),
+      memorizedAmount: cell(row[columnMapping.memorizedAmount]),
     });
 
     if (!parsed.success) {
