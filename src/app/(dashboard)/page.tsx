@@ -136,6 +136,11 @@ async function AdminOrSupervisorHome({
     stats.supervisorsCount = key ? supervisorsCountByTrack.get(key) ?? 0 : 0;
   }
 
+  const totalMemorizedPages = halaqat.reduce(
+    (sum, h) => sum + h.students.reduce((s, st) => s + st.memorizedPagesTotal, 0),
+    0
+  );
+
   const orderedStats = [
     ...tracks.map((t) => statsByTrack.get(t.id)!),
     ...(statsByTrack.has(null) ? [statsByTrack.get(null)!] : []),
@@ -150,7 +155,7 @@ async function AdminOrSupervisorHome({
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">نظرة عامة على المسارات والحلقات والطالبات</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="عدد الحلقات النشطة" value={activeHalaqatCount} icon={<MosqueIcon className="h-6 w-6" />} />
         <StatCard label="إجمالي عدد الطالبات" value={totalStudents} icon={<BookIcon className="h-6 w-6" />} />
         <StatCard
@@ -158,6 +163,7 @@ async function AdminOrSupervisorHome({
           value={onlineTeachers}
           icon={<DotIcon className="h-3.5 w-3.5 text-emerald-500" />}
         />
+        <StatCard label="مجموع عدد أوجه الحفظ" value={totalMemorizedPages} icon={<BookIcon className="h-6 w-6" />} />
       </div>
 
       <div>
