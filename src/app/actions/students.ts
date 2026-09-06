@@ -9,6 +9,7 @@ import { logAudit } from "@/lib/audit";
 import { riyadhToday, riyadhFullWeekDays, riyadhWeekStart } from "@/lib/timezone";
 import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
+import { STUDENT_IMPORT_FIELDS, type StudentImportFieldKey } from "@/lib/studentImportFields";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
 import { normalizeDigits } from "@/lib/numbers";
 
@@ -206,16 +207,6 @@ export type ImportStudentsResult = {
   error?: string;
 };
 
-const IMPORT_HEADER_MAP = {
-  name: "الاسم",
-  nationality: "الجنسية",
-  nationalId: "رقم الهوية/الإقامة",
-  age: "العمر",
-  educationLevel: "المؤهل الدراسي",
-  residence: "مقر الإقامة",
-  memorizedAmount: "مقدار الحفظ",
-} as const;
-
 /** استيراد طالبات دفعة واحدة من ملف Excel لحلقة محددة (نفس تحقق الإضافة اليدوية لكل صف) */
 export async function importStudentsAction(
   _prev: ImportStudentsResult | undefined,
@@ -232,12 +223,22 @@ export async function importStudentsAction(
     return { successCount: 0, failures: [], error: "الرجاء اختيار ملف Excel" };
   }
 
-  let rows: Record<string, unknown>[];
+  let columnMapping: Record<StudentImportFieldKey, number>;
+  try {
+    const parsedMapping = JSON.parse(String(formData.get("columnMapping") ?? ""));
+    if (!STUDENT_IMPORT_FIELDS.every((f) => typeof parsedMapping[f.key] === "number")) throw new Error();
+    columnMapping = parsedMapping;
+  } catch {
+    return { successCount: 0, failures: [], error: "تعذّر التعرف على أعمدة الملف، أعيدي رفعه" };
+  }
+
+  let dataRows: unknown[][];
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const wb = XLSX.read(buffer, { type: "buffer" });
     const sheet = wb.Sheets[wb.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    const rawRows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
+    dataRows = rawRows.slice(1); // تجاهل صف الرأس
   } catch {
     return { successCount: 0, failures: [], error: "تعذّر قراءة الملف، تأكدي أنه بصيغة Excel صحيحة" };
   }
@@ -246,16 +247,16 @@ export async function importStudentsAction(
   const failures: { row: number; message: string }[] = [];
   let successCount = 0;
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
+  for (let i = 0; i < dataRows.length; i++) {
+    const row = dataRows[i];
     const parsed = importRowSchema.safeParse({
-      name: row[IMPORT_HEADER_MAP.name],
-      nationality: row[IMPORT_HEADER_MAP.nationality],
-      nationalId: row[IMPORT_HEADER_MAP.nationalId],
-      age: row[IMPORT_HEADER_MAP.age],
-      educationLevel: row[IMPORT_HEADER_MAP.educationLevel],
-      residence: row[IMPORT_HEADER_MAP.residence],
-      memorizedAmount: row[IMPORT_HEADER_MAP.memorizedAmount],
+      name: row[columnMapping.name],
+      nationality: row[columnMapping.nationality],
+      nationalId: row[columnMapping.nationalId],
+      age: row[columnMapping.age],
+      educationLevel: row[columnMapping.educationLevel],
+      residence: row[columnMapping.residence],
+      memorizedAmount: row[columnMapping.memorizedAmount],
     });
 
     if (!parsed.success) {
