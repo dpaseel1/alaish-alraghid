@@ -4,6 +4,7 @@ import { riyadhToday } from "@/lib/timezone";
 import { MemorizationChart } from "@/components/reports/MemorizationChart";
 import { PrintButton } from "@/components/reports/PrintButton";
 import { ExportButton } from "@/components/export/ExportButton";
+import { STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
 
 function toDateInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -54,7 +55,7 @@ export default async function ReportsPage({
     }),
     db.studentAttendance.findMany({
       where: {
-        present: false,
+        status: { in: ["ABSENT_EXCUSED", "ABSENT_UNEXCUSED"] },
         student: { isActive: true },
         attendanceLog: {
           date: { gte: fromDate, lte: toDate },
@@ -185,12 +186,13 @@ export default async function ReportsPage({
                 <th className="px-5 py-3 font-medium">الطالبة</th>
                 <th className="px-5 py-3 font-medium">الحلقة</th>
                 <th className="px-5 py-3 font-medium">التاريخ</th>
+                <th className="px-5 py-3 font-medium">الحالة</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {absentees.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد حالات غياب مسجّلة في هذه الفترة
                   </td>
                 </tr>
@@ -205,6 +207,9 @@ export default async function ReportsPage({
                   </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300" dir="ltr">
                     {toDateInputValue(a.attendanceLog.date)}
+                  </td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
+                    {STUDENT_ATTENDANCE_LABELS[a.status]}
                   </td>
                 </tr>
               ))}

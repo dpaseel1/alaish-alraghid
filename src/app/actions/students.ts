@@ -12,6 +12,8 @@ import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { STUDENT_IMPORT_FIELDS, type StudentImportFieldKey } from "@/lib/studentImportFields";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
 import { normalizeDigits } from "@/lib/numbers";
+import type { StudentAttendanceStatus } from "@/generated/prisma/client";
+import { STUDENT_ATTENDANCE_STATUSES, STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
 
 export type StudentActionState = { error?: string; success?: string };
 
@@ -581,9 +583,10 @@ export async function revealStudentNationalIdAction(
 export async function toggleStudentAttendanceAction(
   studentId: string,
   dateIso: string,
-  present: boolean
+  status: StudentAttendanceStatus
 ) {
   const user = await requireRole("TEACHER");
+  if (!STUDENT_ATTENDANCE_STATUSES.includes(status)) return;
 
   const student = await db.student.findUnique({
     where: { id: studentId },
@@ -616,7 +619,7 @@ export async function toggleStudentAttendanceAction(
     },
   });
 
-  const shouldClear = existing?.present === present;
+  const shouldClear = existing?.status === status;
 
   if (shouldClear) {
     await db.studentAttendance.delete({ where: { id: existing!.id } });
@@ -628,8 +631,8 @@ export async function toggleStudentAttendanceAction(
           studentId,
         },
       },
-      create: { attendanceLogId: attendanceLog.id, studentId, present },
-      update: { present },
+      create: { attendanceLogId: attendanceLog.id, studentId, status },
+      update: { status },
     });
   }
 
@@ -641,7 +644,7 @@ export async function toggleStudentAttendanceAction(
     targetLabel: student.name,
     message: shouldClear
       ? `أزالت تحضير الطالبة ليوم ${dateIso}`
-      : `سجّلت ${present ? "حضور" : "غياب"} الطالبة ليوم ${dateIso}`,
+      : `سجّلت (${STUDENT_ATTENDANCE_LABELS[status]}) للطالبة ليوم ${dateIso}`,
   });
 
   revalidatePath("/students");
@@ -692,7 +695,7 @@ export async function importAttendanceExcelAction(
 
   const studentsByName = new Map(halaqa.students.map((s) => [s.name.trim(), s]));
   const failures: { row: number; message: string }[] = [];
-  const results: { studentId: string; present: boolean }[] = [];
+  const results: { studentId: string; status: StudentAttendanceStatus }[] = [];
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -712,9 +715,9 @@ export async function importAttendanceExcelAction(
     }
 
     if (answer === "نعم") {
-      results.push({ studentId: student.id, present: true });
+      results.push({ studentId: student.id, status: "PRESENT" });
     } else if (answer === "لا") {
-      results.push({ studentId: student.id, present: false });
+      results.push({ studentId: student.id, status: "ABSENT_UNEXCUSED" });
     } else {
       failures.push({ row: i + 1, message: `قيمة غير معروفة في عمود الحضور لـ"${name}" (يجب أن تكون نعم أو لا)` });
     }
@@ -731,8 +734,8 @@ export async function importAttendanceExcelAction(
       results.map((r) =>
         db.studentAttendance.upsert({
           where: { attendanceLogId_studentId: { attendanceLogId: attendanceLog.id, studentId: r.studentId } },
-          create: { attendanceLogId: attendanceLog.id, studentId: r.studentId, present: r.present },
-          update: { present: r.present },
+          create: { attendanceLogId: attendanceLog.id, studentId: r.studentId, status: r.status },
+          update: { status: r.status },
         })
       )
     );

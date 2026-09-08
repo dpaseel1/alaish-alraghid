@@ -54,7 +54,7 @@ export default async function HonorBoardPage({
         halaqa: { select: { name: true } },
         attendanceRecords: {
           where: { attendanceLog: { date: { gte: fromDate, lte: toDate } } },
-          select: { present: true },
+          select: { status: true },
         },
       },
       orderBy: { name: "asc" },
@@ -69,7 +69,7 @@ export default async function HonorBoardPage({
         name: true,
         halaqa: { select: { name: true, days: true } },
         attendanceRecords: {
-          where: { present: true, attendanceLog: { date: { in: fullWeek } } },
+          where: { status: "PRESENT", attendanceLog: { date: { in: fullWeek } } },
           select: { attendanceLog: { select: { date: true } } },
         },
       },
@@ -100,7 +100,7 @@ export default async function HonorBoardPage({
   const achievers = students
     .map((s) => {
       const total = s.attendanceRecords.length;
-      const presentCount = s.attendanceRecords.filter((a) => a.present).length;
+      const presentCount = s.attendanceRecords.filter((a) => a.status === "PRESENT").length;
       return {
         id: s.id,
         name: s.name,

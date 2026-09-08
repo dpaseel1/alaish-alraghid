@@ -2,6 +2,7 @@ import "server-only";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
 import type { User } from "@/generated/prisma/client";
+import { STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
 
 type HalaqaWhere = Record<string, unknown>;
 
@@ -99,7 +100,7 @@ export async function buildAttendanceRows(
         date: { gte: fromDate, lte: toDate },
         halaqa: halaqaWhere,
       },
-      ...(onlyAbsent ? { present: false } : {}),
+      ...(onlyAbsent ? { status: { in: ["ABSENT_EXCUSED", "ABSENT_UNEXCUSED"] as const } } : {}),
     },
     include: {
       student: { select: { name: true } },
@@ -112,7 +113,7 @@ export async function buildAttendanceRows(
     "الطالبة": a.student.name,
     "الحلقة": a.attendanceLog.halaqa.name,
     "التاريخ": a.attendanceLog.date.toISOString().slice(0, 10),
-    "الحالة": a.present ? "حاضرة" : "غائبة",
+    "الحالة": STUDENT_ATTENDANCE_LABELS[a.status],
   }));
 }
 

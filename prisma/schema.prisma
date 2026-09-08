@@ -225,13 +225,19 @@ model AttendanceLog {
   @@index([date])
 }
 
+enum StudentAttendanceStatus {
+  PRESENT // حاضرة
+  ABSENT_EXCUSED // غياب بعذر
+  ABSENT_UNEXCUSED // غياب بدون عذر
+}
+
 model StudentAttendance {
-  id              String        @id @default(cuid())
+  id              String                   @id @default(cuid())
   attendanceLogId String
-  attendanceLog   AttendanceLog @relation(fields: [attendanceLogId], references: [id])
+  attendanceLog   AttendanceLog            @relation(fields: [attendanceLogId], references: [id])
   studentId       String
-  student         Student       @relation(fields: [studentId], references: [id])
-  present         Boolean       @default(true)
+  student         Student                  @relation(fields: [studentId], references: [id])
+  status          StudentAttendanceStatus  @default(PRESENT)
 
   @@unique([attendanceLogId, studentId])
 }

@@ -62,7 +62,7 @@ export default async function StatisticsPage() {
         student: { isActive: true },
         attendanceLog: { date: { gte: rangeStart }, halaqa: halaqaScope },
       },
-      select: { present: true, attendanceLog: { select: { date: true } } },
+      select: { status: true, attendanceLog: { select: { date: true } } },
     }),
     db.attendanceLog.findMany({
       where: { date: today, dataSubmitted: true, halaqa: halaqaScope },
@@ -83,7 +83,7 @@ export default async function StatisticsPage() {
     (a) => a.attendanceLog.date.getTime() >= last30Start.getTime()
   );
   const attendanceRate = attendanceLast30.length
-    ? Math.round((attendanceLast30.filter((a) => a.present).length / attendanceLast30.length) * 1000) / 10
+    ? Math.round((attendanceLast30.filter((a) => a.status === "PRESENT").length / attendanceLast30.length) * 1000) / 10
     : 0;
 
   const submittedTodaySet = new Set(submittedTodayLogs.map((l) => l.halaqaId));
@@ -112,7 +112,7 @@ export default async function StatisticsPage() {
   for (const a of attendanceRecords) {
     const key = weekStartUTC(a.attendanceLog.date).toISOString();
     attendanceTotalPerWeek.set(key, (attendanceTotalPerWeek.get(key) ?? 0) + 1);
-    if (a.present) attendancePresentPerWeek.set(key, (attendancePresentPerWeek.get(key) ?? 0) + 1);
+    if (a.status === "PRESENT") attendancePresentPerWeek.set(key, (attendancePresentPerWeek.get(key) ?? 0) + 1);
   }
 
   const performanceTrend = weekBuckets.map((w) => ({

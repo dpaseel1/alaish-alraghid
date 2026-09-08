@@ -8,6 +8,7 @@ import {
   type StudentActionState,
 } from "@/app/actions/students";
 import { CheckIcon, XIcon } from "@/components/icons";
+import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 
 type Student = {
   id: string;
@@ -21,6 +22,9 @@ type WeekDay = {
 
 const initialState: StudentActionState = {};
 
+const IS_ABSENT = (status: StudentAttendanceStatus | undefined) =>
+  status === "ABSENT_EXCUSED" || status === "ABSENT_UNEXCUSED";
+
 export function DailyDataForm({
   students,
   weekDays,
@@ -33,7 +37,7 @@ export function DailyDataForm({
 }: {
   students: Student[];
   weekDays: WeekDay[];
-  weekAttendance: Record<string, Record<string, boolean>>;
+  weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
   weekRecitation?: Record<string, boolean>;
   recitationEnabled?: boolean;
   alreadySubmitted: boolean;
@@ -76,43 +80,79 @@ export function DailyDataForm({
                   <td className="px-4 py-2">
                     <div className="flex flex-wrap items-center gap-2">
                       {weekDays.map((day) => {
-                        const present = weekAttendance[s.id]?.[day.iso];
+                        const current = weekAttendance[s.id]?.[day.iso];
                         return (
                           <div key={day.iso} className="flex flex-col items-center gap-1">
                             <span className="text-[10px] text-slate-400 dark:text-slate-500">
                               {day.label}
                             </span>
-                            <div className="flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
-                              <form
-                                action={toggleStudentAttendanceAction.bind(null, s.id, day.iso, true)}
-                              >
-                                <button
-                                  type="submit"
-                                  title="حضور"
-                                  className={
-                                    present === true
-                                      ? "flex h-7 w-7 items-center justify-center bg-emerald-600 text-white"
-                                      : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600"
-                                  }
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
+                                <form
+                                  action={toggleStudentAttendanceAction.bind(null, s.id, day.iso, "PRESENT")}
                                 >
-                                  <CheckIcon className="h-4 w-4" />
-                                </button>
-                              </form>
-                              <form
-                                action={toggleStudentAttendanceAction.bind(null, s.id, day.iso, false)}
-                              >
-                                <button
-                                  type="submit"
-                                  title="غياب"
-                                  className={
-                                    present === false
-                                      ? "flex h-7 w-7 items-center justify-center bg-red-600 text-white"
-                                      : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600"
-                                  }
+                                  <button
+                                    type="submit"
+                                    title="حضور"
+                                    className={
+                                      current === "PRESENT"
+                                        ? "flex h-7 w-7 items-center justify-center bg-emerald-600 text-white"
+                                        : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600"
+                                    }
+                                  >
+                                    <CheckIcon className="h-4 w-4" />
+                                  </button>
+                                </form>
+                                <form
+                                  action={toggleStudentAttendanceAction.bind(null, s.id, day.iso, "ABSENT_UNEXCUSED")}
                                 >
-                                  <XIcon className="h-4 w-4" />
-                                </button>
-                              </form>
+                                  <button
+                                    type="submit"
+                                    title="غياب"
+                                    className={
+                                      IS_ABSENT(current)
+                                        ? "flex h-7 w-7 items-center justify-center bg-red-600 text-white"
+                                        : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600"
+                                    }
+                                  >
+                                    <XIcon className="h-4 w-4" />
+                                  </button>
+                                </form>
+                              </div>
+                              {IS_ABSENT(current) && (
+                                <div className="flex items-center rounded-md overflow-hidden border border-slate-200 dark:border-slate-600 text-[10px]">
+                                  <form
+                                    action={toggleStudentAttendanceAction.bind(null, s.id, day.iso, "ABSENT_EXCUSED")}
+                                  >
+                                    <button
+                                      type="submit"
+                                      title="غياب بعذر"
+                                      className={`px-1.5 py-0.5 font-medium ${
+                                        current === "ABSENT_EXCUSED"
+                                          ? "bg-amber-600 text-white"
+                                          : "bg-white dark:bg-slate-800 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                                      }`}
+                                    >
+                                      بعذر
+                                    </button>
+                                  </form>
+                                  <form
+                                    action={toggleStudentAttendanceAction.bind(null, s.id, day.iso, "ABSENT_UNEXCUSED")}
+                                  >
+                                    <button
+                                      type="submit"
+                                      title="غياب بدون عذر"
+                                      className={`px-1.5 py-0.5 font-medium ${
+                                        current === "ABSENT_UNEXCUSED"
+                                          ? "bg-red-600 text-white"
+                                          : "bg-white dark:bg-slate-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                      }`}
+                                    >
+                                      بدون
+                                    </button>
+                                  </form>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

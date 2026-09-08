@@ -12,6 +12,7 @@ import { ImportAttendanceForm } from "@/components/students/ImportAttendanceForm
 import { ExamGradesCard } from "@/components/students/ExamGradesCard";
 import { HalaqaSelect } from "@/components/students/HalaqaSelect";
 import { ExportButton } from "@/components/export/ExportButton";
+import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 
 export default async function StudentsPage({
   searchParams,
@@ -84,12 +85,12 @@ export default async function StudentsPage({
       include: { studentAttendance: true },
     });
 
-    const weekAttendance: Record<string, Record<string, boolean>> = {};
+    const weekAttendance: Record<string, Record<string, StudentAttendanceStatus>> = {};
     for (const log of weekLogs) {
       const dateIso = log.date.toISOString().slice(0, 10);
       for (const a of log.studentAttendance) {
         weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
-        weekAttendance[a.studentId][dateIso] = a.present;
+        weekAttendance[a.studentId][dateIso] = a.status;
       }
     }
 
