@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { MosqueIcon, TeacherIcon, CompassIcon, BookIcon } from "@/components/icons";
 import { DeleteHalaqaButton } from "@/components/halaqat/DeleteHalaqaButton";
+import { TRACK_TYPE_PAGES_LABELS } from "@/lib/trackType";
 
 export default async function TrackDetailPage({
   params,
@@ -58,6 +59,7 @@ export default async function TrackDetailPage({
     (sum, h) => sum + h.students.reduce((s, st) => s + st.reviewedPagesTotal, 0),
     0
   );
+  const pagesLabel = TRACK_TYPE_PAGES_LABELS[track?.type ?? "HIFZ"];
 
   return (
     <div className="space-y-6">
@@ -97,7 +99,7 @@ export default async function TrackDetailPage({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <StatCard label="إجمالي الأوجه المحفوظة" value={memorizedTotal} icon={<BookIcon className="h-6 w-6" />} />
+        <StatCard label={`إجمالي ${pagesLabel}`} value={memorizedTotal} icon={<BookIcon className="h-6 w-6" />} />
         <StatCard label="إجمالي أوجه المراجعة" value={reviewedTotal} icon={<BookIcon className="h-6 w-6" />} />
       </div>
 
@@ -135,7 +137,7 @@ export default async function TrackDetailPage({
                 <th className="px-5 py-3 font-medium">المعلمة</th>
                 <th className="px-5 py-3 font-medium">المشرفة</th>
                 <th className="px-5 py-3 font-medium">عدد الطالبات</th>
-                <th className="px-5 py-3 font-medium">الأوجه المحفوظة</th>
+                <th className="px-5 py-3 font-medium">{pagesLabel}</th>
                 <th className="px-5 py-3 font-medium">أوجه المراجعة</th>
                 <th className="px-5 py-3 font-medium">وقت الحلقة</th>
                 <th className="px-5 py-3 font-medium">إجراءات</th>

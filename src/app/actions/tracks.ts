@@ -12,6 +12,7 @@ export type TrackActionState = { error?: string; success?: string };
 
 const trackSchema = z.object({
   name: z.string().trim().min(2, "اسم المسار قصير جدًا").max(100, "اسم المسار طويل جدًا"),
+  type: z.enum(["HIFZ", "MURAJAA", "TILAWAH", "TAFSIR"]),
 });
 
 export async function createTrackAction(
@@ -20,7 +21,7 @@ export async function createTrackAction(
 ): Promise<TrackActionState> {
   const actor = await requireRole("ADMIN");
 
-  const parsed = trackSchema.safeParse({ name: formData.get("name") });
+  const parsed = trackSchema.safeParse({ name: formData.get("name"), type: formData.get("type") });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
@@ -32,7 +33,7 @@ export async function createTrackAction(
   if (imageError) return { error: imageError };
 
   const track = await db.track.create({
-    data: { name: parsed.data.name, ...(imageUrl ? { imageUrl } : {}) },
+    data: { name: parsed.data.name, type: parsed.data.type, ...(imageUrl ? { imageUrl } : {}) },
   });
 
   await logAudit({
@@ -55,7 +56,7 @@ export async function updateTrackAction(
 ): Promise<TrackActionState> {
   const actor = await requireRole("ADMIN");
 
-  const parsed = trackSchema.safeParse({ name: formData.get("name") });
+  const parsed = trackSchema.safeParse({ name: formData.get("name"), type: formData.get("type") });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
@@ -71,7 +72,7 @@ export async function updateTrackAction(
 
   await db.track.update({
     where: { id: trackId },
-    data: { name: parsed.data.name, ...(imageUrl ? { imageUrl } : {}) },
+    data: { name: parsed.data.name, type: parsed.data.type, ...(imageUrl ? { imageUrl } : {}) },
   });
 
   await logAudit({

@@ -3,12 +3,15 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { TrackActionState } from "@/app/actions/tracks";
+import type { TrackType } from "@/generated/prisma/client";
+import { TRACK_TYPES, TRACK_TYPE_LABELS } from "@/lib/trackType";
 
 const initialState: TrackActionState = {};
 
 export function TrackForm({
   action,
   defaultName,
+  defaultType,
   defaultImageUrl,
   cancelHref,
   submitLabel,
@@ -18,6 +21,7 @@ export function TrackForm({
     formData: FormData
   ) => Promise<TrackActionState>;
   defaultName?: string;
+  defaultType?: TrackType;
   defaultImageUrl?: string | null;
   cancelHref: string;
   submitLabel: string;
@@ -46,6 +50,24 @@ export function TrackForm({
           placeholder="مثال: مسار الجمان"
           className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          نوع المسار
+        </label>
+        <select
+          name="type"
+          required
+          defaultValue={defaultType ?? "HIFZ"}
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+        >
+          {TRACK_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {TRACK_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>
