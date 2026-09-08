@@ -7,6 +7,9 @@ import { CircularProgress } from "@/components/dashboard/CircularProgress";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { MosqueIcon, BookIcon, TeacherIcon, CompassIcon, DotIcon, PenIcon, AwardIcon } from "@/components/icons";
 import { DeleteTrackButton } from "@/components/tracks/DeleteTrackButton";
+import { StudentNumbersRow } from "@/components/students/StudentNumbersRow";
+import type { TrackType } from "@/generated/prisma/client";
+import { TRACK_TYPES, TRACK_TYPE_PAGE_UNIT_LABELS, TRACK_TYPE_TOTAL_LABELS } from "@/lib/trackType";
 
 const ONLINE_THRESHOLD_MINUTES = 15;
 
@@ -83,6 +86,7 @@ async function AdminOrSupervisorHome({
     id: string | null;
     name: string;
     imageUrl: string | null;
+    type: TrackType;
     halaqatCount: number;
     teachersCount: number;
     supervisorsCount: number;
@@ -96,6 +100,7 @@ async function AdminOrSupervisorHome({
       id: t.id,
       name: t.name,
       imageUrl: t.imageUrl,
+      type: t.type,
       halaqatCount: 0,
       teachersCount: 0,
       supervisorsCount: 0,
@@ -113,6 +118,7 @@ async function AdminOrSupervisorHome({
         id: key,
         name: "حلقات غير مصنّفة ضمن مسار",
         imageUrl: null,
+        type: "HIFZ",
         halaqatCount: 0,
         teachersCount: 0,
         supervisorsCount: 0,
@@ -136,15 +142,15 @@ async function AdminOrSupervisorHome({
     stats.supervisorsCount = key ? supervisorsCountByTrack.get(key) ?? 0 : 0;
   }
 
-  const totalMemorizedPages = halaqat.reduce(
-    (sum, h) => sum + h.students.reduce((s, st) => s + st.memorizedPagesTotal, 0),
-    0
-  );
-
   const orderedStats = [
     ...tracks.map((t) => statsByTrack.get(t.id)!),
     ...(statsByTrack.has(null) ? [statsByTrack.get(null)!] : []),
   ];
+
+  const memorizedTotalsByType = new Map<TrackType, number>();
+  for (const stats of orderedStats) {
+    memorizedTotalsByType.set(stats.type, (memorizedTotalsByType.get(stats.type) ?? 0) + stats.memorizedTotal);
+  }
 
   return (
     <div className="space-y-6">
@@ -163,7 +169,14 @@ async function AdminOrSupervisorHome({
           value={onlineTeachers}
           icon={<DotIcon className="h-3.5 w-3.5 text-emerald-500" />}
         />
-        <StatCard label="مجموع عدد أوجه الحفظ" value={totalMemorizedPages} icon={<BookIcon className="h-6 w-6" />} />
+        {TRACK_TYPES.filter((type) => memorizedTotalsByType.has(type)).map((type) => (
+          <StatCard
+            key={type}
+            label={TRACK_TYPE_TOTAL_LABELS[type]}
+            value={memorizedTotalsByType.get(type)!}
+            icon={<BookIcon className="h-6 w-6" />}
+          />
+        ))}
       </div>
 
       <div>
@@ -216,7 +229,7 @@ async function AdminOrSupervisorHome({
                   <p className="flex items-center gap-1.5"><BookIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.studentsCount} طالبة</p>
                   <p className="flex items-center gap-1.5"><TeacherIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.teachersCount} معلمة</p>
                   <p className="flex items-center gap-1.5"><CompassIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.supervisorsCount} مشرفة</p>
-                  <p className="col-span-2 flex items-center gap-1.5"><BookIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.memorizedTotal} وجه محفوظ</p>
+                  <p className="col-span-2 flex items-center gap-1.5"><BookIcon className="h-4 w-4 shrink-0 text-slate-400" /> {t.memorizedTotal} {TRACK_TYPE_PAGE_UNIT_LABELS[t.type]}</p>
                 </div>
               </Link>
               {isAdmin && t.id && (
@@ -358,26 +371,19 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
                   <th className="px-5 py-3 font-medium">عدد أوجه المراجعة</th>
                 )}
                 <th className="px-5 py-3 font-medium">النصاب الحالي</th>
+                <th className="px-5 py-3 font-medium">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {halaqa.students.length === 0 && (
                 <tr>
-                  <td colSpan={halaqa.recitationEnabled ? 5 : 4} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={halaqa.recitationEnabled ? 6 : 5} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد طالبات مضافات بعد
                   </td>
                 </tr>
               )}
               {halaqa.students.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.nationality}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.memorizedPagesTotal}</td>
-                  {halaqa.recitationEnabled && (
-                    <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.reviewedPagesTotal}</td>
-                  )}
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.currentQuota ?? "—"}</td>
-                </tr>
+                <StudentNumbersRow key={s.id} student={s} showReviewedPages={halaqa.recitationEnabled} />
               ))}
             </tbody>
           </table>

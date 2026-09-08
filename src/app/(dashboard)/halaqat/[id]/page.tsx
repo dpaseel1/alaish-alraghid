@@ -6,6 +6,7 @@ import { RevealNationalId } from "@/components/teachers/RevealNationalId";
 import { Avatar } from "@/components/ui/Avatar";
 import { DeleteHalaqaButton } from "@/components/halaqat/DeleteHalaqaButton";
 import { ToggleHalaqaActiveButton } from "@/components/halaqat/ToggleHalaqaActiveButton";
+import { StudentNumbersRow } from "@/components/students/StudentNumbersRow";
 import { HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
 
 export default async function HalaqaDetailPage({
@@ -183,9 +184,19 @@ export default async function HalaqaDetailPage({
           <h2 className="font-semibold text-slate-800 dark:text-slate-100">
             طالبات الحلقة ({halaqa.students.length})
           </h2>
-          <Link href="/students" className="text-sm text-brand font-medium hover:underline">
-            إدارة الطالبات
-          </Link>
+          <div className="flex items-center gap-4">
+            {halaqa.recitationEnabled && (
+              <Link
+                href={`/halaqat/${halaqa.id}/recitation`}
+                className="text-sm text-brand font-medium hover:underline"
+              >
+                عرض كامل بيانات الحلقة
+              </Link>
+            )}
+            <Link href="/students" className="text-sm text-brand font-medium hover:underline">
+              إدارة الطالبات
+            </Link>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -194,25 +205,39 @@ export default async function HalaqaDetailPage({
                 <th className="px-5 py-3 font-medium">الاسم</th>
                 <th className="px-5 py-3 font-medium">الجنسية</th>
                 <th className="px-5 py-3 font-medium">إجمالي الأوجه المحفوظة</th>
+                {halaqa.recitationEnabled && (
+                  <th className="px-5 py-3 font-medium">إجمالي أوجه المراجعة</th>
+                )}
                 <th className="px-5 py-3 font-medium">النصاب الحالي</th>
+                {canManage && <th className="px-5 py-3 font-medium">إجراءات</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {halaqa.students.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td
+                    colSpan={4 + (halaqa.recitationEnabled ? 1 : 0) + (canManage ? 1 : 0)}
+                    className="px-5 py-8 text-center text-slate-400 dark:text-slate-500"
+                  >
                     لا توجد طالبات مضافات بعد
                   </td>
                 </tr>
               )}
-              {halaqa.students.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.nationality}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.memorizedPagesTotal}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.currentQuota ?? "—"}</td>
-                </tr>
-              ))}
+              {halaqa.students.map((s) =>
+                canManage ? (
+                  <StudentNumbersRow key={s.id} student={s} showReviewedPages={halaqa.recitationEnabled} />
+                ) : (
+                  <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.nationality}</td>
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.memorizedPagesTotal}</td>
+                    {halaqa.recitationEnabled && (
+                      <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.reviewedPagesTotal}</td>
+                    )}
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{s.currentQuota ?? "—"}</td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
         </div>

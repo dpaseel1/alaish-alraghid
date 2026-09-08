@@ -28,6 +28,8 @@ export function DailyDataForm({
   weekRecitation,
   recitationEnabled,
   alreadySubmitted,
+  todayPages,
+  todayQuota,
 }: {
   students: Student[];
   weekDays: WeekDay[];
@@ -35,6 +37,8 @@ export function DailyDataForm({
   weekRecitation?: Record<string, boolean>;
   recitationEnabled?: boolean;
   alreadySubmitted: boolean;
+  todayPages?: Record<string, number>;
+  todayQuota?: Record<string, string>;
 }) {
   const [state, formAction, pending] = useActionState(
     submitDailyDataAction,
@@ -199,6 +203,7 @@ export function DailyDataForm({
                       type="number"
                       min={0}
                       name={`pages_${s.id}`}
+                      defaultValue={todayPages?.[s.id] ?? ""}
                       className="w-24 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
                       placeholder="0"
                     />
@@ -207,6 +212,7 @@ export function DailyDataForm({
                     <input
                       type="text"
                       name={`quota_${s.id}`}
+                      defaultValue={todayQuota?.[s.id] ?? ""}
                       className="w-32 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
                       placeholder="اختياري"
                     />

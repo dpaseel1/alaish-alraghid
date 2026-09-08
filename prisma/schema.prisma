@@ -84,11 +84,19 @@ model Session {
 // ============ المسارات ============
 // تجميع الحلقات ضمن مسارات كبرى (مثال: مسار الجمان، مسار الرواء، مسار رواس)
 
+enum TrackType {
+  HIFZ // حفظ
+  MURAJAA // مراجعة
+  TILAWAH // تلاوة
+  TAFSIR // تفسير
+}
+
 model Track {
-  id        String   @id @default(cuid())
-  name      String   @unique
+  id        String    @id @default(cuid())
+  name      String    @unique
+  type      TrackType @default(HIFZ) // تصنيف المسار - يحدد تسمية "الأوجه" المعروضة له في الإحصائيات
   imageUrl  String? // صورة المسار (اختيارية) - تُخزَّن كـ data URL مصغّرة
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   halaqat     Halaqa[]
   supervisors User[]   @relation("TrackSupervisors")
@@ -182,7 +190,7 @@ model MemorizationRecord {
   enteredById    String // المعلمة التي أدخلت البيانات
   createdAt      DateTime @default(now())
 
-  @@index([studentId, date])
+  @@unique([studentId, date])
 }
 
 // درجات الاختبارات (تُستخدم للأرشفة والشهادات)

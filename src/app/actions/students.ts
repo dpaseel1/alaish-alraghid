@@ -334,10 +334,21 @@ export async function submitDailyDataAction(
     const quota = quotaRaw ? String(quotaRaw).trim() : "";
 
     if (pages > 0) {
-      await db.memorizationRecord.create({
-        data: {
+      const existing = await db.memorizationRecord.findUnique({
+        where: { studentId_date: { studentId: student.id, date: today } },
+      });
+      const delta = pages - (existing?.pagesMemorized ?? 0);
+
+      await db.memorizationRecord.upsert({
+        where: { studentId_date: { studentId: student.id, date: today } },
+        create: {
           studentId: student.id,
           date: today,
+          pagesMemorized: pages,
+          quota: quota || null,
+          enteredById: user.id,
+        },
+        update: {
           pagesMemorized: pages,
           quota: quota || null,
           enteredById: user.id,
@@ -347,7 +358,7 @@ export async function submitDailyDataAction(
       await db.student.update({
         where: { id: student.id },
         data: {
-          memorizedPagesTotal: { increment: pages },
+          memorizedPagesTotal: { increment: delta },
           ...(quota ? { currentQuota: quota } : {}),
         },
       });
@@ -374,6 +385,60 @@ const digitsNumber = (min: number) =>
     (v) => (typeof v === "string" ? normalizeDigits(v) : v),
     z.coerce.number().min(min)
   );
+
+const studentNumbersSchema = z.object({
+  memorizedPagesTotal: digitsNumber(0),
+  reviewedPagesTotal: digitsNumber(0),
+  currentQuota: z.string().trim().optional().or(z.literal("")),
+});
+
+/** تعديل مباشر لإجمالي الأوجه المحفوظة وعدد أوجه المراجعة والنصاب الحالي لطالبة (لتصحيح الأرقام يدويًا) */
+export async function updateStudentNumbersAction(
+  studentId: string,
+  _prev: StudentActionState | undefined,
+  formData: FormData
+): Promise<StudentActionState> {
+  await requireRole("ADMIN", "SUPERVISOR", "TEACHER");
+
+  const student = await db.student.findUnique({ where: { id: studentId } });
+  if (!student) return { error: "الطالبة غير موجودة" };
+
+  const { ok, user } = await assertHalaqaAccess(student.halaqaId);
+  if (!ok) return { error: "لا تملكين صلاحية تعديل بيانات هذه الطالبة" };
+
+  const parsed = studentNumbersSchema.safeParse({
+    memorizedPagesTotal: formData.get("memorizedPagesTotal"),
+    reviewedPagesTotal: formData.get("reviewedPagesTotal"),
+    currentQuota: formData.get("currentQuota"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+  }
+
+  await db.student.update({
+    where: { id: studentId },
+    data: {
+      memorizedPagesTotal: parsed.data.memorizedPagesTotal,
+      reviewedPagesTotal: parsed.data.reviewedPagesTotal,
+      currentQuota: parsed.data.currentQuota || null,
+    },
+  });
+
+  await logAudit({
+    actor: user,
+    action: "STUDENT_NUMBERS_UPDATE",
+    targetType: "Student",
+    targetId: student.id,
+    targetLabel: student.name,
+    message: `عدّلت إجمالي الأوجه المحفوظة إلى ${parsed.data.memorizedPagesTotal} وعدد أوجه المراجعة إلى ${parsed.data.reviewedPagesTotal} والنصاب الحالي إلى ${parsed.data.currentQuota || "—"}`,
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+  revalidatePath("/halaqat");
+  return { success: "تم تحديث بيانات الطالبة" };
+}
 
 const examGradeSchema = z.object({
   studentId: z.string().min(1),
@@ -479,16 +544,31 @@ export async function toggleStudentAttendanceAction(
     update: { dataSubmitted: true, submittedAt: new Date() },
   });
 
-  await db.studentAttendance.upsert({
+  const existing = await db.studentAttendance.findUnique({
     where: {
       attendanceLogId_studentId: {
         attendanceLogId: attendanceLog.id,
         studentId,
       },
     },
-    create: { attendanceLogId: attendanceLog.id, studentId, present },
-    update: { present },
   });
+
+  const shouldClear = existing?.present === present;
+
+  if (shouldClear) {
+    await db.studentAttendance.delete({ where: { id: existing!.id } });
+  } else {
+    await db.studentAttendance.upsert({
+      where: {
+        attendanceLogId_studentId: {
+          attendanceLogId: attendanceLog.id,
+          studentId,
+        },
+      },
+      create: { attendanceLogId: attendanceLog.id, studentId, present },
+      update: { present },
+    });
+  }
 
   await logAudit({
     actor: user,
@@ -496,7 +576,9 @@ export async function toggleStudentAttendanceAction(
     targetType: "Student",
     targetId: student.id,
     targetLabel: student.name,
-    message: `سجّلت ${present ? "حضور" : "غياب"} الطالبة ليوم ${dateIso}`,
+    message: shouldClear
+      ? `أزالت تحضير الطالبة ليوم ${dateIso}`
+      : `سجّلت ${present ? "حضور" : "غياب"} الطالبة ليوم ${dateIso}`,
   });
 
   revalidatePath("/students");

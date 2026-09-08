@@ -105,6 +105,17 @@ export default async function StudentsPage({
     const todayIso = riyadhToday().toISOString().slice(0, 10);
     const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
 
+    const todayMemorization = await db.memorizationRecord.findMany({
+      where: { date: riyadhToday(), studentId: { in: halaqa.students.map((s) => s.id) } },
+      select: { studentId: true, pagesMemorized: true, quota: true },
+    });
+    const todayPages: Record<string, number> = {};
+    const todayQuota: Record<string, string> = {};
+    for (const r of todayMemorization) {
+      todayPages[r.studentId] = r.pagesMemorized;
+      if (r.quota) todayQuota[r.studentId] = r.quota;
+    }
+
     return (
       <div className="space-y-6">
         <div>
@@ -132,6 +143,8 @@ export default async function StudentsPage({
                 weekRecitation={weekRecitation}
                 recitationEnabled={halaqa.recitationEnabled}
                 alreadySubmitted={todayLog?.dataSubmitted ?? false}
+                todayPages={todayPages}
+                todayQuota={todayQuota}
               />
             </div>
 
