@@ -6,6 +6,7 @@ import { HalaqaSelect } from "@/components/students/HalaqaSelect";
 import { CertificateSection } from "@/components/certificates/CertificateSection";
 import { ExportHalaqaCertificatesButton } from "@/components/certificates/ExportHalaqaCertificatesButton";
 import { getActiveCertificateTemplate } from "@/lib/certificateTemplate";
+import { MemorizationRecordRow } from "@/components/students/MemorizationRecordRow";
 import type { Prisma } from "@/generated/prisma/client";
 
 function toDateInputValue(d: Date) {
@@ -275,13 +276,7 @@ export default async function CertificatesPage({
                     </tr>
                   )}
                   {selectedStudent.memorizationRecords.map((r) => (
-                    <tr key={r.id}>
-                      <td className="px-4 py-2" dir="ltr">
-                        {toDateInputValue(r.date)}
-                      </td>
-                      <td className="px-4 py-2">{r.pagesMemorized}</td>
-                      <td className="px-4 py-2">{r.quota ?? "—"}</td>
-                    </tr>
+                    <MemorizationRecordRow key={r.id} record={r} />
                   ))}
                 </tbody>
               </table>

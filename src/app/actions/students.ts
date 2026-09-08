@@ -440,6 +440,69 @@ export async function updateStudentNumbersAction(
   return { success: "تم تحديث بيانات الطالبة" };
 }
 
+const memorizationRecordSchema = z.object({
+  pagesMemorized: digitsNumber(0),
+  quota: z.string().trim().optional().or(z.literal("")),
+});
+
+/** تعديل مباشر لسجل تسميع يومي سابق (الأوجه المحفوظة والنصاب) من صفحة الأرشيف، مع تصحيح إجمالي الطالبة تلقائيًا بمقدار الفرق فقط */
+export async function updateMemorizationRecordAction(
+  recordId: string,
+  _prev: StudentActionState | undefined,
+  formData: FormData
+): Promise<StudentActionState> {
+  await requireRole("ADMIN", "SUPERVISOR", "TEACHER");
+
+  const record = await db.memorizationRecord.findUnique({
+    where: { id: recordId },
+    include: { student: true },
+  });
+  if (!record) return { error: "السجل غير موجود" };
+
+  const { ok, user } = await assertHalaqaAccess(record.student.halaqaId);
+  if (!ok) return { error: "لا تملكين صلاحية تعديل هذا السجل" };
+
+  const parsed = memorizationRecordSchema.safeParse({
+    pagesMemorized: formData.get("pagesMemorized"),
+    quota: formData.get("quota"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+  }
+
+  const delta = parsed.data.pagesMemorized - record.pagesMemorized;
+
+  await db.$transaction([
+    db.memorizationRecord.update({
+      where: { id: recordId },
+      data: {
+        pagesMemorized: parsed.data.pagesMemorized,
+        quota: parsed.data.quota || null,
+      },
+    }),
+    db.student.update({
+      where: { id: record.studentId },
+      data: { memorizedPagesTotal: { increment: delta } },
+    }),
+  ]);
+
+  await logAudit({
+    actor: user,
+    action: "MEMORIZATION_RECORD_UPDATE",
+    targetType: "Student",
+    targetId: record.student.id,
+    targetLabel: record.student.name,
+    message: `عدّلت سجل تسميع يوم ${record.date.toISOString().slice(0, 10)} من ${record.pagesMemorized} إلى ${parsed.data.pagesMemorized} وجهًا (النصاب: ${parsed.data.quota || "—"})`,
+  });
+
+  revalidatePath("/certificates");
+  revalidatePath("/students");
+  revalidatePath("/");
+
+  return { success: "تم تحديث السجل" };
+}
+
 const examGradeSchema = z.object({
   studentId: z.string().min(1),
   quota: z.string().trim().min(1, "الرجاء تحديد النصاب"),

@@ -333,7 +333,7 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
           />
           {halaqa.recitationEnabled && (
             <CircularProgress
-              label="عدد أوجه المراجعة"
+              label="عدد أوجه السرد"
               periodLabel={`خلال شهر ${hijriMonthLabel}`}
               value={pagesReviewedThisMonth}
               unit="وجه"
