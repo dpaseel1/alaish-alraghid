@@ -23,6 +23,12 @@ export function MemorizationRecordRow({ record }: { record: MemorizationRecord }
     initialState
   );
 
+  const [handledSuccess, setHandledSuccess] = useState(state?.success);
+  if (state?.success !== handledSuccess) {
+    setHandledSuccess(state?.success);
+    if (state?.success) setIsEditing(false);
+  }
+
   if (isEditing) {
     return (
       <tr className="bg-brand/5">
@@ -35,8 +41,8 @@ export function MemorizationRecordRow({ record }: { record: MemorizationRecord }
               <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">الأوجه المحفوظة</label>
               <input
                 name="pagesMemorized"
-                type="number"
-                min={0}
+                dir="ltr"
+                inputMode="numeric"
                 defaultValue={record.pagesMemorized}
                 required
                 className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-24"

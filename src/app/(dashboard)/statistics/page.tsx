@@ -88,6 +88,11 @@ export default async function StatisticsPage() {
 
   const submittedTodaySet = new Set(submittedTodayLogs.map((l) => l.halaqaId));
   const todayCode = HALAQA_DAYS[today.getUTCDay()];
+  const submittedHalaqatToday = halaqat.filter((h) => {
+    const scheduledDays = h.days.length > 0 ? new Set(h.days) : null;
+    const isScheduledToday = scheduledDays ? scheduledDays.has(todayCode) : today.getUTCDay() <= 4;
+    return isScheduledToday && submittedTodaySet.has(h.id);
+  });
   const unsubmittedHalaqatToday = halaqat.filter((h) => {
     const scheduledDays = h.days.length > 0 ? new Set(h.days) : null;
     const isScheduledToday = scheduledDays ? scheduledDays.has(todayCode) : today.getUTCDay() <= 4;
@@ -168,6 +173,21 @@ export default async function StatisticsPage() {
           icon={<CalendarIcon className="h-6 w-6" />}
         />
         <StatCard label="الحلقات النشطة" value={halaqat.length} icon={<MosqueIcon className="h-6 w-6" />} />
+        <StatCard
+          label="حلقات سجلت بيانات اليوم"
+          value={submittedHalaqatToday.length}
+          icon={<MosqueIcon className="h-6 w-6" />}
+          detailsLabel={submittedHalaqatToday.length > 0 ? "عرض الأسماء" : undefined}
+          detailsContent={
+            submittedHalaqatToday.length > 0 ? (
+              <ul className="space-y-1 list-disc pr-4">
+                {submittedHalaqatToday.map((h) => (
+                  <li key={h.id}>{h.name}</li>
+                ))}
+              </ul>
+            ) : undefined
+          }
+        />
         <StatCard
           label="حلقات لم تُسجّل بيانات اليوم"
           value={unsubmittedHalaqatToday.length}

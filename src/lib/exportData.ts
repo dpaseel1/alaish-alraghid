@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
 import type { User } from "@/generated/prisma/client";
 import { STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
+import { ROLE_LABELS } from "@/components/layout/nav-items";
 
 type HalaqaWhere = Record<string, unknown>;
 
@@ -137,6 +138,18 @@ export async function buildGradesRows(halaqaWhere: HalaqaWhere, fromDate: Date, 
     "من": g.maxGrade,
     "تاريخ الاختبار": g.examDate.toISOString().slice(0, 10),
   }));
+}
+
+export async function buildStaffNotRecordedRows(date: Date) {
+  const staff = await db.user.findMany({
+    where: { role: { in: ["TEACHER", "SUPERVISOR"] }, status: "ACTIVE" },
+    select: { name: true, role: true, staffAttendance: { where: { date } } },
+    orderBy: { name: "asc" },
+  });
+
+  return staff
+    .filter((s) => s.staffAttendance.length === 0)
+    .map((s) => ({ "الاسم": s.name, "الصفة": ROLE_LABELS[s.role] }));
 }
 
 export function rowsToXlsxBuffer(sheets: { name: string; rows: Record<string, unknown>[] }[]): Buffer {

@@ -143,13 +143,14 @@ export default async function StudentsPage({
                 weekAttendance={weekAttendance}
                 weekRecitation={weekRecitation}
                 recitationEnabled={halaqa.recitationEnabled}
+                uniformQuota={halaqa.uniformQuota}
                 alreadySubmitted={todayLog?.dataSubmitted ?? false}
                 todayPages={todayPages}
                 todayQuota={todayQuota}
               />
             </div>
 
-            <ImportAttendanceForm weekDays={weekDays} />
+            <ImportAttendanceForm weekDays={weekDays} students={halaqa.students} />
 
             <ExamGradesCard
               students={halaqa.students.map((s) => ({
@@ -245,9 +246,83 @@ export default async function StudentsPage({
           id: halaqaId,
           ...(user.role === "SUPERVISOR" ? { trackId: user.supervisedTrackId ?? "__no_track__" } : {}),
         },
-        include: { students: { where: { isActive: !isArchiveView }, orderBy: { name: "asc" } } },
+        include: {
+          students: {
+            where: { isActive: !isArchiveView },
+            orderBy: { name: "asc" },
+            include: { examGrades: { orderBy: { examDate: "desc" }, take: 1 } },
+          },
+        },
       })
     : null;
+
+  // المشرفة فقط تدخل بيانات اليوم مباشرة (للحلقات التي لا معلمة لها)، بنفس منطق أيام الانعقاد المستخدم لدى المعلمة
+  let supervisorWorkspace: {
+    weekDays: { iso: string; label: string }[];
+    weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
+    weekRecitation: Record<string, boolean>;
+    todayPages: Record<string, number>;
+    todayQuota: Record<string, string>;
+    alreadySubmitted: boolean;
+  } | null = null;
+
+  if (user.role === "SUPERVISOR" && selectedHalaqa && !isArchiveView) {
+    const scheduledDays = selectedHalaqa.days.length > 0 ? new Set(selectedHalaqa.days) : null;
+    const fullWeek = riyadhFullWeekDays();
+    const weekDayDates = scheduledDays
+      ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
+      : fullWeek.slice(0, 5);
+    const weekDays = weekDayDates.map((d) => ({
+      iso: d.toISOString().slice(0, 10),
+      label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],
+    }));
+
+    const weekLogs = await db.attendanceLog.findMany({
+      where: { halaqaId: selectedHalaqa.id, date: { in: weekDayDates } },
+      include: { studentAttendance: true },
+    });
+
+    const weekAttendance: Record<string, Record<string, StudentAttendanceStatus>> = {};
+    for (const log of weekLogs) {
+      const dateIso = log.date.toISOString().slice(0, 10);
+      for (const a of log.studentAttendance) {
+        weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
+        weekAttendance[a.studentId][dateIso] = a.status;
+      }
+    }
+
+    const weekRecitation: Record<string, boolean> = {};
+    if (selectedHalaqa.recitationEnabled) {
+      const recitations = await db.weeklyRecitation.findMany({
+        where: { weekStart: riyadhWeekStart(), student: { halaqaId: selectedHalaqa.id } },
+        select: { studentId: true, recited: true },
+      });
+      for (const r of recitations) weekRecitation[r.studentId] = r.recited;
+    }
+
+    const todayIso = riyadhToday().toISOString().slice(0, 10);
+    const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
+
+    const todayMemorization = await db.memorizationRecord.findMany({
+      where: { date: riyadhToday(), studentId: { in: selectedHalaqa.students.map((s) => s.id) } },
+      select: { studentId: true, pagesMemorized: true, quota: true },
+    });
+    const todayPages: Record<string, number> = {};
+    const todayQuota: Record<string, string> = {};
+    for (const r of todayMemorization) {
+      todayPages[r.studentId] = r.pagesMemorized;
+      if (r.quota) todayQuota[r.studentId] = r.quota;
+    }
+
+    supervisorWorkspace = {
+      weekDays,
+      weekAttendance,
+      weekRecitation,
+      todayPages,
+      todayQuota,
+      alreadySubmitted: todayLog?.dataSubmitted ?? false,
+    };
+  }
 
   return (
     <div className="space-y-6">
@@ -271,6 +346,54 @@ export default async function StudentsPage({
 
       {selectedHalaqa && (
         <>
+          {supervisorWorkspace && (
+            <>
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+                <div className="mb-4">
+                  <h2 className="font-semibold text-slate-800 dark:text-slate-100">بيانات اليوم</h2>
+                  {selectedHalaqa.days.length > 0 && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                      أيام انعقاد الحلقة:{" "}
+                      {selectedHalaqa.days.map((d) => HALAQA_DAY_LABELS[d as HalaqaDay]).join("، ")}
+                    </p>
+                  )}
+                </div>
+                <DailyDataForm
+                  halaqaId={selectedHalaqa.id}
+                  students={selectedHalaqa.students}
+                  weekDays={supervisorWorkspace.weekDays}
+                  weekAttendance={supervisorWorkspace.weekAttendance}
+                  weekRecitation={supervisorWorkspace.weekRecitation}
+                  recitationEnabled={selectedHalaqa.recitationEnabled}
+                  uniformQuota={selectedHalaqa.uniformQuota}
+                  alreadySubmitted={supervisorWorkspace.alreadySubmitted}
+                  todayPages={supervisorWorkspace.todayPages}
+                  todayQuota={supervisorWorkspace.todayQuota}
+                />
+              </div>
+
+              <ImportAttendanceForm
+                halaqaId={selectedHalaqa.id}
+                weekDays={supervisorWorkspace.weekDays}
+                students={selectedHalaqa.students}
+              />
+
+              <ExamGradesCard
+                students={selectedHalaqa.students.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                  latestGrade: s.examGrades[0]
+                    ? {
+                        quota: s.examGrades[0].quota,
+                        grade: s.examGrades[0].grade,
+                        maxGrade: s.examGrades[0].maxGrade,
+                      }
+                    : null,
+                }))}
+              />
+            </>
+          )}
+
           {!isArchiveView && (
             <>
               <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">

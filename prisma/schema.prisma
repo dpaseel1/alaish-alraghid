@@ -137,6 +137,8 @@ model Halaqa {
   supervisorName String? // اسم مشرفة الحلقة (نص حر، بدون حساب دخول)
   days           String[]      @default([]) // أيام انعقاد الحلقة: SUN/MON/TUE/WED/THU/FRI/SAT
   recitationEnabled Boolean      @default(false) // تفعيل خانة السرد: تُظهر للمعلمة خانة سرد لكل طالبة
+  uniformQuota   Boolean         @default(false) // نصاب موحّد: يُدخل نصاب واحد يوميًا للحلقة ويُطبَّق تلقائيًا على كل الطالبات بدل نصاب مستقل لكل طالبة
+  endDate        DateTime? // تاريخ نهاية الحلقة (اختياري) - عند تحديده تُستثنى من قائمة استحقاق الشهادات كل طالبة لم تحضر ولو يومًا واحدًا
   order        Int             @default(0) // ترتيب العرض اليدوي، تُحرَّكه المديرة/المشرفة بالأسهم في صفحة الحلقات
   trackId      String?
   track        Track?          @relation(fields: [trackId], references: [id])

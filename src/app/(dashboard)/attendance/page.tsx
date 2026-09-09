@@ -55,12 +55,21 @@ export default async function AttendancePage({
   const weekDayDates = riyadhWeekDays();
   const weekDays = weekDayDates.map((d, i) => ({ iso: toIso(d), label: WEEKDAY_LABELS[i] }));
 
-  // حضور المعلمة الشخصي مقيّد بأيام انعقاد حلقتها (وقد تشمل الجمعة/السبت)؛ المشرفة أو المعلمة بلا أيام محددة تبقى على الأحد-الخميس
-  const myHalaqa =
+  // حضور المعلمة الشخصي مقيّد بأيام انعقاد حلقتها (وقد تشمل الجمعة/السبت)؛ المشرفة مقيّدة باتحاد أيام كل حلقات مسارها،
+  // والمعلمة أو المشرفة بلا أيام محددة (أو بلا حلقات) تبقى على الأحد-الخميس الافتراضي
+  const myHalaqat =
     user.role === "TEACHER"
-      ? await db.halaqa.findUnique({ where: { teacherId: user.id }, select: { days: true } })
+      ? await db.halaqa.findUnique({ where: { teacherId: user.id }, select: { days: true } }).then((h) => (h ? [h] : []))
+      : user.role === "SUPERVISOR" && user.supervisedTrackId
+        ? await db.halaqa.findMany({
+            where: { trackId: user.supervisedTrackId, isActive: true },
+            select: { days: true },
+          })
+        : [];
+  const myScheduledDays =
+    myHalaqat.length > 0
+      ? new Set(myHalaqat.flatMap((h) => (h.days.length > 0 ? h.days : HALAQA_DAYS.slice(0, 5))))
       : null;
-  const myScheduledDays = myHalaqa && myHalaqa.days.length > 0 ? new Set(myHalaqa.days) : null;
   const fullWeek = riyadhFullWeekDays();
   const myWeekDayDates = myScheduledDays
     ? fullWeek.filter((d) => myScheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
@@ -77,8 +86,10 @@ export default async function AttendancePage({
   const exportQuery = new URLSearchParams({ from: exportFrom, to: exportTo }).toString();
   const thisWeekFrom = weekDays[0]?.iso ?? toIso(riyadhToday());
   const thisWeekTo = weekDays[weekDays.length - 1]?.iso ?? toIso(riyadhToday());
+  const today = riyadhToday();
 
-  const [myWeekAttendance, myLeaveRequests, pendingRequests, weeklyStaffSummary] = await Promise.all([
+  const [myWeekAttendance, myLeaveRequests, pendingRequests, weeklyStaffSummary, todayStaffAttendance] =
+    await Promise.all([
     isStaff
       ? db.staffAttendance.findMany({
           where: { userId: user.id, date: { in: myWeekDayDates } },
@@ -110,7 +121,16 @@ export default async function AttendancePage({
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
+    isAdmin
+      ? db.user.findMany({
+          where: { role: { in: ["TEACHER", "SUPERVISOR"] }, status: "ACTIVE" },
+          select: { id: true, name: true, role: true, staffAttendance: { where: { date: today } } },
+          orderBy: { name: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
+
+  const staffNotRecordedToday = todayStaffAttendance.filter((s) => s.staffAttendance.length === 0);
 
   const attendanceMap: Record<string, StaffAttendanceStatus> = {};
   for (const a of myWeekAttendance) {
@@ -259,6 +279,48 @@ export default async function AttendancePage({
                 reason: r.reason,
               }))}
             />
+          </div>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-2">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">
+              معلمات لم يسجلن حضورهن اليوم ({staffNotRecordedToday.length})
+            </h2>
+            {staffNotRecordedToday.length > 0 && (
+              <ExportButton href="/api/export/staff-not-recorded" label="تصدير القائمة" />
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
+                  <th className="px-4 py-2 font-medium">الاسم</th>
+                  <th className="px-4 py-2 font-medium">الصفة</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {staffNotRecordedToday.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                      جميع المعلمات سجّلن حضورهن اليوم
+                    </td>
+                  </tr>
+                )}
+                {staffNotRecordedToday.map((member) => (
+                  <tr key={member.id}>
+                    <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                      {member.name}
+                    </td>
+                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                      {ROLE_LABELS[member.role]}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

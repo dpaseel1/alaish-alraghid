@@ -26,20 +26,24 @@ const IS_ABSENT = (status: StudentAttendanceStatus | undefined) =>
   status === "ABSENT_EXCUSED" || status === "ABSENT_UNEXCUSED";
 
 export function DailyDataForm({
+  halaqaId,
   students,
   weekDays,
   weekAttendance,
   weekRecitation,
   recitationEnabled,
+  uniformQuota,
   alreadySubmitted,
   todayPages,
   todayQuota,
 }: {
+  halaqaId?: string;
   students: Student[];
   weekDays: WeekDay[];
   weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
   weekRecitation?: Record<string, boolean>;
   recitationEnabled?: boolean;
+  uniformQuota?: boolean;
   alreadySubmitted: boolean;
   todayPages?: Record<string, number>;
   todayQuota?: Record<string, string>;
@@ -202,6 +206,7 @@ export function DailyDataForm({
       )}
 
       <form action={formAction} className="space-y-4">
+        {halaqaId && <input type="hidden" name="halaqaId" value={halaqaId} />}
         {alreadySubmitted && !state?.success && (
           <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-400 text-sm px-4 py-3">
             تم تسجيل بيانات اليوم مسبقًا، يمكنك تعديلها وإعادة الحفظ.
@@ -218,19 +223,34 @@ export function DailyDataForm({
           </div>
         )}
 
+        {uniformQuota && (
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+              نصاب اليوم لكل الطالبات
+            </label>
+            <input
+              type="text"
+              name="quota"
+              defaultValue={Object.values(todayQuota ?? {})[0] ?? ""}
+              className="w-48 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              placeholder="اختياري"
+            />
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-4 py-2 font-medium">الطالبة</th>
                 <th className="px-4 py-2 font-medium">الأوجه المحفوظة اليوم</th>
-                <th className="px-4 py-2 font-medium">النصاب</th>
+                {!uniformQuota && <th className="px-4 py-2 font-medium">النصاب</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {students.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={uniformQuota ? 2 : 3} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                     لا توجد طالبات في حلقتك بعد
                   </td>
                 </tr>
@@ -240,23 +260,25 @@ export function DailyDataForm({
                   <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
                   <td className="px-4 py-2">
                     <input
-                      type="number"
-                      min={0}
+                      dir="ltr"
+                      inputMode="numeric"
                       name={`pages_${s.id}`}
                       defaultValue={todayPages?.[s.id] ?? ""}
                       className="w-24 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
                       placeholder="0"
                     />
                   </td>
-                  <td className="px-4 py-2">
-                    <input
-                      type="text"
-                      name={`quota_${s.id}`}
-                      defaultValue={todayQuota?.[s.id] ?? ""}
-                      className="w-32 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
-                      placeholder="اختياري"
-                    />
-                  </td>
+                  {!uniformQuota && (
+                    <td className="px-4 py-2">
+                      <input
+                        type="text"
+                        name={`quota_${s.id}`}
+                        defaultValue={todayQuota?.[s.id] ?? ""}
+                        className="w-32 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
+                        placeholder="اختياري"
+                      />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

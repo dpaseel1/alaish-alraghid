@@ -48,14 +48,19 @@ export default async function CertificatesPage({
           students: {
             where: { isActive: true },
             orderBy: { name: "asc" },
-            include: { examGrades: { orderBy: { examDate: "desc" }, take: 1 } },
+            include: {
+              examGrades: { orderBy: { examDate: "desc" }, take: 1 },
+              attendanceRecords: { where: { status: "PRESENT" }, take: 1 },
+            },
           },
         },
       })
     : null;
 
+  // بعد تحديد تاريخ نهاية صريح للحلقة، تُستثنى من استحقاق الشهادات كل طالبة لم تحضر ولو يومًا واحدًا طوال الحلقة
   const studentsWithCertificates = (halaqa?.students ?? [])
     .filter((s) => s.examGrades.length > 0)
+    .filter((s) => !halaqa!.endDate || s.attendanceRecords.length > 0)
     .map((s) => ({
       studentName: s.name,
       quota: s.examGrades[0].quota,
@@ -70,10 +75,16 @@ export default async function CertificatesPage({
           include: {
             memorizationRecords: { orderBy: { date: "desc" }, take: 100 },
             examGrades: { orderBy: { examDate: "desc" } },
+            attendanceRecords: { where: { status: "PRESENT" }, take: 1 },
             halaqa: { select: { name: true, teacher: { select: { name: true } } } },
           },
         })
       : null;
+
+  const isCertificateEligible =
+    !!selectedStudent &&
+    selectedStudent.examGrades.length > 0 &&
+    (!halaqa?.endDate || selectedStudent.attendanceRecords.length > 0);
 
   return (
     <div className="space-y-6">
@@ -211,7 +222,7 @@ export default async function CertificatesPage({
             </div>
           </div>
 
-          {selectedStudent.examGrades.length > 0 && (
+          {isCertificateEligible && (
             <CertificateSection
               data={{
                 studentName: selectedStudent.name,
@@ -222,6 +233,16 @@ export default async function CertificatesPage({
               template={template}
             />
           )}
+
+          {!isCertificateEligible &&
+            selectedStudent.examGrades.length > 0 &&
+            halaqa?.endDate &&
+            selectedStudent.attendanceRecords.length === 0 && (
+              <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-700 dark:text-amber-400 print:hidden">
+                لا تستحق الطالبة شهادة: لم تحضر ولو يومًا واحدًا طوال الحلقة، والحلقة انتهت بتاريخ{" "}
+                {toDateInputValue(halaqa.endDate)}
+              </div>
+            )}
 
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
             <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-2">درجات الاختبارات</h3>

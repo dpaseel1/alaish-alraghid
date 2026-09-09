@@ -31,6 +31,8 @@ export function HalaqaForm({
     trackId?: string | null;
     days?: string[];
     recitationEnabled?: boolean;
+    uniformQuota?: boolean;
+    endDate?: string | null;
   };
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -102,6 +104,36 @@ export function HalaqaForm({
         </label>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
           عند التفعيل، تظهر للمعلمة خانة السرد لكل طالبة لتسجيل سردها لمحفوظ الأسبوع كاملًا
+        </p>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            name="uniformQuota"
+            defaultChecked={initial?.uniformQuota}
+          />
+          نصاب موحّد لكل الطالبات
+        </label>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          عند التفعيل، يُدخل نصاب واحد فقط في بيانات اليوم ويُطبَّق تلقائيًا على كل طالبات الحلقة، بدل نصاب مستقل لكل طالبة
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+          تاريخ نهاية الحلقة (اختياري)
+        </label>
+        <input
+          type="date"
+          name="endDate"
+          dir="ltr"
+          defaultValue={initial?.endDate ?? ""}
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+        />
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          عند تحديده، تُستثنى من استحقاق الشهادات كل طالبة لم تحضر ولو يومًا واحدًا طوال الحلقة
         </p>
       </div>
 

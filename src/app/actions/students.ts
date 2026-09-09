@@ -47,6 +47,35 @@ async function assertHalaqaAccess(halaqaId: string) {
   return { user, ok: false as const, halaqa };
 }
 
+/**
+ * تحدد "حلقة المشغِّلة" التي تُدخِل عليها بيانات اليوم/الاستيراد: المعلمة تعمل على حلقتها المرتبطة بحسابها تلقائيًا،
+ * والمشرفة تعمل على أي حلقة ضمن مسارها تُرسَل صراحةً عبر حقل halaqaId (لعدم وجود حلقة واحدة مرتبطة بحسابها مباشرة)
+ */
+async function resolveOperatorHalaqa(formData: FormData) {
+  const user = await requireRole("TEACHER", "SUPERVISOR");
+
+  if (user.role === "TEACHER") {
+    const halaqa = await db.halaqa.findUnique({
+      where: { teacherId: user.id },
+      include: { students: { where: { isActive: true } } },
+    });
+    if (!halaqa) return { error: "لا توجد حلقة مرتبطة بحسابك" as const };
+    return { user, halaqa };
+  }
+
+  const halaqaId = String(formData.get("halaqaId") ?? "");
+  if (!halaqaId) return { error: "الرجاء تحديد الحلقة" as const };
+
+  const halaqa = await db.halaqa.findUnique({
+    where: { id: halaqaId },
+    include: { students: { where: { isActive: true } } },
+  });
+  if (!halaqa || halaqa.trackId == null || halaqa.trackId !== user.supervisedTrackId) {
+    return { error: "لا تملكين صلاحية الوصول لهذه الحلقة" as const };
+  }
+  return { user, halaqa };
+}
+
 export async function createStudentAction(
   _prev: StudentActionState | undefined,
   formData: FormData
@@ -307,13 +336,9 @@ export async function submitDailyDataAction(
   _prev: StudentActionState | undefined,
   formData: FormData
 ): Promise<StudentActionState> {
-  const user = await requireRole("TEACHER");
-
-  const halaqa = await db.halaqa.findUnique({
-    where: { teacherId: user.id },
-    include: { students: { where: { isActive: true } } },
-  });
-  if (!halaqa) return { error: "لا توجد حلقة مرتبطة بحسابك" };
+  const resolved = await resolveOperatorHalaqa(formData);
+  if ("error" in resolved) return { error: resolved.error };
+  const { user, halaqa } = resolved;
 
   const today = riyadhToday();
 
@@ -329,12 +354,28 @@ export async function submitDailyDataAction(
     update: { dataSubmitted: true, submittedAt: new Date() },
   });
 
+  const uniformQuotaRaw = halaqa.uniformQuota ? String(formData.get("quota") ?? "").trim() : null;
+
+  const entries: { student: (typeof halaqa.students)[number]; pages: number; quota: string }[] = [];
   for (const student of halaqa.students) {
     const pagesRaw = formData.get(`pages_${student.id}`);
-    const quotaRaw = formData.get(`quota_${student.id}`);
-    const pages = pagesRaw ? parseInt(String(pagesRaw), 10) : 0;
+    const quotaRaw = halaqa.uniformQuota ? uniformQuotaRaw : formData.get(`quota_${student.id}`);
+    const pagesStr = pagesRaw ? normalizeDigits(String(pagesRaw)).trim() : "";
     const quota = quotaRaw ? String(quotaRaw).trim() : "";
 
+    if (!pagesStr) {
+      entries.push({ student, pages: 0, quota });
+      continue;
+    }
+
+    const pages = Number(pagesStr);
+    if (!Number.isInteger(pages) || pages < 0) {
+      return { error: `الرجاء إدخال رقم صحيح للأوجه المحفوظة لـ"${student.name}"` };
+    }
+    entries.push({ student, pages, quota });
+  }
+
+  for (const { student, pages, quota } of entries) {
     if (pages > 0) {
       const existing = await db.memorizationRecord.findUnique({
         where: { studentId_date: { studentId: student.id, date: today } },
@@ -585,14 +626,16 @@ export async function toggleStudentAttendanceAction(
   dateIso: string,
   status: StudentAttendanceStatus
 ) {
-  const user = await requireRole("TEACHER");
   if (!STUDENT_ATTENDANCE_STATUSES.includes(status)) return;
 
   const student = await db.student.findUnique({
     where: { id: studentId },
     include: { halaqa: true },
   });
-  if (!student || student.halaqa.teacherId !== user.id) return;
+  if (!student) return;
+
+  const { ok, user } = await assertHalaqaAccess(student.halaqaId);
+  if (!ok) return;
 
   const date = new Date(dateIso);
   const validDates = getValidHalaqaDates(student.halaqa.days);
@@ -654,120 +697,106 @@ export async function toggleStudentAttendanceAction(
 
 export type ImportAttendanceResult = {
   successCount: number;
+  absentCount: number;
   failures: { row: number; message: string }[];
   error?: string;
 };
 
-/** استيراد حضور يوم واحد لكل طالبات الحلقة من ملف Excel بعمودين (اسم الطالبة، وعمود إجابة نعم/لا يختلف نصّ سؤاله من حلقة لأخرى)، كبديل عن التسجيل اليدوي لنفس اليوم */
+/**
+ * استيراد حضور يوم واحد لكل طالبات الحلقة من ملف Excel (مثل استبانات مايكروسوفت فورمز): تُطابَق أسماء الملف مع طالبات
+ * الحلقة في المتصفح مسبقًا (مطابقة تلقائية + مراجعة يدوية)، فيصل هذا الإجراء بقائمة معرّفات الطالبات المطابَقة (الحاضرات) جاهزة.
+ * كل طالبة نشطة في الحلقة لم تُطابَق ضمن الملف تُسجَّل تلقائيًا "غياب بدون عذر" لنفس اليوم.
+ */
 export async function importAttendanceExcelAction(
   _prev: ImportAttendanceResult | undefined,
   formData: FormData
 ): Promise<ImportAttendanceResult> {
-  const user = await requireRole("TEACHER");
-
-  const halaqa = await db.halaqa.findUnique({
-    where: { teacherId: user.id },
-    include: { students: { where: { isActive: true } } },
-  });
-  if (!halaqa) return { successCount: 0, failures: [], error: "لا توجد حلقة مرتبطة بحسابك" };
+  const resolved = await resolveOperatorHalaqa(formData);
+  if ("error" in resolved) return { successCount: 0, absentCount: 0, failures: [], error: resolved.error };
+  const { user, halaqa } = resolved;
 
   const dateIso = String(formData.get("dateIso") ?? "");
   const date = new Date(dateIso);
   const validDates = getValidHalaqaDates(halaqa.days);
   if (!dateIso || !validDates.includes(date.getTime())) {
-    return { successCount: 0, failures: [], error: "الرجاء اختيار يوم صحيح من أيام انعقاد الحلقة هذا الأسبوع" };
+    return {
+      successCount: 0,
+      absentCount: 0,
+      failures: [],
+      error: "الرجاء اختيار يوم صحيح من أيام انعقاد الحلقة هذا الأسبوع",
+    };
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { successCount: 0, failures: [], error: "الرجاء اختيار ملف Excel" };
-  }
-
-  let rows: unknown[][];
+  let presentStudentIds: string[];
   try {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const wb = XLSX.read(buffer, { type: "buffer" });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
+    const parsed = JSON.parse(String(formData.get("presentStudentIds") ?? "[]"));
+    if (!Array.isArray(parsed)) throw new Error();
+    presentStudentIds = parsed.filter((v): v is string => typeof v === "string");
   } catch {
-    return { successCount: 0, failures: [], error: "تعذّر قراءة الملف، تأكدي أنه بصيغة Excel صحيحة" };
+    return { successCount: 0, absentCount: 0, failures: [], error: "بيانات المطابقة غير صحيحة" };
   }
 
-  const studentsByName = new Map(halaqa.students.map((s) => [s.name.trim(), s]));
-  const failures: { row: number; message: string }[] = [];
-  const results: { studentId: string; status: StudentAttendanceStatus }[] = [];
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const name = String(row?.[0] ?? "").trim();
-    const answer = String(row?.[1] ?? "").trim();
-    if (!name && !answer) continue; // صف فارغ
-
-    if (!name) {
-      failures.push({ row: i + 1, message: "اسم الطالبة فارغ" });
-      continue;
-    }
-
-    const student = studentsByName.get(name);
-    if (!student) {
-      failures.push({ row: i + 1, message: `"${name}" غير موجودة ضمن طالبات الحلقة` });
-      continue;
-    }
-
-    if (answer === "نعم") {
-      results.push({ studentId: student.id, status: "PRESENT" });
-    } else if (answer === "لا") {
-      results.push({ studentId: student.id, status: "ABSENT_UNEXCUSED" });
-    } else {
-      failures.push({ row: i + 1, message: `قيمة غير معروفة في عمود الحضور لـ"${name}" (يجب أن تكون نعم أو لا)` });
-    }
+  const rosterIds = new Set(halaqa.students.map((s) => s.id));
+  const presentIds = [...new Set(presentStudentIds.filter((id) => rosterIds.has(id)))];
+  if (presentIds.length === 0) {
+    return {
+      successCount: 0,
+      absentCount: 0,
+      failures: [],
+      error: "لم تتم مطابقة أي طالبة من الملف، تأكدي من المطابقة ثم أعيدي المحاولة",
+    };
   }
 
-  if (results.length > 0) {
-    const attendanceLog = await db.attendanceLog.upsert({
-      where: { halaqaId_date: { halaqaId: halaqa.id, date } },
-      create: { halaqaId: halaqa.id, date, teacherPresent: true, dataSubmitted: true, submittedAt: new Date() },
-      update: { dataSubmitted: true, submittedAt: new Date() },
-    });
+  const presentSet = new Set(presentIds);
+  const absentIds = halaqa.students.filter((s) => !presentSet.has(s.id)).map((s) => s.id);
 
-    await Promise.all(
-      results.map((r) =>
-        db.studentAttendance.upsert({
-          where: { attendanceLogId_studentId: { attendanceLogId: attendanceLog.id, studentId: r.studentId } },
-          create: { attendanceLogId: attendanceLog.id, studentId: r.studentId, status: r.status },
-          update: { status: r.status },
-        })
-      )
-    );
+  const attendanceLog = await db.attendanceLog.upsert({
+    where: { halaqaId_date: { halaqaId: halaqa.id, date } },
+    create: { halaqaId: halaqa.id, date, teacherPresent: true, dataSubmitted: true, submittedAt: new Date() },
+    update: { dataSubmitted: true, submittedAt: new Date() },
+  });
 
-    await logAudit({
-      actor: user,
-      action: "STUDENT_ATTENDANCE_IMPORT",
-      targetType: "Halaqa",
-      targetId: halaqa.id,
-      targetLabel: halaqa.name,
-      message: `استوردت حضور ${results.length} طالبة من ملف Excel ليوم ${dateIso}${
-        failures.length ? ` (${failures.length} صف مرفوض)` : ""
-      }`,
-    });
+  const results: { studentId: string; status: StudentAttendanceStatus }[] = [
+    ...presentIds.map((studentId) => ({ studentId, status: "PRESENT" as const })),
+    ...absentIds.map((studentId) => ({ studentId, status: "ABSENT_UNEXCUSED" as const })),
+  ];
 
-    revalidatePath("/students");
-    revalidatePath("/");
-    revalidatePath("/honor-board");
-  }
+  await Promise.all(
+    results.map((r) =>
+      db.studentAttendance.upsert({
+        where: { attendanceLogId_studentId: { attendanceLogId: attendanceLog.id, studentId: r.studentId } },
+        create: { attendanceLogId: attendanceLog.id, studentId: r.studentId, status: r.status },
+        update: { status: r.status },
+      })
+    )
+  );
 
-  return { successCount: results.length, failures };
+  await logAudit({
+    actor: user,
+    action: "STUDENT_ATTENDANCE_IMPORT",
+    targetType: "Halaqa",
+    targetId: halaqa.id,
+    targetLabel: halaqa.name,
+    message: `استوردت حضور ${presentIds.length} طالبة من ملف Excel ليوم ${dateIso} (${absentIds.length} غياب بدون عذر تلقائيًا)`,
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+  revalidatePath("/honor-board");
+
+  return { successCount: presentIds.length, absentCount: absentIds.length, failures: [] };
 }
 
 /** تضبط تسجيل "سردت" لطالبة لأسبوعها الحالي (متاح فقط للحلقات المفعّلة لديها خانة السرد) - عند التفعيل تُحسب أوجه الحفظ المسجَّلة لها هذا الأسبوع تحديدًا ضمن "عدد أوجه المراجعة" */
 export async function toggleStudentRecitationAction(studentId: string, recited: boolean) {
-  const user = await requireRole("TEACHER");
-
   const student = await db.student.findUnique({
     where: { id: studentId },
     include: { halaqa: true },
   });
-  if (!student || student.halaqa.teacherId !== user.id) return;
+  if (!student) return;
+
+  const { ok, user } = await assertHalaqaAccess(student.halaqaId);
+  if (!ok) return;
   if (!student.halaqa.recitationEnabled) return;
 
   const weekStart = riyadhWeekStart();

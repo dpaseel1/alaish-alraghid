@@ -58,6 +58,8 @@ export default async function EditHalaqaPage({
             trackId: halaqa.trackId,
             days: halaqa.days,
             recitationEnabled: halaqa.recitationEnabled,
+            uniformQuota: halaqa.uniformQuota,
+            endDate: halaqa.endDate ? halaqa.endDate.toISOString().slice(0, 10) : null,
           }}
         />
       </div>

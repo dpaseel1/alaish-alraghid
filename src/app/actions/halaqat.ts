@@ -20,6 +20,7 @@ const halaqaSchema = z.object({
   supervisorName: z.string().trim().max(100).optional().nullable(),
   trackId: z.string().optional().nullable(),
   days: z.array(z.enum(HALAQA_DAYS)).default([]),
+  endDate: z.string().optional().nullable(),
 });
 
 export type HalaqaActionState = { error?: string; success?: string };
@@ -38,14 +39,16 @@ export async function createHalaqaAction(
     supervisorName: formData.get("supervisorName") || null,
     trackId: formData.get("trackId") || null,
     days: formData.getAll("days"),
+    endDate: formData.get("endDate") || null,
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
-  const { name, time, category, teacherId, supervisorName, days } = parsed.data;
+  const { name, time, category, teacherId, supervisorName, days, endDate } = parsed.data;
   const recitationEnabled = formData.get("recitationEnabled") === "on";
+  const uniformQuota = formData.get("uniformQuota") === "on";
 
   // المشرفة تُنشئ حلقات ضمن مسارها فقط (يُفرض من الجلسة، وليس من الفورم)، والمديرة تختار المسار
   let trackId: string | null;
@@ -77,6 +80,8 @@ export async function createHalaqaAction(
       trackId,
       days,
       recitationEnabled,
+      uniformQuota,
+      endDate: endDate ? new Date(endDate) : null,
       order: (maxOrder._max.order ?? -1) + 1,
     },
   });
@@ -111,6 +116,7 @@ export async function updateHalaqaAction(
     supervisorName: formData.get("supervisorName") || null,
     trackId: formData.get("trackId") || null,
     days: formData.getAll("days"),
+    endDate: formData.get("endDate") || null,
   });
 
   if (!parsed.success) {
@@ -123,8 +129,9 @@ export async function updateHalaqaAction(
     return { error: "لا تملكين صلاحية تعديل هذه الحلقة" };
   }
 
-  const { name, time, category, teacherId, supervisorName, days } = parsed.data;
+  const { name, time, category, teacherId, supervisorName, days, endDate } = parsed.data;
   const recitationEnabled = formData.get("recitationEnabled") === "on";
+  const uniformQuota = formData.get("uniformQuota") === "on";
 
   if (teacherId) {
     const existing = await db.halaqa.findUnique({ where: { teacherId } });
@@ -146,6 +153,8 @@ export async function updateHalaqaAction(
       trackId,
       days,
       recitationEnabled,
+      uniformQuota,
+      endDate: endDate ? new Date(endDate) : null,
     },
   });
 
