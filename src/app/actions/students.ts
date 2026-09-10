@@ -405,6 +405,28 @@ export async function submitDailyDataAction(
           ...(quota ? { currentQuota: quota } : {}),
         },
       });
+    } else if (quota) {
+      // النصاب أُدخل لكن ما أُدخل عدد أوجه لهذه الطالبة اليوم (شائع في وضع النصاب الموحّد) — يُحفظ النصاب
+      // بلا التأثير على عدد الأوجه المحفوظة سابقًا لهذا اليوم إن وُجد
+      await db.memorizationRecord.upsert({
+        where: { studentId_date: { studentId: student.id, date: today } },
+        create: {
+          studentId: student.id,
+          date: today,
+          pagesMemorized: 0,
+          quota,
+          enteredById: user.id,
+        },
+        update: {
+          quota,
+          enteredById: user.id,
+        },
+      });
+
+      await db.student.update({
+        where: { id: student.id },
+        data: { currentQuota: quota },
+      });
     }
   }
 
