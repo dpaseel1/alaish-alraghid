@@ -442,6 +442,8 @@ export default async function StudentsPage({
                       student={s}
                       canManage
                       canRevealNationalId
+                      canMoveAndDelete
+                      halaqatOptions={halaqat}
                       showReviewedPages={selectedHalaqa.recitationEnabled}
                       updateAction={updateStudentAction.bind(null, s.id)}
                       deleteAction={deleteStudentAction.bind(null, s.id)}

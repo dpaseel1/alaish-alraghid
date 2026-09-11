@@ -232,6 +232,98 @@ export async function reactivateStudentAction(studentId: string) {
   revalidatePath("/");
 }
 
+/** حذف نهائي للطالبة وكل سجلاتها المرتبطة (بخلاف الأرشفة)، متاح للمديرة والمشرفة فقط */
+export async function permanentlyDeleteStudentAction(studentId: string): Promise<{ error?: string }> {
+  await requireRole("ADMIN", "SUPERVISOR");
+
+  const student = await db.student.findUnique({ where: { id: studentId } });
+  if (!student) return { error: "الطالبة غير موجودة" };
+
+  const { ok, user } = await assertHalaqaAccess(student.halaqaId);
+  if (!ok) return { error: "لا تملكين صلاحية حذف هذه الطالبة" };
+
+  await db.$transaction([
+    db.memorizationRecord.deleteMany({ where: { studentId } }),
+    db.examGrade.deleteMany({ where: { studentId } }),
+    db.studentAttendance.deleteMany({ where: { studentId } }),
+    db.weeklyRecitation.deleteMany({ where: { studentId } }),
+    db.student.delete({ where: { id: studentId } }),
+  ]);
+
+  await logAudit({
+    actor: user,
+    action: "STUDENT_PERMANENT_DELETE",
+    targetType: "Student",
+    targetId: studentId,
+    targetLabel: student.name,
+    message: "حذفت الطالبة نهائيًا مع جميع سجلاتها",
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+  revalidatePath("/reports");
+  revalidatePath("/certificates");
+  revalidatePath("/honor-board");
+  revalidatePath("/statistics");
+  return {};
+}
+
+const moveStudentSchema = z.object({
+  studentId: z.string().min(1),
+  targetHalaqaId: z.string().min(1, "الرجاء اختيار الحلقة"),
+});
+
+/** نقل طالبة إلى حلقة أخرى ضمن نطاق صلاحية المستخدمة (كل الحلقات للمديرة، حلقات مسارها فقط للمشرفة) */
+export async function moveStudentAction(
+  _prev: StudentActionState | undefined,
+  formData: FormData
+): Promise<StudentActionState> {
+  await requireRole("ADMIN", "SUPERVISOR");
+
+  const parsed = moveStudentSchema.safeParse({
+    studentId: formData.get("studentId"),
+    targetHalaqaId: formData.get("targetHalaqaId"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+  }
+  const { studentId, targetHalaqaId } = parsed.data;
+
+  const student = await db.student.findUnique({ where: { id: studentId } });
+  if (!student) return { error: "الطالبة غير موجودة" };
+  if (student.halaqaId === targetHalaqaId) {
+    return { error: "الطالبة موجودة بالفعل في هذه الحلقة" };
+  }
+
+  const { ok: sourceOk } = await assertHalaqaAccess(student.halaqaId);
+  if (!sourceOk) return { error: "لا تملكين صلاحية نقل هذه الطالبة" };
+
+  const { ok: targetOk, user } = await assertHalaqaAccess(targetHalaqaId);
+  if (!targetOk) return { error: "لا تملكين صلاحية النقل إلى هذه الحلقة" };
+
+  const [sourceHalaqa, targetHalaqa] = await Promise.all([
+    db.halaqa.findUnique({ where: { id: student.halaqaId }, select: { name: true } }),
+    db.halaqa.findUnique({ where: { id: targetHalaqaId }, select: { name: true } }),
+  ]);
+
+  await db.student.update({ where: { id: studentId }, data: { halaqaId: targetHalaqaId } });
+
+  await logAudit({
+    actor: user,
+    action: "STUDENT_MOVE",
+    targetType: "Student",
+    targetId: student.id,
+    targetLabel: student.name,
+    message: `نقلت الطالبة من حلقة ${sourceHalaqa?.name ?? "—"} إلى حلقة ${targetHalaqa?.name ?? "—"}`,
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+  revalidatePath("/reports");
+  revalidatePath("/statistics");
+  return { success: "تم نقل الطالبة بنجاح" };
+}
+
 export type ImportStudentsResult = {
   successCount: number;
   failures: { row: number; message: string }[];

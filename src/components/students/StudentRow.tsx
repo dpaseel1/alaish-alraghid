@@ -3,14 +3,17 @@
 import { useActionState, useState } from "react";
 import {
   addExamGradeAction,
+  moveStudentAction,
   type StudentActionState,
 } from "@/app/actions/students";
 import { RevealStudentNationalId } from "@/components/students/RevealStudentNationalId";
+import { DeleteStudentButton } from "@/components/students/DeleteStudentButton";
 
 type Student = {
   id: string;
   name: string;
   nationality: string;
+  halaqaId: string;
   memorizedPagesTotal: number;
   reviewedPagesTotal?: number;
   currentQuota: string | null;
@@ -29,6 +32,8 @@ export function StudentRow({
   halaqaName,
   canManage,
   canRevealNationalId,
+  canMoveAndDelete,
+  halaqatOptions,
   showReviewedPages,
   updateAction,
   deleteAction,
@@ -40,6 +45,8 @@ export function StudentRow({
   halaqaName?: string;
   canManage: boolean;
   canRevealNationalId?: boolean;
+  canMoveAndDelete?: boolean;
+  halaqatOptions?: { id: string; name: string }[];
   showReviewedPages?: boolean;
   updateAction: (
     prev: StudentActionState | undefined,
@@ -49,13 +56,17 @@ export function StudentRow({
   isArchived?: boolean;
   reactivateAction?: () => Promise<void>;
 }) {
-  const [mode, setMode] = useState<"view" | "edit" | "grade">("view");
+  const [mode, setMode] = useState<"view" | "edit" | "grade" | "move">("view");
   const [updateState, updateFormAction, updatePending] = useActionState(
     updateAction,
     initialState
   );
   const [gradeState, gradeFormAction, gradePending] = useActionState(
     addExamGradeAction,
+    initialState
+  );
+  const [moveState, moveFormAction, movePending] = useActionState(
+    moveStudentAction,
     initialState
   );
 
@@ -253,6 +264,68 @@ export function StudentRow({
     );
   }
 
+  if (mode === "move") {
+    return (
+      <tr className="bg-sky-50/60 dark:bg-sky-950/30">
+        <td colSpan={colCount} className="px-5 py-3">
+          {moveState?.success ? (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-emerald-700 dark:text-emerald-400">{moveState.success}</span>
+              <button
+                type="button"
+                onClick={() => setMode("view")}
+                className="text-sm text-slate-500 dark:text-slate-400 hover:underline"
+              >
+                إغلاق
+              </button>
+            </div>
+          ) : (
+            <form action={moveFormAction} className="flex flex-wrap items-end gap-3">
+              <input type="hidden" name="studentId" value={student.id} />
+              <div>
+                <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">نقل إلى حلقة</label>
+                <select
+                  name="targetHalaqaId"
+                  required
+                  defaultValue=""
+                  className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-800"
+                >
+                  <option value="" disabled>
+                    اختاري الحلقة
+                  </option>
+                  {(halaqatOptions ?? [])
+                    .filter((h) => h.id !== student.halaqaId)
+                    .map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={movePending}
+                className="rounded-lg bg-brand text-white text-sm font-medium px-4 py-2 hover:bg-brand-dark disabled:opacity-60"
+              >
+                {movePending ? "جاري النقل..." : "نقل"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("view")}
+                className="text-sm text-slate-500 dark:text-slate-400 hover:underline px-2 py-2"
+              >
+                إلغاء
+              </button>
+              {moveState?.error && (
+                <span className="text-xs text-red-600 dark:text-red-400 basis-full">{moveState.error}</span>
+              )}
+            </form>
+          )}
+        </td>
+      </tr>
+    );
+  }
+
   return (
     <tr className="hover:bg-slate-50 dark:hover:bg-slate-800">
       <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">{student.name}</td>
@@ -290,9 +363,20 @@ export function StudentRow({
               >
                 تسجيل درجة
               </button>
+              {canMoveAndDelete && (
+                <button
+                  onClick={() => setMode("move")}
+                  className="text-xs text-sky-700 dark:text-sky-400 hover:underline"
+                >
+                  نقل
+                </button>
+              )}
               <form action={deleteAction} className="inline">
                 <button className="text-xs text-red-600 dark:text-red-400 hover:underline">أرشفة</button>
               </form>
+              {canMoveAndDelete && (
+                <DeleteStudentButton studentId={student.id} name={student.name} />
+              )}
             </>
           )}
         </td>
