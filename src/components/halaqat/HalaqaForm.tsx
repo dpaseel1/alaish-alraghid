@@ -100,10 +100,10 @@ export function HalaqaForm({
             name="recitationEnabled"
             defaultChecked={initial?.recitationEnabled}
           />
-          تفعيل خانة السرد
+          تفعيل خانة المراجعة
         </label>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-          عند التفعيل، تظهر للمعلمة خانة السرد لكل طالبة لتسجيل سردها لمحفوظ الأسبوع كاملًا
+          عند التفعيل، تظهر للمعلمة خانة يومية لتسجيل عدد أوجه المراجعة لكل طالبة، بجانب خانة الأوجه المحفوظة
         </p>
       </div>
 

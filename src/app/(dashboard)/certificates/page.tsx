@@ -285,19 +285,25 @@ export default async function CertificatesPage({
                   <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                     <th className="px-4 py-2 font-medium">التاريخ</th>
                     <th className="px-4 py-2 font-medium">الأوجه المحفوظة</th>
+                    {halaqa?.recitationEnabled && (
+                      <th className="px-4 py-2 font-medium">عدد أوجه المراجعة</th>
+                    )}
                     <th className="px-4 py-2 font-medium">النصاب</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {selectedStudent.memorizationRecords.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="px-4 py-4 text-center text-slate-400 dark:text-slate-500">
+                      <td
+                        colSpan={halaqa?.recitationEnabled ? 4 : 3}
+                        className="px-4 py-4 text-center text-slate-400 dark:text-slate-500"
+                      >
                         لا توجد سجلات تسميع بعد
                       </td>
                     </tr>
                   )}
                   {selectedStudent.memorizationRecords.map((r) => (
-                    <MemorizationRecordRow key={r.id} record={r} />
+                    <MemorizationRecordRow key={r.id} record={r} showReviewedPages={halaqa?.recitationEnabled} />
                   ))}
                 </tbody>
               </table>

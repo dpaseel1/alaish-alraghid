@@ -7,7 +7,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import { DeleteHalaqaButton } from "@/components/halaqat/DeleteHalaqaButton";
 import { ToggleHalaqaActiveButton } from "@/components/halaqat/ToggleHalaqaActiveButton";
 import { StudentNumbersRow } from "@/components/students/StudentNumbersRow";
-import { HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
+import { HALAQA_DAYS, HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
+import { riyadhFullWeekDays } from "@/lib/timezone";
+import { STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
+import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 
 export default async function HalaqaDetailPage({
   params,
@@ -63,6 +66,36 @@ export default async function HalaqaDetailPage({
       </div>
     );
   }
+
+  const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : null;
+  const fullWeek = riyadhFullWeekDays();
+  const weekDayDates = scheduledDays
+    ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
+    : fullWeek.slice(0, 5);
+  const weekDays = weekDayDates.map((d) => ({
+    iso: d.toISOString().slice(0, 10),
+    label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],
+  }));
+
+  const weekLogs = await db.attendanceLog.findMany({
+    where: { halaqaId: halaqa.id, date: { in: weekDayDates } },
+    include: { studentAttendance: true },
+  });
+
+  const weekAttendance: Record<string, Record<string, StudentAttendanceStatus>> = {};
+  for (const log of weekLogs) {
+    const dateIso = log.date.toISOString().slice(0, 10);
+    for (const a of log.studentAttendance) {
+      weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
+      weekAttendance[a.studentId][dateIso] = a.status;
+    }
+  }
+
+  const ATTENDANCE_BADGE_CLASS: Record<StudentAttendanceStatus, string> = {
+    PRESENT: "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400",
+    ABSENT_EXCUSED: "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400",
+    ABSENT_UNEXCUSED: "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400",
+  };
 
   return (
     <div className="space-y-6">
@@ -179,20 +212,66 @@ export default async function HalaqaDetailPage({
         </div>
       </div>
 
+      {weekDays.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">الحضور والغياب هذا الأسبوع</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
+                  <th className="px-5 py-3 font-medium">الطالبة</th>
+                  {weekDays.map((day) => (
+                    <th key={day.iso} className="px-3 py-3 font-medium text-center">
+                      {day.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {halaqa.students.length === 0 && (
+                  <tr>
+                    <td colSpan={1 + weekDays.length} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                      لا توجد طالبات مضافات بعد
+                    </td>
+                  </tr>
+                )}
+                {halaqa.students.map((s) => (
+                  <tr key={s.id}>
+                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                      {s.name}
+                    </td>
+                    {weekDays.map((day) => {
+                      const status = weekAttendance[s.id]?.[day.iso];
+                      return (
+                        <td key={day.iso} className="px-3 py-3 text-center">
+                          {status ? (
+                            <span
+                              className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${ATTENDANCE_BADGE_CLASS[status]}`}
+                            >
+                              {STUDENT_ATTENDANCE_LABELS[status]}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100">
             طالبات الحلقة ({halaqa.students.length})
           </h2>
           <div className="flex items-center gap-4">
-            {halaqa.recitationEnabled && (
-              <Link
-                href={`/halaqat/${halaqa.id}/recitation`}
-                className="text-sm text-brand font-medium hover:underline"
-              >
-                عرض كامل بيانات الحلقة
-              </Link>
-            )}
             <Link href="/students" className="text-sm text-brand font-medium hover:underline">
               إدارة الطالبات
             </Link>

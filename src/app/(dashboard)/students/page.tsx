@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhToday, riyadhFullWeekDays, riyadhWeekStart } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
 import { HALAQA_DAYS, HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
 import { updateStudentAction, deleteStudentAction, reactivateStudentAction } from "@/app/actions/students";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
@@ -94,27 +94,20 @@ export default async function StudentsPage({
       }
     }
 
-    const weekRecitation: Record<string, boolean> = {};
-    if (halaqa.recitationEnabled) {
-      const recitations = await db.weeklyRecitation.findMany({
-        where: { weekStart: riyadhWeekStart(), student: { halaqaId: halaqa.id } },
-        select: { studentId: true, recited: true },
-      });
-      for (const r of recitations) weekRecitation[r.studentId] = r.recited;
-    }
-
     const todayIso = riyadhToday().toISOString().slice(0, 10);
     const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
 
     const todayMemorization = await db.memorizationRecord.findMany({
       where: { date: riyadhToday(), studentId: { in: halaqa.students.map((s) => s.id) } },
-      select: { studentId: true, pagesMemorized: true, quota: true },
+      select: { studentId: true, pagesMemorized: true, pagesReviewed: true, quota: true },
     });
     const todayPages: Record<string, number> = {};
     const todayQuota: Record<string, string> = {};
+    const todayPagesReviewed: Record<string, number> = {};
     for (const r of todayMemorization) {
       todayPages[r.studentId] = r.pagesMemorized;
       if (r.quota) todayQuota[r.studentId] = r.quota;
+      todayPagesReviewed[r.studentId] = r.pagesReviewed;
     }
 
     return (
@@ -141,12 +134,12 @@ export default async function StudentsPage({
                 students={halaqa.students}
                 weekDays={weekDays}
                 weekAttendance={weekAttendance}
-                weekRecitation={weekRecitation}
                 recitationEnabled={halaqa.recitationEnabled}
                 uniformQuota={halaqa.uniformQuota}
                 alreadySubmitted={todayLog?.dataSubmitted ?? false}
                 todayPages={todayPages}
                 todayQuota={todayQuota}
+                todayPagesReviewed={todayPagesReviewed}
               />
             </div>
 
@@ -260,9 +253,9 @@ export default async function StudentsPage({
   let supervisorWorkspace: {
     weekDays: { iso: string; label: string }[];
     weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
-    weekRecitation: Record<string, boolean>;
     todayPages: Record<string, number>;
     todayQuota: Record<string, string>;
+    todayPagesReviewed: Record<string, number>;
     alreadySubmitted: boolean;
   } | null = null;
 
@@ -291,35 +284,28 @@ export default async function StudentsPage({
       }
     }
 
-    const weekRecitation: Record<string, boolean> = {};
-    if (selectedHalaqa.recitationEnabled) {
-      const recitations = await db.weeklyRecitation.findMany({
-        where: { weekStart: riyadhWeekStart(), student: { halaqaId: selectedHalaqa.id } },
-        select: { studentId: true, recited: true },
-      });
-      for (const r of recitations) weekRecitation[r.studentId] = r.recited;
-    }
-
     const todayIso = riyadhToday().toISOString().slice(0, 10);
     const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
 
     const todayMemorization = await db.memorizationRecord.findMany({
       where: { date: riyadhToday(), studentId: { in: selectedHalaqa.students.map((s) => s.id) } },
-      select: { studentId: true, pagesMemorized: true, quota: true },
+      select: { studentId: true, pagesMemorized: true, pagesReviewed: true, quota: true },
     });
     const todayPages: Record<string, number> = {};
     const todayQuota: Record<string, string> = {};
+    const todayPagesReviewed: Record<string, number> = {};
     for (const r of todayMemorization) {
       todayPages[r.studentId] = r.pagesMemorized;
       if (r.quota) todayQuota[r.studentId] = r.quota;
+      todayPagesReviewed[r.studentId] = r.pagesReviewed;
     }
 
     supervisorWorkspace = {
       weekDays,
       weekAttendance,
-      weekRecitation,
       todayPages,
       todayQuota,
+      todayPagesReviewed,
       alreadySubmitted: todayLog?.dataSubmitted ?? false,
     };
   }
@@ -363,12 +349,12 @@ export default async function StudentsPage({
                   students={selectedHalaqa.students}
                   weekDays={supervisorWorkspace.weekDays}
                   weekAttendance={supervisorWorkspace.weekAttendance}
-                  weekRecitation={supervisorWorkspace.weekRecitation}
                   recitationEnabled={selectedHalaqa.recitationEnabled}
                   uniformQuota={selectedHalaqa.uniformQuota}
                   alreadySubmitted={supervisorWorkspace.alreadySubmitted}
                   todayPages={supervisorWorkspace.todayPages}
                   todayQuota={supervisorWorkspace.todayQuota}
+                  todayPagesReviewed={supervisorWorkspace.todayPagesReviewed}
                 />
               </div>
 

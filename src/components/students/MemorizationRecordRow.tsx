@@ -7,6 +7,7 @@ type MemorizationRecord = {
   id: string;
   date: Date;
   pagesMemorized: number;
+  pagesReviewed: number;
   quota: string | null;
 };
 
@@ -16,7 +17,13 @@ function toDateInputValue(d: Date) {
 
 const initialState: StudentActionState = {};
 
-export function MemorizationRecordRow({ record }: { record: MemorizationRecord }) {
+export function MemorizationRecordRow({
+  record,
+  showReviewedPages,
+}: {
+  record: MemorizationRecord;
+  showReviewedPages?: boolean;
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [state, formAction, pending] = useActionState(
     updateMemorizationRecordAction.bind(null, record.id),
@@ -29,10 +36,12 @@ export function MemorizationRecordRow({ record }: { record: MemorizationRecord }
     if (state?.success) setIsEditing(false);
   }
 
+  const columnCount = showReviewedPages ? 4 : 3;
+
   if (isEditing) {
     return (
       <tr className="bg-brand/5">
-        <td colSpan={3} className="px-4 py-3">
+        <td colSpan={columnCount} className="px-4 py-3">
           <form action={formAction} className="flex flex-wrap items-end gap-3">
             <span dir="ltr" className="text-sm text-slate-500 dark:text-slate-400 self-center">
               {toDateInputValue(record.date)}
@@ -48,6 +57,18 @@ export function MemorizationRecordRow({ record }: { record: MemorizationRecord }
                 className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-24"
               />
             </div>
+            {showReviewedPages && (
+              <div>
+                <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">عدد أوجه المراجعة</label>
+                <input
+                  name="pagesReviewed"
+                  dir="ltr"
+                  inputMode="numeric"
+                  defaultValue={record.pagesReviewed}
+                  className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-24"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">النصاب</label>
               <input
@@ -85,6 +106,7 @@ export function MemorizationRecordRow({ record }: { record: MemorizationRecord }
         {toDateInputValue(record.date)}
       </td>
       <td className="px-4 py-2">{record.pagesMemorized}</td>
+      {showReviewedPages && <td className="px-4 py-2">{record.pagesReviewed}</td>}
       <td className="px-4 py-2">
         <div className="flex items-center justify-between gap-2">
           <span>{record.quota ?? "—"}</span>

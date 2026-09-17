@@ -10,6 +10,7 @@ import { DeleteTrackButton } from "@/components/tracks/DeleteTrackButton";
 import { StudentNumbersRow } from "@/components/students/StudentNumbersRow";
 import type { TrackType } from "@/generated/prisma/client";
 import { TRACK_TYPES, TRACK_TYPE_PAGE_UNIT_LABELS, TRACK_TYPE_TOTAL_LABELS } from "@/lib/trackType";
+import { computeVolunteerHours } from "@/lib/volunteerHours";
 
 const ONLINE_THRESHOLD_MINUTES = 15;
 
@@ -17,7 +18,7 @@ export default async function HomePage() {
   const user = await requireUser();
 
   if (user.role === "TEACHER") {
-    return <TeacherHome teacherId={user.id} />;
+    return <TeacherHome teacherId={user.id} volunteerHoursAdjustment={user.volunteerHoursAdjustment} />;
   }
 
   return (
@@ -252,7 +253,13 @@ async function AdminOrSupervisorHome({
   );
 }
 
-async function TeacherHome({ teacherId }: { teacherId: string }) {
+async function TeacherHome({
+  teacherId,
+  volunteerHoursAdjustment,
+}: {
+  teacherId: string;
+  volunteerHoursAdjustment: number;
+}) {
   const halaqa = await db.halaqa.findUnique({
     where: { teacherId },
     include: {
@@ -271,32 +278,20 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
 
   const { start: hijriMonthStart, end: hijriMonthEnd, monthLabel: hijriMonthLabel } = riyadhHijriMonthRange();
 
-  // الساعة التطوعية تُحسب فقط ليوم سجّلت فيه المعلمة حضورها الشخصي (حاضرة) + سجّلت بيانات الحلقة لنفس اليوم
-  const [submittedLogs, presentAttendance, memorizedAgg, reviewedAgg] = await Promise.all([
-    db.attendanceLog.findMany({
-      where: { halaqaId: halaqa.id, dataSubmitted: true },
-      select: { date: true },
-    }),
-    db.staffAttendance.findMany({
-      where: { userId: teacherId, status: "PRESENT" },
-      select: { date: true },
-    }),
+  const [volunteerHours, memorizedAgg, reviewedAgg] = await Promise.all([
+    computeVolunteerHours(teacherId, halaqa.id, volunteerHoursAdjustment),
     db.memorizationRecord.aggregate({
       _sum: { pagesMemorized: true },
       where: { student: { halaqaId: halaqa.id }, date: { gte: hijriMonthStart, lt: hijriMonthEnd } },
     }),
-    db.weeklyRecitation.aggregate({
-      _sum: { pagesRecorded: true },
-      where: { weekStart: { gte: hijriMonthStart, lt: hijriMonthEnd }, student: { halaqaId: halaqa.id } },
+    db.memorizationRecord.aggregate({
+      _sum: { pagesReviewed: true },
+      where: { student: { halaqaId: halaqa.id }, date: { gte: hijriMonthStart, lt: hijriMonthEnd } },
     }),
   ]);
 
-  const presentDates = new Set(presentAttendance.map((a) => a.date.getTime()));
-  const attendanceDays = submittedLogs.filter((l) => presentDates.has(l.date.getTime())).length;
-
-  const volunteerHours = attendanceDays * 1;
   const pagesMemorizedThisMonth = memorizedAgg._sum.pagesMemorized ?? 0;
-  const pagesReviewedThisMonth = reviewedAgg._sum.pagesRecorded ?? 0;
+  const pagesReviewedThisMonth = reviewedAgg._sum.pagesReviewed ?? 0;
 
   return (
     <div className="space-y-6">
@@ -333,7 +328,7 @@ async function TeacherHome({ teacherId }: { teacherId: string }) {
           />
           {halaqa.recitationEnabled && (
             <CircularProgress
-              label="عدد أوجه السرد"
+              label="عدد أوجه المراجعة"
               periodLabel={`خلال شهر ${hijriMonthLabel}`}
               value={pagesReviewedThisMonth}
               unit="وجه"

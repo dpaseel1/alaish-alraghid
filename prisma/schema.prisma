@@ -53,6 +53,8 @@ model User {
   memorizedAmount String? // مقدار حفظها من القرآن الكريم
   experience      String? // الخبرة
 
+  volunteerHoursAdjustment Int @default(0) // تعديل يدوي (زيادة/نقصان) فوق الساعات التطوعية المحسوبة تلقائيًا
+
   teacherHalaqa     Halaqa?   @relation("TeacherHalaqa")
   sessions          Session[]
 
@@ -188,6 +190,7 @@ model MemorizationRecord {
   student        Student  @relation(fields: [studentId], references: [id])
   date           DateTime
   pagesMemorized Int // عدد الأوجه المحفوظة في هذا التسجيل
+  pagesReviewed  Int      @default(0) // عدد أوجه المراجعة في هذا التسجيل
   quota          String? // النصاب المحدد لهذا اليوم
   enteredById    String // المعلمة التي أدخلت البيانات
   createdAt      DateTime @default(now())

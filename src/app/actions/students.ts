@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
-import { riyadhToday, riyadhFullWeekDays, riyadhWeekStart } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
 import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { STUDENT_IMPORT_FIELDS, type StudentImportFieldKey } from "@/lib/studentImportFields";
@@ -447,16 +447,32 @@ export async function submitDailyDataAction(
   });
 
   const uniformQuotaRaw = halaqa.uniformQuota ? String(formData.get("quota") ?? "").trim() : null;
+  const uniformQuotaNormalized = uniformQuotaRaw ? normalizeDigits(uniformQuotaRaw).trim() : "";
 
-  const entries: { student: (typeof halaqa.students)[number]; pages: number; quota: string }[] = [];
+  const entries: {
+    student: (typeof halaqa.students)[number];
+    pages: number;
+    quota: string;
+    pagesReviewed: number;
+  }[] = [];
   for (const student of halaqa.students) {
-    const pagesRaw = formData.get(`pages_${student.id}`);
+    const pagesRaw = halaqa.uniformQuota ? uniformQuotaNormalized : formData.get(`pages_${student.id}`);
     const quotaRaw = halaqa.uniformQuota ? uniformQuotaRaw : formData.get(`quota_${student.id}`);
     const pagesStr = pagesRaw ? normalizeDigits(String(pagesRaw)).trim() : "";
     const quota = quotaRaw ? String(quotaRaw).trim() : "";
 
+    const pagesReviewedRaw = halaqa.recitationEnabled ? formData.get(`pagesReviewed_${student.id}`) : null;
+    const pagesReviewedStr = pagesReviewedRaw ? normalizeDigits(String(pagesReviewedRaw)).trim() : "";
+    let pagesReviewed = 0;
+    if (pagesReviewedStr) {
+      pagesReviewed = Number(pagesReviewedStr);
+      if (!Number.isInteger(pagesReviewed) || pagesReviewed < 0) {
+        return { error: `الرجاء إدخال رقم صحيح لعدد أوجه المراجعة لـ"${student.name}"` };
+      }
+    }
+
     if (!pagesStr) {
-      entries.push({ student, pages: 0, quota });
+      entries.push({ student, pages: 0, quota, pagesReviewed });
       continue;
     }
 
@@ -464,15 +480,16 @@ export async function submitDailyDataAction(
     if (!Number.isInteger(pages) || pages < 0) {
       return { error: `الرجاء إدخال رقم صحيح للأوجه المحفوظة لـ"${student.name}"` };
     }
-    entries.push({ student, pages, quota });
+    entries.push({ student, pages, quota, pagesReviewed });
   }
 
-  for (const { student, pages, quota } of entries) {
-    if (pages > 0) {
+  for (const { student, pages, quota, pagesReviewed } of entries) {
+    if (pages > 0 || pagesReviewed > 0) {
       const existing = await db.memorizationRecord.findUnique({
         where: { studentId_date: { studentId: student.id, date: today } },
       });
       const delta = pages - (existing?.pagesMemorized ?? 0);
+      const deltaReviewed = pagesReviewed - (existing?.pagesReviewed ?? 0);
 
       await db.memorizationRecord.upsert({
         where: { studentId_date: { studentId: student.id, date: today } },
@@ -480,11 +497,13 @@ export async function submitDailyDataAction(
           studentId: student.id,
           date: today,
           pagesMemorized: pages,
+          pagesReviewed,
           quota: quota || null,
           enteredById: user.id,
         },
         update: {
           pagesMemorized: pages,
+          pagesReviewed,
           quota: quota || null,
           enteredById: user.id,
         },
@@ -494,6 +513,7 @@ export async function submitDailyDataAction(
         where: { id: student.id },
         data: {
           memorizedPagesTotal: { increment: delta },
+          reviewedPagesTotal: { increment: deltaReviewed },
           ...(quota ? { currentQuota: quota } : {}),
         },
       });
@@ -599,10 +619,11 @@ export async function updateStudentNumbersAction(
 
 const memorizationRecordSchema = z.object({
   pagesMemorized: digitsNumber(0),
+  pagesReviewed: digitsNumber(0),
   quota: z.string().trim().optional().or(z.literal("")),
 });
 
-/** تعديل مباشر لسجل تسميع يومي سابق (الأوجه المحفوظة والنصاب) من صفحة الأرشيف، مع تصحيح إجمالي الطالبة تلقائيًا بمقدار الفرق فقط */
+/** تعديل مباشر لسجل تسميع يومي سابق (الأوجه المحفوظة وأوجه المراجعة والنصاب) من صفحة الأرشيف، مع تصحيح إجمالي الطالبة تلقائيًا بمقدار الفرق فقط */
 export async function updateMemorizationRecordAction(
   recordId: string,
   _prev: StudentActionState | undefined,
@@ -621,6 +642,7 @@ export async function updateMemorizationRecordAction(
 
   const parsed = memorizationRecordSchema.safeParse({
     pagesMemorized: formData.get("pagesMemorized"),
+    pagesReviewed: formData.get("pagesReviewed") ?? record.pagesReviewed,
     quota: formData.get("quota"),
   });
 
@@ -629,18 +651,23 @@ export async function updateMemorizationRecordAction(
   }
 
   const delta = parsed.data.pagesMemorized - record.pagesMemorized;
+  const deltaReviewed = parsed.data.pagesReviewed - record.pagesReviewed;
 
   await db.$transaction([
     db.memorizationRecord.update({
       where: { id: recordId },
       data: {
         pagesMemorized: parsed.data.pagesMemorized,
+        pagesReviewed: parsed.data.pagesReviewed,
         quota: parsed.data.quota || null,
       },
     }),
     db.student.update({
       where: { id: record.studentId },
-      data: { memorizedPagesTotal: { increment: delta } },
+      data: {
+        memorizedPagesTotal: { increment: delta },
+        reviewedPagesTotal: { increment: deltaReviewed },
+      },
     }),
   ]);
 
@@ -901,59 +928,3 @@ export async function importAttendanceExcelAction(
   return { successCount: presentIds.length, absentCount: absentIds.length, failures: [] };
 }
 
-/** تضبط تسجيل "سردت" لطالبة لأسبوعها الحالي (متاح فقط للحلقات المفعّلة لديها خانة السرد) - عند التفعيل تُحسب أوجه الحفظ المسجَّلة لها هذا الأسبوع تحديدًا ضمن "عدد أوجه المراجعة" */
-export async function toggleStudentRecitationAction(studentId: string, recited: boolean) {
-  const student = await db.student.findUnique({
-    where: { id: studentId },
-    include: { halaqa: true },
-  });
-  if (!student) return;
-
-  const { ok, user } = await assertHalaqaAccess(student.halaqaId);
-  if (!ok) return;
-  if (!student.halaqa.recitationEnabled) return;
-
-  const weekStart = riyadhWeekStart();
-  const weekEnd = new Date(weekStart);
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
-
-  const existing = await db.weeklyRecitation.findUnique({
-    where: { studentId_weekStart: { studentId, weekStart } },
-  });
-
-  let pagesRecorded = 0;
-  if (recited) {
-    const agg = await db.memorizationRecord.aggregate({
-      _sum: { pagesMemorized: true },
-      where: { studentId, date: { gte: weekStart, lt: weekEnd } },
-    });
-    pagesRecorded = agg._sum.pagesMemorized ?? 0;
-  }
-  const pagesDelta = pagesRecorded - (existing?.pagesRecorded ?? 0);
-
-  await db.weeklyRecitation.upsert({
-    where: { studentId_weekStart: { studentId, weekStart } },
-    create: { studentId, weekStart, recited, pagesRecorded, recordedById: user.id },
-    update: { recited, pagesRecorded, recordedById: user.id },
-  });
-
-  if (pagesDelta !== 0) {
-    await db.student.update({
-      where: { id: studentId },
-      data: { reviewedPagesTotal: { increment: pagesDelta } },
-    });
-  }
-
-  await logAudit({
-    actor: user,
-    action: "STUDENT_RECITATION_TOGGLE",
-    targetType: "Student",
-    targetId: student.id,
-    targetLabel: student.name,
-    message: `${recited ? "سجّلت" : "ألغت"} سرد الطالبة لأسبوع ${weekStart.toISOString().slice(0, 10)}`,
-  });
-
-  revalidatePath("/students");
-  revalidatePath("/");
-  revalidatePath("/statistics");
-}

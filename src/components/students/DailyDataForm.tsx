@@ -1,10 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   submitDailyDataAction,
   toggleStudentAttendanceAction,
-  toggleStudentRecitationAction,
   type StudentActionState,
 } from "@/app/actions/students";
 import { CheckIcon, XIcon } from "@/components/icons";
@@ -13,6 +12,7 @@ import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 type Student = {
   id: string;
   name: string;
+  memorizedPagesTotal: number;
 };
 
 type WeekDay = {
@@ -30,40 +30,40 @@ export function DailyDataForm({
   students,
   weekDays,
   weekAttendance,
-  weekRecitation,
   recitationEnabled,
   uniformQuota,
   alreadySubmitted,
   todayPages,
   todayQuota,
+  todayPagesReviewed,
 }: {
   halaqaId?: string;
   students: Student[];
   weekDays: WeekDay[];
   weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
-  weekRecitation?: Record<string, boolean>;
   recitationEnabled?: boolean;
   uniformQuota?: boolean;
   alreadySubmitted: boolean;
   todayPages?: Record<string, number>;
   todayQuota?: Record<string, string>;
+  todayPagesReviewed?: Record<string, number>;
 }) {
   const [state, formAction, pending] = useActionState(
     submitDailyDataAction,
     initialState
   );
 
+  const [uniformQuotaValue, setUniformQuotaValue] = useState(
+    Object.values(todayQuota ?? {})[0] ?? ""
+  );
+  const uniformQuotaNumber = Number(uniformQuotaValue);
+  const uniformQuotaValid = uniformQuotaValue.trim() !== "" && Number.isFinite(uniformQuotaNumber);
+
   return (
     <div className="space-y-6">
       {students.length > 0 && weekDays.length === 0 && (
         <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-4 py-3">
           لا يوجد يوم من أيام انعقاد الحلقة ضمن الأسبوع الدراسي الحالي (الأحد-الخميس)، لذا لا تظهر شبكة تحضير هذا الأسبوع.
-        </p>
-      )}
-      {students.length > 0 && weekDays.length > 0 && recitationEnabled && (
-        <p className="text-xs text-slate-400 dark:text-slate-500">
-          حضور وغياب · خانة{" "}
-          <span className="text-violet-600 dark:text-violet-400 font-bold">السرد</span> راجعت محفوظ الأسبوع كاملًا
         </p>
       )}
       {students.length > 0 && weekDays.length > 0 && (
@@ -161,41 +161,6 @@ export function DailyDataForm({
                           </div>
                         );
                       })}
-                      {recitationEnabled && (
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
-                            السرد
-                          </span>
-                          <div className="flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
-                            <form action={toggleStudentRecitationAction.bind(null, s.id, true)}>
-                              <button
-                                type="submit"
-                                title="سردت"
-                                className={
-                                  weekRecitation?.[s.id]
-                                    ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white"
-                                    : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 hover:text-violet-600"
-                                }
-                              >
-                                <CheckIcon className="h-4 w-4" />
-                              </button>
-                            </form>
-                            <form action={toggleStudentRecitationAction.bind(null, s.id, false)}>
-                              <button
-                                type="submit"
-                                title="لم تسرد"
-                                className={
-                                  !weekRecitation?.[s.id]
-                                    ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white"
-                                    : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
-                                }
-                              >
-                                <XIcon className="h-4 w-4" />
-                              </button>
-                            </form>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </td>
                 </tr>
@@ -226,15 +191,20 @@ export function DailyDataForm({
         {uniformQuota && (
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-              نصاب اليوم لكل الطالبات
+              عدد الأوجه المضافة اليوم لكل الطالبات
             </label>
             <input
-              type="text"
+              dir="ltr"
+              inputMode="numeric"
               name="quota"
-              defaultValue={Object.values(todayQuota ?? {})[0] ?? ""}
+              value={uniformQuotaValue}
+              onChange={(e) => setUniformQuotaValue(e.target.value)}
               className="w-48 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
               placeholder="اختياري"
             />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              يُضاف هذا الرقم تلقائيًا فوق رصيد كل طالبة المحفوظ سابقًا (لا يُستبدل به)
+            </p>
           </div>
         )}
 
@@ -243,14 +213,27 @@ export function DailyDataForm({
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                 <th className="px-4 py-2 font-medium">الطالبة</th>
-                <th className="px-4 py-2 font-medium">الأوجه المحفوظة اليوم</th>
-                {!uniformQuota && <th className="px-4 py-2 font-medium">النصاب</th>}
+                {uniformQuota ? (
+                  <>
+                    <th className="px-4 py-2 font-medium">رصيدها الحالي</th>
+                    <th className="px-4 py-2 font-medium">المتوقع بعد اليوم</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-4 py-2 font-medium">الأوجه المحفوظة اليوم</th>
+                    <th className="px-4 py-2 font-medium">النصاب</th>
+                  </>
+                )}
+                {recitationEnabled && <th className="px-4 py-2 font-medium">عدد أوجه المراجعة</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {students.length === 0 && (
                 <tr>
-                  <td colSpan={uniformQuota ? 2 : 3} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                  <td
+                    colSpan={2 + (recitationEnabled ? 1 : 0)}
+                    className="px-4 py-6 text-center text-slate-400 dark:text-slate-500"
+                  >
                     لا توجد طالبات في حلقتك بعد
                   </td>
                 </tr>
@@ -258,24 +241,45 @@ export function DailyDataForm({
               {students.map((s) => (
                 <tr key={s.id}>
                   <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{s.name}</td>
-                  <td className="px-4 py-2">
-                    <input
-                      dir="ltr"
-                      inputMode="numeric"
-                      name={`pages_${s.id}`}
-                      defaultValue={todayPages?.[s.id] ?? ""}
-                      className="w-24 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
-                      placeholder="0"
-                    />
-                  </td>
-                  {!uniformQuota && (
+                  {uniformQuota ? (
+                    <>
+                      <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{s.memorizedPagesTotal}</td>
+                      <td className="px-4 py-2 font-medium text-brand">
+                        {uniformQuotaValid ? s.memorizedPagesTotal + uniformQuotaNumber : "—"}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-4 py-2">
+                        <input
+                          dir="ltr"
+                          inputMode="numeric"
+                          name={`pages_${s.id}`}
+                          defaultValue={todayPages?.[s.id] ?? ""}
+                          className="w-24 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
+                          placeholder="0"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          name={`quota_${s.id}`}
+                          defaultValue={todayQuota?.[s.id] ?? ""}
+                          className="w-32 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
+                          placeholder="اختياري"
+                        />
+                      </td>
+                    </>
+                  )}
+                  {recitationEnabled && (
                     <td className="px-4 py-2">
                       <input
-                        type="text"
-                        name={`quota_${s.id}`}
-                        defaultValue={todayQuota?.[s.id] ?? ""}
-                        className="w-32 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
-                        placeholder="اختياري"
+                        dir="ltr"
+                        inputMode="numeric"
+                        name={`pagesReviewed_${s.id}`}
+                        defaultValue={todayPagesReviewed?.[s.id] ?? ""}
+                        className="w-24 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
+                        placeholder="0"
                       />
                     </td>
                   )}
