@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays, riyadhWeekStart } from "@/lib/timezone";
 import { HALAQA_DAYS, HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
 import { updateStudentAction, deleteStudentAction, reactivateStudentAction } from "@/app/actions/students";
 import { AddStudentForm } from "@/components/students/AddStudentForm";
@@ -110,6 +110,13 @@ export default async function StudentsPage({
       todayPagesReviewed[r.studentId] = r.pagesReviewed;
     }
 
+    const weekRecitationRows = await db.weeklyRecitation.findMany({
+      where: { weekStart: riyadhWeekStart(), studentId: { in: halaqa.students.map((s) => s.id) } },
+      select: { studentId: true, recited: true },
+    });
+    const weekRecitation: Record<string, boolean> = {};
+    for (const r of weekRecitationRows) weekRecitation[r.studentId] = r.recited;
+
     return (
       <div className="space-y-6">
         <div>
@@ -134,6 +141,7 @@ export default async function StudentsPage({
                 students={halaqa.students}
                 weekDays={weekDays}
                 weekAttendance={weekAttendance}
+                weekRecitation={weekRecitation}
                 recitationEnabled={halaqa.recitationEnabled}
                 uniformQuota={halaqa.uniformQuota}
                 alreadySubmitted={todayLog?.dataSubmitted ?? false}
@@ -253,6 +261,7 @@ export default async function StudentsPage({
   let supervisorWorkspace: {
     weekDays: { iso: string; label: string }[];
     weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
+    weekRecitation: Record<string, boolean>;
     todayPages: Record<string, number>;
     todayQuota: Record<string, string>;
     todayPagesReviewed: Record<string, number>;
@@ -300,9 +309,17 @@ export default async function StudentsPage({
       todayPagesReviewed[r.studentId] = r.pagesReviewed;
     }
 
+    const weekRecitationRows = await db.weeklyRecitation.findMany({
+      where: { weekStart: riyadhWeekStart(), studentId: { in: selectedHalaqa.students.map((s) => s.id) } },
+      select: { studentId: true, recited: true },
+    });
+    const weekRecitation: Record<string, boolean> = {};
+    for (const r of weekRecitationRows) weekRecitation[r.studentId] = r.recited;
+
     supervisorWorkspace = {
       weekDays,
       weekAttendance,
+      weekRecitation,
       todayPages,
       todayQuota,
       todayPagesReviewed,
@@ -349,6 +366,7 @@ export default async function StudentsPage({
                   students={selectedHalaqa.students}
                   weekDays={supervisorWorkspace.weekDays}
                   weekAttendance={supervisorWorkspace.weekAttendance}
+                  weekRecitation={supervisorWorkspace.weekRecitation}
                   recitationEnabled={selectedHalaqa.recitationEnabled}
                   uniformQuota={selectedHalaqa.uniformQuota}
                   alreadySubmitted={supervisorWorkspace.alreadySubmitted}

@@ -278,7 +278,7 @@ async function TeacherHome({
 
   const { start: hijriMonthStart, end: hijriMonthEnd, monthLabel: hijriMonthLabel } = riyadhHijriMonthRange();
 
-  const [volunteerHours, memorizedAgg, reviewedAgg] = await Promise.all([
+  const [volunteerHours, memorizedAgg, reviewedAgg, recitationAgg] = await Promise.all([
     computeVolunteerHours(teacherId, halaqa.id, volunteerHoursAdjustment),
     db.memorizationRecord.aggregate({
       _sum: { pagesMemorized: true },
@@ -288,10 +288,14 @@ async function TeacherHome({
       _sum: { pagesReviewed: true },
       where: { student: { halaqaId: halaqa.id }, date: { gte: hijriMonthStart, lt: hijriMonthEnd } },
     }),
+    db.weeklyRecitation.aggregate({
+      _sum: { pagesRecorded: true },
+      where: { student: { halaqaId: halaqa.id }, weekStart: { gte: hijriMonthStart, lt: hijriMonthEnd } },
+    }),
   ]);
 
   const pagesMemorizedThisMonth = memorizedAgg._sum.pagesMemorized ?? 0;
-  const pagesReviewedThisMonth = reviewedAgg._sum.pagesReviewed ?? 0;
+  const pagesReviewedThisMonth = (reviewedAgg._sum.pagesReviewed ?? 0) + (recitationAgg._sum.pagesRecorded ?? 0);
 
   return (
     <div className="space-y-6">

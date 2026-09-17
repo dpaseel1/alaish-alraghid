@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
-import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
+import { riyadhToday, riyadhFullWeekDays, riyadhWeekStart } from "@/lib/timezone";
 import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { STUDENT_IMPORT_FIELDS, type StudentImportFieldKey } from "@/lib/studentImportFields";
@@ -834,6 +834,75 @@ export async function toggleStudentAttendanceAction(
   revalidatePath("/students");
   revalidatePath("/");
   revalidatePath("/honor-board");
+}
+
+/** تبديل حالة "سرد" الطالبة لهذا الأسبوع (خانة أسبوعية واحدة، منفصلة عن خانة "عدد أوجه المراجعة" اليومية).
+ *  لا يُسمح بالتبديل إلا بعد تحضير الطالبة (أي حالة) في كل أيام انعقاد الحلقة هذا الأسبوع. */
+export async function toggleStudentRecitationAction(studentId: string, recited: boolean) {
+  const student = await db.student.findUnique({
+    where: { id: studentId },
+    include: { halaqa: true },
+  });
+  if (!student) return;
+
+  const { ok, user } = await assertHalaqaAccess(student.halaqaId);
+  if (!ok) return;
+  if (!student.halaqa.recitationEnabled) return;
+
+  // شرط جديد: يجب أن تكون الطالبة مُحضَّرة (بأي حالة) في كل أيام انعقاد الحلقة هذا الأسبوع
+  const validDates = getValidHalaqaDates(student.halaqa.days);
+  if (validDates.length === 0) return;
+  const attendanceCount = await db.studentAttendance.count({
+    where: {
+      studentId,
+      attendanceLog: { halaqaId: student.halaqaId, date: { in: validDates.map((t) => new Date(t)) } },
+    },
+  });
+  if (attendanceCount < validDates.length) return;
+
+  const weekStart = riyadhWeekStart();
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+  const existing = await db.weeklyRecitation.findUnique({
+    where: { studentId_weekStart: { studentId, weekStart } },
+  });
+
+  let pagesRecorded = 0;
+  if (recited) {
+    const agg = await db.memorizationRecord.aggregate({
+      _sum: { pagesMemorized: true },
+      where: { studentId, date: { gte: weekStart, lt: weekEnd } },
+    });
+    pagesRecorded = agg._sum.pagesMemorized ?? 0;
+  }
+  const pagesDelta = pagesRecorded - (existing?.pagesRecorded ?? 0);
+
+  await db.weeklyRecitation.upsert({
+    where: { studentId_weekStart: { studentId, weekStart } },
+    create: { studentId, weekStart, recited, pagesRecorded, recordedById: user.id },
+    update: { recited, pagesRecorded, recordedById: user.id },
+  });
+
+  if (pagesDelta !== 0) {
+    await db.student.update({
+      where: { id: studentId },
+      data: { reviewedPagesTotal: { increment: pagesDelta } },
+    });
+  }
+
+  await logAudit({
+    actor: user,
+    action: "STUDENT_RECITATION_TOGGLE",
+    targetType: "Student",
+    targetId: student.id,
+    targetLabel: student.name,
+    message: `${recited ? "سجّلت" : "ألغت"} سرد الطالبة لأسبوع ${weekStart.toISOString().slice(0, 10)}`,
+  });
+
+  revalidatePath("/students");
+  revalidatePath("/");
+  revalidatePath("/statistics");
 }
 
 export type ImportAttendanceResult = {

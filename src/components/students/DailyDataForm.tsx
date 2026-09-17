@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import {
   submitDailyDataAction,
   toggleStudentAttendanceAction,
+  toggleStudentRecitationAction,
   type StudentActionState,
 } from "@/app/actions/students";
 import { CheckIcon, XIcon } from "@/components/icons";
@@ -30,6 +31,7 @@ export function DailyDataForm({
   students,
   weekDays,
   weekAttendance,
+  weekRecitation,
   recitationEnabled,
   uniformQuota,
   alreadySubmitted,
@@ -41,6 +43,7 @@ export function DailyDataForm({
   students: Student[];
   weekDays: WeekDay[];
   weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
+  weekRecitation?: Record<string, boolean>;
   recitationEnabled?: boolean;
   uniformQuota?: boolean;
   alreadySubmitted: boolean;
@@ -161,6 +164,58 @@ export function DailyDataForm({
                           </div>
                         );
                       })}
+                      {recitationEnabled && (() => {
+                        const attendanceComplete =
+                          weekDays.length > 0 &&
+                          weekDays.every((day) => weekAttendance[s.id]?.[day.iso] !== undefined);
+                        const recited = weekRecitation?.[s.id] ?? false;
+                        return (
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
+                              السرد
+                            </span>
+                            <div
+                              className={`flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 ${
+                                !attendanceComplete ? "opacity-40" : ""
+                              }`}
+                              title={
+                                !attendanceComplete
+                                  ? "يجب تحضير الطالبة في كل أيام انعقاد الحلقة هذا الأسبوع أولًا"
+                                  : undefined
+                              }
+                            >
+                              <form action={toggleStudentRecitationAction.bind(null, s.id, true)}>
+                                <button
+                                  type="submit"
+                                  title="سردت"
+                                  disabled={!attendanceComplete}
+                                  className={
+                                    recited
+                                      ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white disabled:cursor-not-allowed"
+                                      : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-violet-50 dark:hover:enabled:bg-violet-950/30 hover:enabled:text-violet-600 disabled:cursor-not-allowed"
+                                  }
+                                >
+                                  <CheckIcon className="h-4 w-4" />
+                                </button>
+                              </form>
+                              <form action={toggleStudentRecitationAction.bind(null, s.id, false)}>
+                                <button
+                                  type="submit"
+                                  title="لم تسرد"
+                                  disabled={!attendanceComplete}
+                                  className={
+                                    !recited
+                                      ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white disabled:cursor-not-allowed"
+                                      : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-slate-50 dark:hover:enabled:bg-slate-700 disabled:cursor-not-allowed"
+                                  }
+                                >
+                                  <XIcon className="h-4 w-4" />
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </td>
                 </tr>
@@ -168,6 +223,13 @@ export function DailyDataForm({
             </tbody>
           </table>
         </div>
+      )}
+      {students.length > 0 && weekDays.length > 0 && recitationEnabled && (
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          خانة <span className="text-violet-600 dark:text-violet-400 font-bold">السرد</span> أسبوعية ومستقلة عن
+          &quot;عدد أوجه المراجعة&quot; اليومية، وتُحتسب بمجموع الأوجه المحفوظة خلال الأسبوع · تُتاح فقط بعد
+          تحضير الطالبة (حضور أو غياب) في كل أيام انعقاد الحلقة هذا الأسبوع
+        </p>
       )}
 
       <form action={formAction} className="space-y-4">
