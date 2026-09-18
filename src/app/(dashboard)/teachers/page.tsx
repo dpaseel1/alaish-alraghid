@@ -132,6 +132,9 @@ export default async function TeachersPage() {
                         residence={t.residence}
                         memorizedAmount={t.memorizedAmount}
                         experience={t.experience}
+                        editable={isAdminRole(user.role)}
+                        userId={t.id}
+                        phone={t.phone}
                       />
                       <form action={approveTeacherAction.bind(null, t.id)} className="inline">
                         <button className="rounded-lg bg-emerald-600 text-white text-xs font-medium px-3 py-1.5 hover:bg-emerald-700">
@@ -205,6 +208,9 @@ export default async function TeachersPage() {
                       residence={t.residence}
                       memorizedAmount={t.memorizedAmount}
                       experience={t.experience}
+                      editable={isAdminRole(user.role)}
+                      userId={t.id}
+                      phone={t.phone}
                     />
                   </td>
                   <td className="px-5 py-3">

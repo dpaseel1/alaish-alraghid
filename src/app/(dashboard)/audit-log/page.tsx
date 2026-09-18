@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/session";
 import { db } from "@/lib/db";
 import { riyadhToday } from "@/lib/timezone";
-import { formatRiyadhDateTime } from "@/lib/dateFormat";
+import { formatRiyadhDate, formatRiyadhDateTime } from "@/lib/dateFormat";
 import { ROLE_LABELS } from "@/components/layout/nav-items";
 import type { Prisma, Role } from "@/generated/prisma/client";
 
@@ -119,8 +119,8 @@ export default async function AuditLogPage({
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100">
             العمليات ({entries.length}
-            {entries.length === 300 ? "+" : ""}) — من {toDateInputValue(fromDate)} إلى{" "}
-            {toDateInputValue(toDate)}
+            {entries.length === 300 ? "+" : ""}) — من {formatRiyadhDate(fromDate)} إلى{" "}
+            {formatRiyadhDate(toDate)}
           </h2>
         </div>
         <div className="overflow-x-auto">

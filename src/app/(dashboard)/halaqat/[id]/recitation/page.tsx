@@ -7,7 +7,12 @@ function formatWeekRange(weekStart: Date) {
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
   const fmt = (d: Date) =>
-    d.toLocaleDateString("ar-SA", { timeZone: "UTC", year: "numeric", month: "long", day: "numeric" });
+    d.toLocaleDateString("ar-SA-u-ca-islamic-umalqura-nu-latn", {
+      timeZone: "UTC",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   return `${fmt(weekStart)} — ${fmt(weekEnd)}`;
 }
 

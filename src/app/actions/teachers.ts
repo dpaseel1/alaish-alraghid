@@ -6,8 +6,9 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
 import { decryptNationalId, hashPassword } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
-import { passwordSchema } from "@/lib/validation";
+import { passwordSchema, nameSchema, requiredProfileFields } from "@/lib/validation";
 import { normalizeDigits } from "@/lib/numbers";
+import { fileToAvatarDataUrl } from "@/lib/avatar";
 
 export type TeacherActionState = { error?: string; success?: string };
 
@@ -188,4 +189,71 @@ export async function adminResetTeacherPasswordAction(
 
   revalidatePath("/teachers");
   return { success: "تم تغيير رمز المرور بنجاح" };
+}
+
+const adminUpdateProfileSchema = z.object({
+  name: nameSchema,
+  phone: z.string().trim().optional().or(z.literal("")),
+  ...requiredProfileFields,
+});
+
+/** المديرة فقط تقدر تعدّل البيانات الشخصية للمعلمة (الاسم، الجوال، والبيانات الإضافية) دون حاجة لصلاحيات المطورة */
+export async function adminUpdateTeacherProfileAction(
+  userId: string,
+  _prev: TeacherActionState | undefined,
+  formData: FormData
+): Promise<TeacherActionState> {
+  const actor = await requireRole("ADMIN");
+
+  const teacher = await db.user.findUnique({ where: { id: userId } });
+  if (!teacher || teacher.role !== "TEACHER") return { error: "المعلمة غير موجودة" };
+
+  const parsed = adminUpdateProfileSchema.safeParse({
+    name: formData.get("name"),
+    phone: formData.get("phone"),
+    nationality: formData.get("nationality"),
+    age: formData.get("age"),
+    educationLevel: formData.get("educationLevel"),
+    residence: formData.get("residence"),
+    memorizedAmount: formData.get("memorizedAmount"),
+    experience: formData.get("experience"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+  }
+
+  const { dataUrl: avatarUrl, error: avatarError } = await fileToAvatarDataUrl(
+    formData.get("avatar")
+  );
+  if (avatarError) return { error: avatarError };
+
+  const { name, phone, nationality, age, educationLevel, residence, memorizedAmount, experience } =
+    parsed.data;
+
+  await db.user.update({
+    where: { id: userId },
+    data: {
+      name,
+      phone: phone || null,
+      nationality,
+      age,
+      educationLevel,
+      residence,
+      memorizedAmount,
+      experience,
+      ...(avatarUrl ? { avatarUrl } : {}),
+    },
+  });
+
+  await logAudit({
+    actor,
+    action: "TEACHER_PROFILE_UPDATE_BY_ADMIN",
+    targetType: "User",
+    targetId: teacher.id,
+    targetLabel: name,
+    message: `عدّلت المديرة البيانات الشخصية للمعلمة "${teacher.name}"`,
+  });
+
+  revalidatePath("/teachers");
+  return { success: "تم حفظ التعديلات بنجاح" };
 }

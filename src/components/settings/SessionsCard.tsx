@@ -87,10 +87,10 @@ export async function SessionsCard({ userId }: { userId: string }) {
                     )}
                   </td>
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-nowrap" dir="ltr">
-                    {(s.lastActiveAt ?? s.createdAt).toLocaleString("ar-SA")}
+                    {(s.lastActiveAt ?? s.createdAt).toLocaleString("ar-SA-u-ca-islamic-umalqura-nu-latn")}
                   </td>
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-300 whitespace-nowrap" dir="ltr">
-                    {s.createdAt.toLocaleDateString("ar-SA")}
+                    {s.createdAt.toLocaleDateString("ar-SA-u-ca-islamic-umalqura-nu-latn")}
                   </td>
                   <td className="px-4 py-2">
                     {!isCurrent && (

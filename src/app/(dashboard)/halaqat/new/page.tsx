@@ -3,8 +3,13 @@ import { db } from "@/lib/db";
 import { createHalaqaAction } from "@/app/actions/halaqat";
 import { HalaqaForm } from "@/components/halaqat/HalaqaForm";
 
-export default async function NewHalaqaPage() {
+export default async function NewHalaqaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ trackId?: string }>;
+}) {
   const user = await requireRole("ADMIN", "SUPERVISOR");
+  const { trackId } = await searchParams;
 
   const [teachers, tracks] = await Promise.all([
     db.user.findMany({
@@ -30,6 +35,7 @@ export default async function NewHalaqaPage() {
           teachers={teachers}
           tracks={tracks}
           isAdmin={isAdminRole(user.role)}
+          initial={trackId ? { name: "", time: "", teacherId: null, trackId: trackId === "none" ? "" : trackId } : undefined}
         />
       </div>
     </div>

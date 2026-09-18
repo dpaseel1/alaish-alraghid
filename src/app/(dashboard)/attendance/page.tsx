@@ -41,6 +41,19 @@ function toIso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+// ترتيب الطاقم بنفس ترتيب الحلقات الذي حدّدته المديرة (Halaqa.order)؛
+// من لا حلقة له (كالمشرفات) يُرتَّب أبجديًا في آخر القائمة
+function sortByHalaqaOrder<T extends { name: string; teacherHalaqa: { order: number } | null }>(
+  members: T[]
+): T[] {
+  return [...members].sort((a, b) => {
+    if (a.teacherHalaqa && b.teacherHalaqa) return a.teacherHalaqa.order - b.teacherHalaqa.order;
+    if (a.teacherHalaqa) return -1;
+    if (b.teacherHalaqa) return 1;
+    return a.name.localeCompare(b.name, "ar");
+  });
+}
+
 export default async function AttendancePage({
   searchParams,
 }: {
@@ -117,20 +130,30 @@ export default async function AttendancePage({
     isAdmin
       ? db.user.findMany({
           where: { role: { in: ["TEACHER", "SUPERVISOR"] }, status: "ACTIVE" },
-          include: { staffAttendance: { where: { date: { in: weekDayDates } } } },
-          orderBy: { name: "asc" },
+          include: {
+            staffAttendance: { where: { date: { in: weekDayDates } } },
+            teacherHalaqa: { select: { order: true } },
+          },
         })
       : Promise.resolve([]),
     isAdmin
       ? db.user.findMany({
           where: { role: { in: ["TEACHER", "SUPERVISOR"] }, status: "ACTIVE" },
-          select: { id: true, name: true, role: true, staffAttendance: { where: { date: today } } },
-          orderBy: { name: "asc" },
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            staffAttendance: { where: { date: today } },
+            teacherHalaqa: { select: { order: true } },
+          },
         })
       : Promise.resolve([]),
   ]);
 
-  const staffNotRecordedToday = todayStaffAttendance.filter((s) => s.staffAttendance.length === 0);
+  const sortedWeeklyStaffSummary = sortByHalaqaOrder(weeklyStaffSummary);
+  const staffNotRecordedToday = sortByHalaqaOrder(
+    todayStaffAttendance.filter((s) => s.staffAttendance.length === 0)
+  );
 
   const attendanceMap: Record<string, StaffAttendanceStatus> = {};
   for (const a of myWeekAttendance) {
@@ -344,14 +367,14 @@ export default async function AttendancePage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {weeklyStaffSummary.length === 0 && (
+                {sortedWeeklyStaffSummary.length === 0 && (
                   <tr>
                     <td colSpan={2 + weekDays.length} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                       لا يوجد طاقم مفعّل بعد
                     </td>
                   </tr>
                 )}
-                {weeklyStaffSummary.map((member) => {
+                {sortedWeeklyStaffSummary.map((member) => {
                   const memberMap: Record<string, StaffAttendanceStatus> = {};
                   for (const a of member.staffAttendance) memberMap[toIso(a.date)] = a.status;
                   return (

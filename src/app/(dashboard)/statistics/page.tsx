@@ -17,7 +17,14 @@ function weekStartUTC(d: Date): Date {
 }
 
 function weekLabel(d: Date): string {
-  return `${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCDate()).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", {
+    timeZone: "UTC",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  return `${month}/${day}`;
 }
 
 export default async function StatisticsPage() {

@@ -4,6 +4,7 @@ import { riyadhToday, riyadhFullWeekDays } from "@/lib/timezone";
 import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { PrintButton } from "@/components/reports/PrintButton";
 import { TrophyIcon } from "@/components/icons";
+import { formatRiyadhDate } from "@/lib/dateFormat";
 import type { Prisma } from "@/generated/prisma/client";
 
 function toDateInputValue(d: Date) {
@@ -211,8 +212,8 @@ export default async function HonorBoardPage({
         <div className="px-5 py-4 border-b border-amber-200 dark:border-amber-900/50 flex items-center gap-2">
           <TrophyIcon className="h-6 w-6 text-amber-700 dark:text-amber-400" />
           <h2 className="font-semibold text-amber-800">
-            تقرير حضور مخصص — متميزات ({achievers.length}) — من {toDateInputValue(fromDate)} إلى{" "}
-            {toDateInputValue(toDate)}
+            تقرير حضور مخصص — متميزات ({achievers.length}) — من {formatRiyadhDate(fromDate)} إلى{" "}
+            {formatRiyadhDate(toDate)}
           </h2>
         </div>
         <div className="overflow-x-auto">

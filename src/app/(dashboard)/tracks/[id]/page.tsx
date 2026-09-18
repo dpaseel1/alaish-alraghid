@@ -86,9 +86,17 @@ export default async function TrackDetailPage({
             </p>
           </div>
         </div>
-        <Link href="/" className="text-sm text-brand font-medium hover:underline">
-          الرجوع للرئيسية
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/halaqat/new?trackId=${isUnassigned ? "none" : id}`}
+            className="text-sm rounded-lg bg-brand text-white font-medium px-4 py-2 hover:bg-brand-dark transition"
+          >
+            + إضافة حلقة
+          </Link>
+          <Link href="/" className="text-sm text-brand font-medium hover:underline">
+            الرجوع للرئيسية
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

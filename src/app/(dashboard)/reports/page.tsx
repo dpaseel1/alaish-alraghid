@@ -5,6 +5,7 @@ import { MemorizationChart } from "@/components/reports/MemorizationChart";
 import { PrintButton } from "@/components/reports/PrintButton";
 import { ExportButton } from "@/components/export/ExportButton";
 import { STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
+import { formatRiyadhDate } from "@/lib/dateFormat";
 
 function toDateInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -175,8 +176,8 @@ export default async function ReportsPage({
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="font-semibold text-slate-800 dark:text-slate-100">
-            قائمة الغياب ({absentees.length}) — من {toDateInputValue(fromDate)} إلى{" "}
-            {toDateInputValue(toDate)}
+            قائمة الغياب ({absentees.length}) — من {formatRiyadhDate(fromDate)} إلى{" "}
+            {formatRiyadhDate(toDate)}
           </h2>
         </div>
         <div className="overflow-x-auto">
@@ -206,7 +207,7 @@ export default async function ReportsPage({
                     {a.attendanceLog.halaqa.name}
                   </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300" dir="ltr">
-                    {toDateInputValue(a.attendanceLog.date)}
+                    {formatRiyadhDate(a.attendanceLog.date)}
                   </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
                     {STUDENT_ATTENDANCE_LABELS[a.status]}

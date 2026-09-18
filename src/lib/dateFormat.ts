@@ -1,7 +1,7 @@
 const RIYADH_TZ = "Asia/Riyadh";
-const RIYADH_LOCALE = "ar-SA-u-ca-gregory-nu-latn";
+const RIYADH_LOCALE = "ar-SA-u-ca-islamic-umalqura-nu-latn";
 
-/** تنسيق تاريخ فقط (ميلادي، أرقام إنجليزية) بتوقيت الرياض */
+/** تنسيق تاريخ فقط (هجري، أرقام إنجليزية) بتوقيت الرياض */
 export function formatRiyadhDate(date: Date | string): string {
   return new Intl.DateTimeFormat(RIYADH_LOCALE, {
     timeZone: RIYADH_TZ,
@@ -11,7 +11,7 @@ export function formatRiyadhDate(date: Date | string): string {
   }).format(new Date(date));
 }
 
-/** تنسيق تاريخ ووقت (ميلادي، أرقام إنجليزية) بتوقيت الرياض */
+/** تنسيق تاريخ ووقت (هجري، أرقام إنجليزية) بتوقيت الرياض */
 export function formatRiyadhDateTime(date: Date | string): string {
   return new Intl.DateTimeFormat(RIYADH_LOCALE, {
     timeZone: RIYADH_TZ,

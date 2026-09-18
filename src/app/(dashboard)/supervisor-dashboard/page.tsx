@@ -9,6 +9,7 @@ import { SupervisorDashboardExportButton } from "@/components/reports/Supervisor
 import { PrintButton } from "@/components/reports/PrintButton";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { BookIcon, TeacherIcon, ChartIcon, StatsIcon, TrophyIcon } from "@/components/icons";
+import { formatRiyadhDate } from "@/lib/dateFormat";
 
 function toDateInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -87,8 +88,8 @@ export default async function SupervisorDashboardPage({
         <div>
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">لوحة الإشراف والمتابعة الشاملة</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            أداء الحلقات (حضور، حفظ، مراجعة، سرد) بحسب المسار والفترة الزمنية — من {toDateInputValue(fromDate)} إلى{" "}
-            {toDateInputValue(toDate)}
+            أداء الحلقات (حضور، حفظ، مراجعة، سرد) بحسب المسار والفترة الزمنية — من {formatRiyadhDate(fromDate)} إلى{" "}
+            {formatRiyadhDate(toDate)}
           </p>
         </div>
         <div className="flex items-center gap-2">
