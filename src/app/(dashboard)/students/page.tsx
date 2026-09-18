@@ -14,6 +14,69 @@ import { HalaqaSelect } from "@/components/students/HalaqaSelect";
 import { ExportButton } from "@/components/export/ExportButton";
 import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 
+/** يجلب بيانات الأسبوع الحالي كاملة (لا اليوم فقط) لحلقة معيّنة: الحضور، الأوجه/النصاب/المراجعة لكل يوم انعقاد، والسرد الأسبوعي */
+async function buildWeekWorkspace(halaqa: { id: string; days: string[]; students: { id: string }[] }) {
+  const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : null;
+  const fullWeek = riyadhFullWeekDays();
+  const weekDayDates = scheduledDays
+    ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
+    : fullWeek.slice(0, 5);
+  const weekDays = weekDayDates.map((d) => ({
+    iso: d.toISOString().slice(0, 10),
+    label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],
+  }));
+  const studentIds = halaqa.students.map((s) => s.id);
+
+  const weekLogs = await db.attendanceLog.findMany({
+    where: { halaqaId: halaqa.id, date: { in: weekDayDates } },
+    include: { studentAttendance: true },
+  });
+
+  const weekAttendance: Record<string, Record<string, StudentAttendanceStatus>> = {};
+  for (const log of weekLogs) {
+    const dateIso = log.date.toISOString().slice(0, 10);
+    for (const a of log.studentAttendance) {
+      weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
+      weekAttendance[a.studentId][dateIso] = a.status;
+    }
+  }
+
+  const todayIso = riyadhToday().toISOString().slice(0, 10);
+  const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
+
+  const weekMemorization = await db.memorizationRecord.findMany({
+    where: { date: { in: weekDayDates }, studentId: { in: studentIds } },
+    select: { studentId: true, date: true, pagesMemorized: true, pagesReviewed: true, quota: true },
+  });
+  const weekPages: Record<string, Record<string, number>> = {};
+  const weekQuota: Record<string, Record<string, string>> = {};
+  const weekPagesReviewed: Record<string, Record<string, number>> = {};
+  for (const r of weekMemorization) {
+    const dateIso = r.date.toISOString().slice(0, 10);
+    (weekPages[r.studentId] ??= {})[dateIso] = r.pagesMemorized;
+    if (r.quota) (weekQuota[r.studentId] ??= {})[dateIso] = r.quota;
+    (weekPagesReviewed[r.studentId] ??= {})[dateIso] = r.pagesReviewed;
+  }
+
+  const weekRecitationRows = await db.weeklyRecitation.findMany({
+    where: { weekStart: riyadhWeekStart(), studentId: { in: studentIds } },
+    select: { studentId: true, recited: true },
+  });
+  const weekRecitation: Record<string, boolean> = {};
+  for (const r of weekRecitationRows) weekRecitation[r.studentId] = r.recited;
+
+  return {
+    weekDays,
+    todayIso,
+    weekAttendance,
+    weekRecitation,
+    weekPages,
+    weekQuota,
+    weekPagesReviewed,
+    alreadySubmitted: todayLog?.dataSubmitted ?? false,
+  };
+}
+
 export default async function StudentsPage({
   searchParams,
 }: {
@@ -71,51 +134,7 @@ export default async function StudentsPage({
     // إن حدّدت المديرة أيام انعقاد للحلقة (وقد تشمل الجمعة/السبت)، تُقتصر شبكة التحضير على تلك الأيام تحديدًا.
     // إن لم تُحدَّد أيام، يُستخدم الأسبوع الدراسي الافتراضي (الأحد-الخميس) كما كان سابقًا
     const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : null;
-    const fullWeek = riyadhFullWeekDays();
-    const weekDayDates = scheduledDays
-      ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
-      : fullWeek.slice(0, 5);
-    const weekDays = weekDayDates.map((d) => ({
-      iso: d.toISOString().slice(0, 10),
-      label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],
-    }));
-
-    const weekLogs = await db.attendanceLog.findMany({
-      where: { halaqaId: halaqa.id, date: { in: weekDayDates } },
-      include: { studentAttendance: true },
-    });
-
-    const weekAttendance: Record<string, Record<string, StudentAttendanceStatus>> = {};
-    for (const log of weekLogs) {
-      const dateIso = log.date.toISOString().slice(0, 10);
-      for (const a of log.studentAttendance) {
-        weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
-        weekAttendance[a.studentId][dateIso] = a.status;
-      }
-    }
-
-    const todayIso = riyadhToday().toISOString().slice(0, 10);
-    const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
-
-    const todayMemorization = await db.memorizationRecord.findMany({
-      where: { date: riyadhToday(), studentId: { in: halaqa.students.map((s) => s.id) } },
-      select: { studentId: true, pagesMemorized: true, pagesReviewed: true, quota: true },
-    });
-    const todayPages: Record<string, number> = {};
-    const todayQuota: Record<string, string> = {};
-    const todayPagesReviewed: Record<string, number> = {};
-    for (const r of todayMemorization) {
-      todayPages[r.studentId] = r.pagesMemorized;
-      if (r.quota) todayQuota[r.studentId] = r.quota;
-      todayPagesReviewed[r.studentId] = r.pagesReviewed;
-    }
-
-    const weekRecitationRows = await db.weeklyRecitation.findMany({
-      where: { weekStart: riyadhWeekStart(), studentId: { in: halaqa.students.map((s) => s.id) } },
-      select: { studentId: true, recited: true },
-    });
-    const weekRecitation: Record<string, boolean> = {};
-    for (const r of weekRecitationRows) weekRecitation[r.studentId] = r.recited;
+    const workspace = !isArchiveView ? await buildWeekWorkspace(halaqa) : null;
 
     return (
       <div className="space-y-6">
@@ -137,21 +156,24 @@ export default async function StudentsPage({
                   </p>
                 )}
               </div>
-              <DailyDataForm
-                students={halaqa.students}
-                weekDays={weekDays}
-                weekAttendance={weekAttendance}
-                weekRecitation={weekRecitation}
-                recitationEnabled={halaqa.recitationEnabled}
-                uniformQuota={halaqa.uniformQuota}
-                alreadySubmitted={todayLog?.dataSubmitted ?? false}
-                todayPages={todayPages}
-                todayQuota={todayQuota}
-                todayPagesReviewed={todayPagesReviewed}
-              />
+              {workspace && (
+                <DailyDataForm
+                  students={halaqa.students}
+                  weekDays={workspace.weekDays}
+                  todayIso={workspace.todayIso}
+                  weekAttendance={workspace.weekAttendance}
+                  weekRecitation={workspace.weekRecitation}
+                  recitationEnabled={halaqa.recitationEnabled}
+                  uniformQuota={halaqa.uniformQuota}
+                  alreadySubmitted={workspace.alreadySubmitted}
+                  weekPages={workspace.weekPages}
+                  weekQuota={workspace.weekQuota}
+                  weekPagesReviewed={workspace.weekPagesReviewed}
+                />
+              )}
             </div>
 
-            <ImportAttendanceForm weekDays={weekDays} students={halaqa.students} />
+            <ImportAttendanceForm weekDays={workspace?.weekDays ?? []} students={halaqa.students} />
 
             <ExamGradesCard
               students={halaqa.students.map((s) => ({
@@ -258,73 +280,10 @@ export default async function StudentsPage({
     : null;
 
   // المشرفة فقط تدخل بيانات اليوم مباشرة (للحلقات التي لا معلمة لها)، بنفس منطق أيام الانعقاد المستخدم لدى المعلمة
-  let supervisorWorkspace: {
-    weekDays: { iso: string; label: string }[];
-    weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
-    weekRecitation: Record<string, boolean>;
-    todayPages: Record<string, number>;
-    todayQuota: Record<string, string>;
-    todayPagesReviewed: Record<string, number>;
-    alreadySubmitted: boolean;
-  } | null = null;
+  let supervisorWorkspace: Awaited<ReturnType<typeof buildWeekWorkspace>> | null = null;
 
   if (user.role === "SUPERVISOR" && selectedHalaqa && !isArchiveView) {
-    const scheduledDays = selectedHalaqa.days.length > 0 ? new Set(selectedHalaqa.days) : null;
-    const fullWeek = riyadhFullWeekDays();
-    const weekDayDates = scheduledDays
-      ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
-      : fullWeek.slice(0, 5);
-    const weekDays = weekDayDates.map((d) => ({
-      iso: d.toISOString().slice(0, 10),
-      label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],
-    }));
-
-    const weekLogs = await db.attendanceLog.findMany({
-      where: { halaqaId: selectedHalaqa.id, date: { in: weekDayDates } },
-      include: { studentAttendance: true },
-    });
-
-    const weekAttendance: Record<string, Record<string, StudentAttendanceStatus>> = {};
-    for (const log of weekLogs) {
-      const dateIso = log.date.toISOString().slice(0, 10);
-      for (const a of log.studentAttendance) {
-        weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
-        weekAttendance[a.studentId][dateIso] = a.status;
-      }
-    }
-
-    const todayIso = riyadhToday().toISOString().slice(0, 10);
-    const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
-
-    const todayMemorization = await db.memorizationRecord.findMany({
-      where: { date: riyadhToday(), studentId: { in: selectedHalaqa.students.map((s) => s.id) } },
-      select: { studentId: true, pagesMemorized: true, pagesReviewed: true, quota: true },
-    });
-    const todayPages: Record<string, number> = {};
-    const todayQuota: Record<string, string> = {};
-    const todayPagesReviewed: Record<string, number> = {};
-    for (const r of todayMemorization) {
-      todayPages[r.studentId] = r.pagesMemorized;
-      if (r.quota) todayQuota[r.studentId] = r.quota;
-      todayPagesReviewed[r.studentId] = r.pagesReviewed;
-    }
-
-    const weekRecitationRows = await db.weeklyRecitation.findMany({
-      where: { weekStart: riyadhWeekStart(), studentId: { in: selectedHalaqa.students.map((s) => s.id) } },
-      select: { studentId: true, recited: true },
-    });
-    const weekRecitation: Record<string, boolean> = {};
-    for (const r of weekRecitationRows) weekRecitation[r.studentId] = r.recited;
-
-    supervisorWorkspace = {
-      weekDays,
-      weekAttendance,
-      weekRecitation,
-      todayPages,
-      todayQuota,
-      todayPagesReviewed,
-      alreadySubmitted: todayLog?.dataSubmitted ?? false,
-    };
+    supervisorWorkspace = await buildWeekWorkspace(selectedHalaqa);
   }
 
   return (
@@ -365,14 +324,15 @@ export default async function StudentsPage({
                   halaqaId={selectedHalaqa.id}
                   students={selectedHalaqa.students}
                   weekDays={supervisorWorkspace.weekDays}
+                  todayIso={supervisorWorkspace.todayIso}
                   weekAttendance={supervisorWorkspace.weekAttendance}
                   weekRecitation={supervisorWorkspace.weekRecitation}
                   recitationEnabled={selectedHalaqa.recitationEnabled}
                   uniformQuota={selectedHalaqa.uniformQuota}
                   alreadySubmitted={supervisorWorkspace.alreadySubmitted}
-                  todayPages={supervisorWorkspace.todayPages}
-                  todayQuota={supervisorWorkspace.todayQuota}
-                  todayPagesReviewed={supervisorWorkspace.todayPagesReviewed}
+                  weekPages={supervisorWorkspace.weekPages}
+                  weekQuota={supervisorWorkspace.weekQuota}
+                  weekPagesReviewed={supervisorWorkspace.weekPagesReviewed}
                 />
               </div>
 
