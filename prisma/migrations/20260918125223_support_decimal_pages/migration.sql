@@ -1,0 +1,14 @@
+-- AlterTable
+ALTER TABLE "MemorizationRecord" ALTER COLUMN "pagesMemorized" SET DATA TYPE DOUBLE PRECISION,
+ALTER COLUMN "pagesReviewed" SET DEFAULT 0,
+ALTER COLUMN "pagesReviewed" SET DATA TYPE DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "Student" ALTER COLUMN "memorizedPagesTotal" SET DEFAULT 0,
+ALTER COLUMN "memorizedPagesTotal" SET DATA TYPE DOUBLE PRECISION,
+ALTER COLUMN "reviewedPagesTotal" SET DEFAULT 0,
+ALTER COLUMN "reviewedPagesTotal" SET DATA TYPE DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "WeeklyRecitation" ALTER COLUMN "pagesRecorded" SET DEFAULT 0,
+ALTER COLUMN "pagesRecorded" SET DATA TYPE DOUBLE PRECISION;

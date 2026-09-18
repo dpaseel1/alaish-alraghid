@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhHijriMonthRange } from "@/lib/timezone";
+import { riyadhHijriMonthRange, riyadhToday } from "@/lib/timezone";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { CircularProgress } from "@/components/dashboard/CircularProgress";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
+import { TodayStaffAttendanceCard } from "@/components/attendance/TodayStaffAttendanceCard";
 import { MosqueIcon, BookIcon, TeacherIcon, CompassIcon, DotIcon, PenIcon, AwardIcon } from "@/components/icons";
 import { DeleteTrackButton } from "@/components/tracks/DeleteTrackButton";
 import { StudentNumbersRow } from "@/components/students/StudentNumbersRow";
@@ -277,8 +278,10 @@ async function TeacherHome({
   }
 
   const { start: hijriMonthStart, end: hijriMonthEnd, monthLabel: hijriMonthLabel } = riyadhHijriMonthRange();
+  const today = riyadhToday();
+  const todayIso = today.toISOString().slice(0, 10);
 
-  const [volunteerHours, memorizedAgg, reviewedAgg, recitationAgg] = await Promise.all([
+  const [volunteerHours, memorizedAgg, reviewedAgg, recitationAgg, todayStaffAttendance] = await Promise.all([
     computeVolunteerHours(teacherId, halaqa.id, volunteerHoursAdjustment),
     db.memorizationRecord.aggregate({
       _sum: { pagesMemorized: true },
@@ -292,6 +295,7 @@ async function TeacherHome({
       _sum: { pagesRecorded: true },
       where: { student: { halaqaId: halaqa.id }, weekStart: { gte: hijriMonthStart, lt: hijriMonthEnd } },
     }),
+    db.staffAttendance.findUnique({ where: { userId_date: { userId: teacherId, date: today } } }),
   ]);
 
   const pagesMemorizedThisMonth = memorizedAgg._sum.pagesMemorized ?? 0;
@@ -344,6 +348,8 @@ async function TeacherHome({
           )}
         </div>
       </div>
+
+      <TodayStaffAttendanceCard todayIso={todayIso} status={todayStaffAttendance?.status} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard label="عدد الطالبات" value={halaqa.students.length} icon={<BookIcon className="h-6 w-6" />} />

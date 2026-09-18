@@ -63,6 +63,7 @@ export async function toggleStaffAttendanceAction(dateIso: string, status: Staff
   });
 
   revalidatePath("/attendance");
+  revalidatePath("/");
 }
 
 const leaveRequestSchema = z

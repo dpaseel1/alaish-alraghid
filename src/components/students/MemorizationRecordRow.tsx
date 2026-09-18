@@ -51,7 +51,7 @@ export function MemorizationRecordRow({
               <input
                 name="pagesMemorized"
                 dir="ltr"
-                inputMode="numeric"
+                inputMode="decimal"
                 defaultValue={record.pagesMemorized}
                 required
                 className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-24"
@@ -63,7 +63,7 @@ export function MemorizationRecordRow({
                 <input
                   name="pagesReviewed"
                   dir="ltr"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   defaultValue={record.pagesReviewed}
                   className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-24"
                 />

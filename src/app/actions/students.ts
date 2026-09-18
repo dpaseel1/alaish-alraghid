@@ -11,7 +11,7 @@ import { HALAQA_DAYS } from "@/lib/halaqaDays";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { STUDENT_IMPORT_FIELDS, type StudentImportFieldKey } from "@/lib/studentImportFields";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
-import { normalizeDigits } from "@/lib/numbers";
+import { normalizeDigits, normalizeDecimal } from "@/lib/numbers";
 import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 import { STUDENT_ATTENDANCE_STATUSES, STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
 
@@ -492,7 +492,7 @@ export async function submitWeeklyDataAction(
     });
 
     const uniformQuotaRaw = String(formData.get("quota") ?? "").trim();
-    const uniformQuotaNormalized = uniformQuotaRaw ? normalizeDigits(uniformQuotaRaw).trim() : "";
+    const uniformQuotaNormalized = uniformQuotaRaw ? normalizeDecimal(uniformQuotaRaw).trim() : "";
 
     const entries: {
       student: (typeof halaqa.students)[number];
@@ -505,12 +505,12 @@ export async function submitWeeklyDataAction(
       const quota = uniformQuotaRaw;
 
       const pagesReviewedRaw = halaqa.recitationEnabled ? formData.get(`pagesReviewed_${student.id}`) : null;
-      const pagesReviewedStr = pagesReviewedRaw ? normalizeDigits(String(pagesReviewedRaw)).trim() : "";
+      const pagesReviewedStr = pagesReviewedRaw ? normalizeDecimal(String(pagesReviewedRaw)).trim() : "";
       let pagesReviewed = 0;
       if (pagesReviewedStr) {
         pagesReviewed = Number(pagesReviewedStr);
-        if (!Number.isInteger(pagesReviewed) || pagesReviewed < 0) {
-          return { error: `الرجاء إدخال رقم صحيح لعدد أوجه المراجعة لـ"${student.name}"` };
+        if (!Number.isFinite(pagesReviewed) || pagesReviewed < 0) {
+          return { error: `الرجاء إدخال رقم صالح لعدد أوجه المراجعة لـ"${student.name}"` };
         }
       }
 
@@ -520,8 +520,8 @@ export async function submitWeeklyDataAction(
       }
 
       const pages = Number(pagesStr);
-      if (!Number.isInteger(pages) || pages < 0) {
-        return { error: `الرجاء إدخال رقم صحيح للأوجه المحفوظة لـ"${student.name}"` };
+      if (!Number.isFinite(pages) || pages < 0) {
+        return { error: `الرجاء إدخال رقم صالح للأوجه المحفوظة لـ"${student.name}"` };
       }
       entries.push({ student, pages, quota, pagesReviewed });
     }
@@ -570,26 +570,26 @@ export async function submitWeeklyDataAction(
       for (const student of halaqa.students) {
         const pagesRaw = formData.get(`pages_${student.id}_${dateIso}`);
         const quotaRaw = formData.get(`quota_${student.id}_${dateIso}`);
-        const pagesStr = pagesRaw ? normalizeDigits(String(pagesRaw)).trim() : "";
+        const pagesStr = pagesRaw ? normalizeDecimal(String(pagesRaw)).trim() : "";
         const quota = quotaRaw ? String(quotaRaw).trim() : "";
 
         const pagesReviewedRaw = halaqa.recitationEnabled
           ? formData.get(`pagesReviewed_${student.id}_${dateIso}`)
           : null;
-        const pagesReviewedStr = pagesReviewedRaw ? normalizeDigits(String(pagesReviewedRaw)).trim() : "";
+        const pagesReviewedStr = pagesReviewedRaw ? normalizeDecimal(String(pagesReviewedRaw)).trim() : "";
         let pagesReviewed = 0;
         if (pagesReviewedStr) {
           pagesReviewed = Number(pagesReviewedStr);
-          if (!Number.isInteger(pagesReviewed) || pagesReviewed < 0) {
-            return { error: `الرجاء إدخال رقم صحيح لعدد أوجه المراجعة لـ"${student.name}" ليوم ${dateIso}` };
+          if (!Number.isFinite(pagesReviewed) || pagesReviewed < 0) {
+            return { error: `الرجاء إدخال رقم صالح لعدد أوجه المراجعة لـ"${student.name}" ليوم ${dateIso}` };
           }
         }
 
         let pages = 0;
         if (pagesStr) {
           pages = Number(pagesStr);
-          if (!Number.isInteger(pages) || pages < 0) {
-            return { error: `الرجاء إدخال رقم صحيح للأوجه المحفوظة لـ"${student.name}" ليوم ${dateIso}` };
+          if (!Number.isFinite(pages) || pages < 0) {
+            return { error: `الرجاء إدخال رقم صالح للأوجه المحفوظة لـ"${student.name}" ليوم ${dateIso}` };
           }
         }
 
@@ -643,9 +643,16 @@ const digitsNumber = (min: number) =>
     z.coerce.number().min(min)
   );
 
+// لحقول الأوجه المحفوظة/المراجعة التي تدعم الكسور العشرية (تقبل الفاصلة "," كبديل للنقطة ".")
+const decimalNumber = (min: number) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? normalizeDecimal(v) : v),
+    z.coerce.number().min(min)
+  );
+
 const studentNumbersSchema = z.object({
-  memorizedPagesTotal: digitsNumber(0),
-  reviewedPagesTotal: digitsNumber(0),
+  memorizedPagesTotal: decimalNumber(0),
+  reviewedPagesTotal: decimalNumber(0),
   currentQuota: z.string().trim().optional().or(z.literal("")),
 });
 
@@ -698,8 +705,8 @@ export async function updateStudentNumbersAction(
 }
 
 const memorizationRecordSchema = z.object({
-  pagesMemorized: digitsNumber(0),
-  pagesReviewed: digitsNumber(0),
+  pagesMemorized: decimalNumber(0),
+  pagesReviewed: decimalNumber(0),
   quota: z.string().trim().optional().or(z.literal("")),
 });
 

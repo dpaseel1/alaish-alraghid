@@ -167,8 +167,8 @@ model Student {
   educationLevel      String? // المؤهل الدراسي
   residence           String? // مقر الإقامة
   memorizedAmount     String? // مقدار الحفظ من القرآن الكريم (وصف عام عند التسجيل)
-  memorizedPagesTotal Int      @default(0) // إجمالي عدد الأوجه المحفوظة
-  reviewedPagesTotal  Int      @default(0) // عدد أوجه المراجعة (تُجمع تلقائيًا عند تسجيل "سردت")
+  memorizedPagesTotal Float    @default(0) // إجمالي عدد الأوجه المحفوظة (يدعم الكسور العشرية)
+  reviewedPagesTotal  Float    @default(0) // عدد أوجه المراجعة (تُجمع تلقائيًا عند تسجيل "سردت")
   currentQuota        String? // نصاب الحفظ الحالي
   notes               String?
   isActive            Boolean  @default(true)
@@ -189,8 +189,8 @@ model MemorizationRecord {
   studentId      String
   student        Student  @relation(fields: [studentId], references: [id])
   date           DateTime
-  pagesMemorized Int // عدد الأوجه المحفوظة في هذا التسجيل
-  pagesReviewed  Int      @default(0) // عدد أوجه المراجعة في هذا التسجيل
+  pagesMemorized Float // عدد الأوجه المحفوظة في هذا التسجيل (يدعم الكسور العشرية)
+  pagesReviewed  Float    @default(0) // عدد أوجه المراجعة في هذا التسجيل
   quota          String? // النصاب المحدد لهذا اليوم
   enteredById    String // المعلمة التي أدخلت البيانات
   createdAt      DateTime @default(now())
@@ -255,7 +255,7 @@ model WeeklyRecitation {
   student       Student  @relation(fields: [studentId], references: [id])
   weekStart     DateTime // بداية الأسبوع (الأحد) بتوقيت الرياض
   recited       Boolean  @default(false)
-  pagesRecorded Int      @default(0) // لقطة أوجه الحفظ المسجَّلة هذا الأسبوع وقت التأشير (لضبط التراجع الصحيح)
+  pagesRecorded Float    @default(0) // لقطة أوجه الحفظ المسجَّلة هذا الأسبوع وقت التأشير (لضبط التراجع الصحيح)
   recordedById  String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

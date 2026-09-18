@@ -10,3 +10,8 @@ export function normalizeDigits(value: string): string {
     return String(extendedIndex);
   });
 }
+
+/** كنورمالايز الأرقام العربية + تحويل الفاصلة (عربية أو إنجليزية) إلى نقطة عشرية، لحقول الكسور (الأوجه المحفوظة/المراجعة) */
+export function normalizeDecimal(value: string): string {
+  return normalizeDigits(value).replace(/,/g, ".");
+}
