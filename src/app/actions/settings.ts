@@ -160,6 +160,44 @@ export async function updateLogoAction(
   return { success: "تم تحديث شعار الموقع بنجاح" };
 }
 
+export async function updateTermStartAction(
+  _prev: SettingsActionState | undefined,
+  formData: FormData
+): Promise<SettingsActionState> {
+  const actor = await requireRole("ADMIN");
+
+  const raw = formData.get("termStartDate");
+  const parsed = z.string().min(1, "الرجاء اختيار تاريخ بداية الفصل").safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "تاريخ غير صحيح" };
+  }
+
+  const date = new Date(parsed.data);
+  if (Number.isNaN(date.getTime())) {
+    return { error: "تاريخ غير صحيح" };
+  }
+  date.setUTCHours(0, 0, 0, 0);
+
+  await db.appSettings.upsert({
+    where: { id: "main" },
+    create: { id: "main", termStartDate: date },
+    update: { termStartDate: date },
+  });
+
+  await logAudit({
+    actor,
+    action: "APP_TERM_START_UPDATE",
+    targetType: "AppSettings",
+    targetId: "main",
+    targetLabel: "بداية الفصل الدراسي",
+    message: "حدّثت تاريخ بداية الفصل الدراسي الحالي",
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/supervisor-dashboard");
+  return { success: "تم تحديث تاريخ بداية الفصل بنجاح" };
+}
+
 export async function removeLogoAction() {
   const actor = await requireRole("ADMIN");
 

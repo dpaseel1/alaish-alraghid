@@ -316,9 +316,10 @@ model LeaveRequest {
 // تُستخدم حاليًا لتخزين شعار الموقع القابل للتعديل من لوحة الإعدادات
 
 model AppSettings {
-  id        String   @id @default("main")
-  logoUrl   String? // شعار الموقع (اختياري) - يُخزَّن كـ data URL، وإلا يُعرض الشعار الافتراضي
-  updatedAt DateTime @updatedAt
+  id            String    @id @default("main")
+  logoUrl       String? // شعار الموقع (اختياري) - يُخزَّن كـ data URL، وإلا يُعرض الشعار الافتراضي
+  termStartDate DateTime? // بداية الفصل الدراسي الحالي (اختياري) - تُستخدم كبداية نطاق "الفصل كامل" في لوحة الإشراف والمتابعة
+  updatedAt     DateTime  @updatedAt
 }
 
 // ============ سجل الحركات (Audit Log) ============

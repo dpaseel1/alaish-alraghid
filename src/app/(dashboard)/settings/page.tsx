@@ -4,6 +4,7 @@ import { ROLE_LABELS } from "@/components/layout/nav-items";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import { UpdateProfileForm } from "@/components/settings/UpdateProfileForm";
 import { UpdateLogoForm } from "@/components/settings/UpdateLogoForm";
+import { UpdateTermStartForm } from "@/components/settings/UpdateTermStartForm";
 import { SessionsCard } from "@/components/settings/SessionsCard";
 
 export default async function SettingsPage() {
@@ -52,6 +53,16 @@ export default async function SettingsPage() {
             يظهر هذا الشعار في القائمة الجانبية وأعلى الجوال وصفحة تسجيل الدخول
           </p>
           <UpdateLogoForm logoUrl={settings?.logoUrl} />
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">بداية الفصل الدراسي الحالي</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+            يُستخدم هذا التاريخ كبداية للنطاق عند اختيار &quot;الفصل كامل&quot; في لوحة الإشراف والمتابعة
+          </p>
+          <UpdateTermStartForm termStartDate={settings?.termStartDate} />
         </div>
       )}
     </div>
