@@ -2,7 +2,7 @@ import type { HalaqaReport } from "@/lib/supervisorDashboard";
 import { dayLabelForIso, cellText } from "@/lib/supervisorDashboardFormat";
 
 export function SupervisorDashboardTable({ halaqa }: { halaqa: HalaqaReport }) {
-  const { meetingDates, students, hideMemorizedColumn } = halaqa;
+  const { meetingDates, students } = halaqa;
 
   return (
     <div className="overflow-x-auto">
@@ -20,7 +20,7 @@ export function SupervisorDashboardTable({ halaqa }: { halaqa: HalaqaReport }) {
                 </div>
               </th>
             ))}
-            {!hideMemorizedColumn && <th className="px-3 py-3 font-medium">إجمالي الحفظ</th>}
+            <th className="px-3 py-3 font-medium">إجمالي الحفظ</th>
             <th className="px-3 py-3 font-medium">إجمالي المراجعة اليومية</th>
             <th className="px-3 py-3 font-medium">إجمالي السرد</th>
             <th className="px-3 py-3 font-medium">إجمالي المراجعة الكلية</th>
@@ -30,7 +30,7 @@ export function SupervisorDashboardTable({ halaqa }: { halaqa: HalaqaReport }) {
           {students.length === 0 && (
             <tr>
               <td
-                colSpan={4 + meetingDates.length + (hideMemorizedColumn ? 2 : 3)}
+                colSpan={4 + meetingDates.length + 3}
                 className="px-5 py-8 text-center text-slate-400 dark:text-slate-500"
               >
                 لا توجد طالبات مسجّلات في هذه الحلقة
@@ -46,12 +46,10 @@ export function SupervisorDashboardTable({ halaqa }: { halaqa: HalaqaReport }) {
               <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{s.attendance.rate}%</td>
               {s.cells.map((cell) => (
                 <td key={cell.dateIso} className="px-3 py-2 text-center text-slate-600 dark:text-slate-300">
-                  {cellText(cell, hideMemorizedColumn)}
+                  {cellText(cell)}
                 </td>
               ))}
-              {!hideMemorizedColumn && (
-                <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{s.totals.memorized}</td>
-              )}
+              <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{s.totals.memorized}</td>
               <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{s.totals.dailyReviewed}</td>
               <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{s.totals.sard}</td>
               <td className="px-3 py-2 font-semibold text-slate-800 dark:text-slate-100">{s.totals.reviewTotal}</td>

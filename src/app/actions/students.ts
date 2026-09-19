@@ -924,8 +924,7 @@ export async function toggleStudentAttendanceAction(
   revalidatePath("/honor-board");
 }
 
-/** تبديل حالة "سرد" الطالبة لهذا الأسبوع (خانة أسبوعية واحدة، منفصلة عن خانة "عدد أوجه المراجعة" اليومية).
- *  لا يُسمح بالتبديل إلا بعد تحضير الطالبة (أي حالة) في كل أيام انعقاد الحلقة هذا الأسبوع. */
+/** تبديل حالة "سرد" الطالبة لهذا الأسبوع (خانة أسبوعية واحدة، منفصلة عن خانة "عدد أوجه المراجعة" اليومية). */
 export async function toggleStudentRecitationAction(studentId: string, recited: boolean) {
   const student = await db.student.findUnique({
     where: { id: studentId },
@@ -936,17 +935,6 @@ export async function toggleStudentRecitationAction(studentId: string, recited: 
   const { ok, user } = await assertHalaqaAccess(student.halaqaId);
   if (!ok) return;
   if (!student.halaqa.recitationEnabled) return;
-
-  // شرط جديد: يجب أن تكون الطالبة مُحضَّرة (بأي حالة) في كل أيام انعقاد الحلقة هذا الأسبوع
-  const validDates = getValidHalaqaDates(student.halaqa.days);
-  if (validDates.length === 0) return;
-  const attendanceCount = await db.studentAttendance.count({
-    where: {
-      studentId,
-      attendanceLog: { halaqaId: student.halaqaId, date: { in: validDates.map((t) => new Date(t)) } },
-    },
-  });
-  if (attendanceCount < validDates.length) return;
 
   const weekStart = riyadhWeekStart();
   const weekEnd = new Date(weekStart);
@@ -991,6 +979,7 @@ export async function toggleStudentRecitationAction(studentId: string, recited: 
   revalidatePath("/students");
   revalidatePath("/");
   revalidatePath("/statistics");
+  revalidatePath("/supervisor-dashboard");
 }
 
 export type ImportAttendanceResult = {

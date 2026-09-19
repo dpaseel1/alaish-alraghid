@@ -151,12 +151,7 @@ export function DailyDataForm({
                             );
                           })}
                           {recitationEnabled && (
-                            <RecitationCell
-                              studentId={s.id}
-                              weekDays={weekDays}
-                              weekAttendance={weekAttendance}
-                              recited={weekRecitation?.[s.id] ?? false}
-                            />
+                            <RecitationCell studentId={s.id} recited={weekRecitation?.[s.id] ?? false} />
                           )}
                         </div>
                       </td>
@@ -351,12 +346,7 @@ export function DailyDataForm({
                         })}
                         {recitationEnabled && (
                           <td className="px-3 py-2 text-center">
-                            <RecitationCell
-                              studentId={s.id}
-                              weekDays={weekDays}
-                              weekAttendance={weekAttendance}
-                              recited={weekRecitation?.[s.id] ?? false}
-                            />
+                            <RecitationCell studentId={s.id} recited={weekRecitation?.[s.id] ?? false} />
                           </td>
                         )}
                       </tr>
@@ -420,8 +410,7 @@ function RecitationHint() {
   return (
     <p className="text-xs text-slate-400 dark:text-slate-500">
       خانة <span className="text-violet-600 dark:text-violet-400 font-bold">السرد</span> أسبوعية ومستقلة عن
-      &quot;عدد أوجه المراجعة&quot; اليومية، وتُحتسب بمجموع الأوجه المحفوظة خلال الأسبوع · تُتاح فقط بعد
-      تحضير الطالبة (حضور أو غياب) في كل أيام انعقاد الحلقة هذا الأسبوع
+      &quot;عدد أوجه المراجعة&quot; اليومية، وتُحتسب بمجموع الأوجه المحفوظة خلال الأسبوع
     </p>
   );
 }
@@ -506,37 +495,19 @@ function AttendanceDayCell({
   );
 }
 
-function RecitationCell({
-  studentId,
-  weekDays,
-  weekAttendance,
-  recited,
-}: {
-  studentId: string;
-  weekDays: WeekDay[];
-  weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
-  recited: boolean;
-}) {
-  const attendanceComplete =
-    weekDays.length > 0 && weekDays.every((day) => weekAttendance[studentId]?.[day.iso] !== undefined);
+function RecitationCell({ studentId, recited }: { studentId: string; recited: boolean }) {
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">السرد</span>
-      <div
-        className={`flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 ${
-          !attendanceComplete ? "opacity-40" : ""
-        }`}
-        title={!attendanceComplete ? "يجب تحضير الطالبة في كل أيام انعقاد الحلقة هذا الأسبوع أولًا" : undefined}
-      >
+      <div className="flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
         <form action={toggleStudentRecitationAction.bind(null, studentId, true)}>
           <button
             type="submit"
             title="سردت"
-            disabled={!attendanceComplete}
             className={
               recited
-                ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white disabled:cursor-not-allowed"
-                : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-violet-50 dark:hover:enabled:bg-violet-950/30 hover:enabled:text-violet-600 disabled:cursor-not-allowed"
+                ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white"
+                : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 hover:text-violet-600"
             }
           >
             <CheckIcon className="h-4 w-4" />
@@ -546,11 +517,10 @@ function RecitationCell({
           <button
             type="submit"
             title="لم تسرد"
-            disabled={!attendanceComplete}
             className={
               !recited
-                ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white disabled:cursor-not-allowed"
-                : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-slate-50 dark:hover:enabled:bg-slate-700 disabled:cursor-not-allowed"
+                ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white"
+                : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
             }
           >
             <XIcon className="h-4 w-4" />

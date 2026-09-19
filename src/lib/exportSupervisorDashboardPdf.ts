@@ -99,14 +99,12 @@ export async function downloadSupervisorDashboardPdf(data: SupervisorDashboardDa
         headerLines: [dayLabelForIso(dateIso), dateIso],
         get: (s) => {
           const cell = s.cells.find((c) => c.dateIso === dateIso);
-          return cell ? cellText(cell, h.hideMemorizedColumn) : "—";
+          return cell ? cellText(cell) : "—";
         },
       });
     });
     if (showTotals) {
-      if (!h.hideMemorizedColumn) {
-        cols.push({ width: TOTALS_COL_W, headerLines: ["إجمالي", "الحفظ"], get: (s) => String(s.totals.memorized) });
-      }
+      cols.push({ width: TOTALS_COL_W, headerLines: ["إجمالي", "الحفظ"], get: (s) => String(s.totals.memorized) });
       cols.push({ width: TOTALS_COL_W, headerLines: ["مراجعة", "يومية"], get: (s) => String(s.totals.dailyReviewed) });
       cols.push({ width: TOTALS_COL_W, headerLines: ["إجمالي", "السرد"], get: (s) => String(s.totals.sard) });
       cols.push({ width: TOTALS_COL_W, headerLines: ["مراجعة", "كلية"], get: (s) => String(s.totals.reviewTotal) });
@@ -171,7 +169,7 @@ export async function downloadSupervisorDashboardPdf(data: SupervisorDashboardDa
     ctx.fillStyle = "#475569";
     const trackLabel = h.trackType ? `${h.trackName ?? "بلا مسار"} (${TRACK_TYPE_LABELS[h.trackType]})` : h.trackName ?? "بلا مسار";
     ctx.fillText(
-      `${trackLabel} — المعلمة: ${h.teacherName ?? "غير محددة"} — أيام الانعقاد: ${h.daysLabel} — يوم السرد المستنتج: ${h.narrationDayLabel}`,
+      `${trackLabel} — المعلمة: ${h.teacherName ?? "غير محددة"} — أيام الانعقاد: ${h.daysLabel} — يوم السرد: ${h.narrationDayLabel}`,
       PAGE_W - MARGIN,
       y + 10
     );
@@ -186,7 +184,7 @@ export async function downloadSupervisorDashboardPdf(data: SupervisorDashboardDa
     y += 34;
 
     const availableW = PAGE_W - MARGIN * 2 - FROZEN_NUM_W - FROZEN_NAME_W - FROZEN_RATE_W;
-    const totalsCount = h.hideMemorizedColumn ? 3 : 4;
+    const totalsCount = 4;
     const totalsW = totalsCount * TOTALS_COL_W;
     const dayColsAreaW = Math.max(availableW - totalsW, MIN_DAY_COL_W);
     const maxDayCols = Math.max(3, Math.floor(dayColsAreaW / MIN_DAY_COL_W));

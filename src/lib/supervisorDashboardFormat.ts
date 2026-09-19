@@ -9,11 +9,11 @@ export function dayLabelForIso(dateIso: string) {
 }
 
 /** نص خانة اليوم في الجدول: أيقونة غياب، أو "ح: X | م: Y | س: Z" حسب توفر البيانات، أو "—" إن لم تُدخَل بيانات بعد */
-export function cellText(cell: DayCell, hideMemorized: boolean): string {
+export function cellText(cell: DayCell): string {
   if (cell.status === "ABSENT_EXCUSED") return "⭕";
   if (cell.status === "ABSENT_UNEXCUSED") return "❌";
   const parts: string[] = [];
-  if (!hideMemorized && cell.pagesMemorized !== null) parts.push(`ح: ${cell.pagesMemorized}`);
+  if (cell.pagesMemorized !== null) parts.push(`ح: ${cell.pagesMemorized}`);
   if (cell.pagesReviewed !== null) parts.push(`م: ${cell.pagesReviewed}`);
   if (cell.isNarrationDay && cell.sardPages !== null) parts.push(`س: ${cell.sardPages}`);
   return parts.length > 0 ? parts.join(" | ") : "—";

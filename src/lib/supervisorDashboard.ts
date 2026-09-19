@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { HALAQA_DAYS, DEFAULT_HALAQA_DAYS, HALAQA_DAY_LABELS, inferNarrationDay, type HalaqaDay } from "@/lib/halaqaDays";
+import { HALAQA_DAYS, DEFAULT_HALAQA_DAYS, HALAQA_DAY_LABELS, NARRATION_DAY, type HalaqaDay } from "@/lib/halaqaDays";
 import type { TrackType, User } from "@/generated/prisma/client";
 
 function toIso(d: Date) {
@@ -55,7 +55,6 @@ export type HalaqaReport = {
   teacherName: string | null;
   daysLabel: string;
   narrationDayLabel: string;
-  hideMemorizedColumn: boolean;
   teacherAttendance: { present: number; excused: number; unexcused: number; leave: number; rate: number };
   meetingDates: string[];
   students: StudentRow[];
@@ -117,9 +116,8 @@ export async function buildSupervisorDashboard({
   for (const h of halaqat) {
     const dates = enumerateMeetingDates(h.days, from, to);
     meetingDatesByHalaqa.set(h.id, dates);
-    const narrationDay = inferNarrationDay(h.days);
     for (const d of dates) {
-      if (HALAQA_DAYS[d.getUTCDay()] === narrationDay) {
+      if (HALAQA_DAYS[d.getUTCDay()] === NARRATION_DAY) {
         narrationWeekStarts.add(weekStartOf(d).toISOString());
       }
     }
@@ -173,7 +171,6 @@ export async function buildSupervisorDashboard({
 
   const halaqaReports: HalaqaReport[] = halaqat.map((h) => {
     const meetingDates = meetingDatesByHalaqa.get(h.id) ?? [];
-    const narrationDay = inferNarrationDay(h.days);
     const scheduledLabels = (h.days.length > 0 ? h.days : DEFAULT_HALAQA_DAYS)
       .map((d) => HALAQA_DAY_LABELS[d as HalaqaDay])
       .join("، ");
@@ -211,7 +208,7 @@ export async function buildSupervisorDashboard({
         memorized += pagesMemorized ?? 0;
         dailyReviewed += pagesReviewed ?? 0;
 
-        const isNarrationDay = HALAQA_DAYS[date.getUTCDay()] === narrationDay;
+        const isNarrationDay = HALAQA_DAYS[date.getUTCDay()] === NARRATION_DAY;
         let sardPages: number | null = null;
         if (isNarrationDay) {
           const rec = weeklyRecByKey.get(`${s.id}_${weekStartOf(date).toISOString()}`);
@@ -254,8 +251,7 @@ export async function buildSupervisorDashboard({
       trackType: h.track?.type ?? null,
       teacherName: h.teacher?.name ?? null,
       daysLabel: scheduledLabels,
-      narrationDayLabel: HALAQA_DAY_LABELS[narrationDay],
-      hideMemorizedColumn: h.track?.type === "MURAJAA",
+      narrationDayLabel: HALAQA_DAY_LABELS[NARRATION_DAY],
       teacherAttendance: {
         present: tPresent,
         excused: tExcused,

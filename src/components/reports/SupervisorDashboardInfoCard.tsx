@@ -18,7 +18,7 @@ export function SupervisorDashboardInfoCard({ halaqa }: { halaqa: HalaqaReport }
         </div>
         <div className="text-sm text-slate-600 dark:text-slate-300 text-right">
           <p>أيام الانعقاد: {halaqa.daysLabel}</p>
-          <p>يوم السرد المستنتج: {halaqa.narrationDayLabel}</p>
+          <p>يوم السرد: {halaqa.narrationDayLabel}</p>
         </div>
       </div>
 
