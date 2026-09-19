@@ -175,7 +175,6 @@ export function DailyDataForm({
               </label>
               <input
                 dir="ltr"
-                inputMode="decimal"
                 name="quota"
                 value={uniformQuotaValue}
                 onChange={(e) => setUniformQuotaValue(e.target.value)}
@@ -219,7 +218,6 @@ export function DailyDataForm({
                         <td className="px-4 py-2">
                           <input
                             dir="ltr"
-                            inputMode="decimal"
                             name={`pagesReviewed_${s.id}`}
                             defaultValue={weekPagesReviewed?.[s.id]?.[todayIso] ?? ""}
                             className="w-24 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
@@ -246,7 +244,6 @@ export function DailyDataForm({
                 </label>
                 <input
                   dir="ltr"
-                  inputMode="decimal"
                   value={bulkFillValue}
                   onChange={(e) => setBulkFillValue(e.target.value)}
                   className="w-32 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
@@ -308,7 +305,6 @@ export function DailyDataForm({
                                 <AttendanceDayCell studentId={s.id} day={day} current={status} locked={locked} />
                                 <input
                                   dir="ltr"
-                                  inputMode="decimal"
                                   name={`pages_${s.id}_${day.iso}`}
                                   value={pagesState[s.id]?.[day.iso] ?? ""}
                                   onChange={(e) => setCell(setPagesState, s.id, day.iso, e.target.value)}
@@ -330,7 +326,6 @@ export function DailyDataForm({
                                 {recitationEnabled && (
                                   <input
                                     dir="ltr"
-                                    inputMode="decimal"
                                     name={`pagesReviewed_${s.id}_${day.iso}`}
                                     value={reviewedState[s.id]?.[day.iso] ?? ""}
                                     onChange={(e) => setCell(setReviewedState, s.id, day.iso, e.target.value)}
