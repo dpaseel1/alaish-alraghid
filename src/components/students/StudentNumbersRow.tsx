@@ -43,9 +43,8 @@ export function StudentNumbersRow({
               </label>
               <input
                 name="memorizedPagesTotal"
-                type="number"
-                min={0}
-                step="0.1"
+                dir="ltr"
+                inputMode="decimal"
                 defaultValue={student.memorizedPagesTotal}
                 required
                 className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-28"
@@ -58,9 +57,8 @@ export function StudentNumbersRow({
                 </label>
                 <input
                   name="reviewedPagesTotal"
-                  type="number"
-                  min={0}
-                  step="0.1"
+                  dir="ltr"
+                  inputMode="decimal"
                   defaultValue={student.reviewedPagesTotal ?? 0}
                   required
                   className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm w-28"
