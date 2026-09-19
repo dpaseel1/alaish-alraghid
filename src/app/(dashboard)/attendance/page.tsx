@@ -1,6 +1,6 @@
 import { requireUser, isAdminRole } from "@/lib/session";
 import { db } from "@/lib/db";
-import { riyadhWeekDays, riyadhFullWeekDays, riyadhToday } from "@/lib/timezone";
+import { riyadhWeekDays, riyadhFullWeekDays, riyadhToday, riyadhHijriMonthRange } from "@/lib/timezone";
 import { HALAQA_DAYS, HALAQA_DAY_LABELS } from "@/lib/halaqaDays";
 import { ROLE_LABELS } from "@/components/layout/nav-items";
 import { StaffWeeklyGrid } from "@/components/attendance/StaffWeeklyGrid";
@@ -57,13 +57,20 @@ function sortByHalaqaOrder<T extends { name: string; teacherHalaqa: { order: num
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{
+    from?: string;
+    to?: string;
+    staffFrom?: string;
+    staffTo?: string;
+    staffQuick?: string;
+  }>;
 }) {
   const user = await requireUser();
   const isStaff = user.role === "TEACHER" || user.role === "SUPERVISOR";
   const isAdmin = isAdminRole(user.role);
   const canExportStudents = isAdmin || user.role === "SUPERVISOR";
-  const { from, to } = await searchParams;
+  const canExportStaff = isAdmin || user.role === "SUPERVISOR";
+  const { from, to, staffFrom, staffTo, staffQuick: staffQuickParam } = await searchParams;
 
   const weekDayDates = riyadhWeekDays();
   const weekDays = weekDayDates.map((d, i) => ({ iso: toIso(d), label: WEEKDAY_LABELS[i] }));
@@ -100,6 +107,34 @@ export default async function AttendancePage({
   const thisWeekFrom = weekDays[0]?.iso ?? toIso(riyadhToday());
   const thisWeekTo = weekDays[weekDays.length - 1]?.iso ?? toIso(riyadhToday());
   const today = riyadhToday();
+
+  // نطاق تصدير حضور الطاقم (المعلمات/المشرفات): هذا الأسبوع/هذا الشهر افتراضيًا، أو مدى مخصّص
+  const staffQuick = staffQuickParam || (!staffFrom && !staffTo ? "week" : undefined);
+  let staffFromDate: Date;
+  let staffToDate: Date;
+  if (staffQuick === "month") {
+    const range = riyadhHijriMonthRange();
+    staffFromDate = range.start;
+    staffToDate = new Date(range.end);
+    staffToDate.setUTCDate(staffToDate.getUTCDate() - 1);
+  } else if (staffQuick === "week") {
+    const week = riyadhFullWeekDays();
+    staffFromDate = week[0];
+    staffToDate = week[6];
+  } else {
+    const week = riyadhFullWeekDays();
+    staffFromDate = staffFrom ? new Date(staffFrom) : week[0];
+    staffFromDate.setUTCHours(0, 0, 0, 0);
+    staffToDate = staffTo ? new Date(staffTo) : week[6];
+    staffToDate.setUTCHours(0, 0, 0, 0);
+  }
+  function staffQuickHref(q: string) {
+    return `/attendance?staffQuick=${q}`;
+  }
+  const staffExportQuery = new URLSearchParams({
+    from: toIso(staffFromDate),
+    to: toIso(staffToDate),
+  }).toString();
 
   const [myWeekAttendance, myLeaveRequests, pendingRequests, weeklyStaffSummary, todayStaffAttendance] =
     await Promise.all([
@@ -281,6 +316,60 @@ export default async function AttendancePage({
               label="تصدير الغائبات فقط"
             />
           </div>
+        </div>
+      )}
+
+      {canExportStaff && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">تصدير حضور وغياب المعلمات</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+            حدّدي مدى التاريخ لتصدير سجل حضور وغياب المعلمات، أو اختاري نطاقًا سريعًا
+          </p>
+          <form method="get" className="flex flex-wrap items-end gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">من تاريخ</label>
+              <input
+                type="date"
+                name="staffFrom"
+                defaultValue={toIso(staffFromDate)}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">إلى تاريخ</label>
+              <input
+                type="date"
+                name="staffTo"
+                defaultValue={toIso(staffToDate)}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand text-white text-sm font-medium px-5 py-2 hover:bg-brand-dark transition"
+            >
+              تصفية
+            </button>
+            <div className="flex items-center gap-2 text-xs">
+              <a
+                href={staffQuickHref("week")}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+              >
+                هذا الأسبوع
+              </a>
+              <a
+                href={staffQuickHref("month")}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+              >
+                هذا الشهر
+              </a>
+            </div>
+          </form>
+          <ExportButton
+            href={`/api/export/staff-attendance?${staffExportQuery}`}
+            label="تصدير حضور المعلمات"
+            emphasize
+          />
         </div>
       )}
 

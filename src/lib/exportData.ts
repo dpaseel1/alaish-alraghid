@@ -1,11 +1,37 @@
 import "server-only";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
-import type { User } from "@/generated/prisma/client";
+import type { StaffAttendanceStatus, User } from "@/generated/prisma/client";
 import { STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
 import { ROLE_LABELS } from "@/components/layout/nav-items";
 
 type HalaqaWhere = Record<string, unknown>;
+type StaffWhere = Record<string, unknown>;
+
+const STAFF_ATTENDANCE_LABELS: Record<StaffAttendanceStatus, string> = {
+  PRESENT: "حاضرة",
+  ABSENT_EXCUSED: "غياب بعذر",
+  ABSENT_UNEXCUSED: "غياب بدون عذر",
+  LEAVE: "إجازة",
+};
+
+/**
+ * يحدد نطاق الصلاحية على مستوى الطاقم (معلمات/مشرفات) لتصدير سجل حضورهن: المديرة
+ * ترى كل الطاقم، والمشرفة ترى معلمات مسارها فقط (بنفس منطق صفحة /teachers)
+ */
+export function resolveStaffExportScope(user: User): { ok: true; staffWhere: StaffWhere } | { ok: false } {
+  if (user.role === "ADMIN" || user.role === "DEVELOPER") {
+    return { ok: true, staffWhere: { role: { in: ["TEACHER", "SUPERVISOR"] } } };
+  }
+  if (user.role === "SUPERVISOR") {
+    if (!user.supervisedTrackId) return { ok: false };
+    return {
+      ok: true,
+      staffWhere: { role: "TEACHER", teacherHalaqa: { trackId: user.supervisedTrackId } },
+    };
+  }
+  return { ok: false };
+}
 
 export type ExportScope = {
   ok: true;
@@ -151,6 +177,28 @@ export async function buildStaffNotRecordedRows(date: Date) {
   return staff
     .filter((s) => s.staffAttendance.length === 0)
     .map((s) => ({ "الاسم": s.name, "الصفة": ROLE_LABELS[s.role] }));
+}
+
+/** يبني صفوف تصدير سجل حضور/غياب الطاقم (معلمات/مشرفات) ضمن نطاق تاريخ محدد */
+export async function buildStaffAttendanceRows(staffWhere: StaffWhere, fromDate: Date, toDate: Date) {
+  const records = await db.staffAttendance.findMany({
+    where: {
+      date: { gte: fromDate, lte: toDate },
+      user: staffWhere,
+    },
+    include: {
+      user: { select: { name: true, role: true } },
+    },
+    orderBy: [{ date: "desc" }, { user: { name: "asc" } }],
+  });
+
+  return records.map((a) => ({
+    "الاسم": a.user.name,
+    "الصفة": ROLE_LABELS[a.user.role],
+    "التاريخ": a.date.toISOString().slice(0, 10),
+    "الحالة": STAFF_ATTENDANCE_LABELS[a.status],
+    "ملاحظة": a.note ?? "",
+  }));
 }
 
 export function rowsToXlsxBuffer(sheets: { name: string; rows: Record<string, unknown>[] }[]): Buffer {
