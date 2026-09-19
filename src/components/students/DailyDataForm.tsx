@@ -83,7 +83,7 @@ export function DailyDataForm({
       .map((byDate) => byDate[todayIso])
       .find((v) => v !== undefined) ?? ""
   );
-  const uniformQuotaNumber = Number(uniformQuotaValue);
+  const uniformQuotaNumber = Number(normalizeDecimal(uniformQuotaValue));
   const uniformQuotaValid = uniformQuotaValue.trim() !== "" && Number.isFinite(uniformQuotaNumber);
 
   // الجدول الأسبوعي الموحّد (غير النصاب الموحّد): خانات controlled لتمكين أداة التعبئة السريعة
