@@ -9,6 +9,7 @@ import { logAudit } from "@/lib/audit";
 import { passwordSchema, nameSchema, requiredProfileFields } from "@/lib/validation";
 import { normalizeDigits } from "@/lib/numbers";
 import { fileToAvatarDataUrl } from "@/lib/avatar";
+import { computeAttendanceDays } from "@/lib/volunteerHours";
 
 export type TeacherActionState = { error?: string; success?: string };
 
@@ -111,12 +112,16 @@ export async function revealNationalIdAction(
   }
 }
 
-const volunteerAdjustmentSchema = z.preprocess(
+const volunteerTotalHoursSchema = z.preprocess(
   (v) => (typeof v === "string" ? normalizeDigits(v) : v),
-  z.coerce.number().int("الرجاء إدخال رقم صحيح")
+  z.coerce.number().int("الرجاء إدخال رقم صحيح").min(0, "لا يمكن أن يكون العدد أقل من صفر")
 );
 
-/** تعديل يدوي (زيادة/نقصان) فوق الساعات التطوعية المحسوبة تلقائيًا لمعلمة - متاح للمشرفة على مسارها وللمديرة على الجميع */
+/**
+ * تعدّل إجمالي الساعات التطوعية الظاهر لمعلمة مباشرة (زيادة أو نقصان) - متاح للمشرفة على مسارها وللمديرة على الجميع.
+ * العميل يرسل الإجمالي المطلوب نفسه (وليس قيمة تعديل منفصلة)، وهنا نحسب فرق `volunteerHoursAdjustment` الداخلي
+ * اللازم (بناءً على عدد أيام الحضور المحسوبة تلقائيًا وقت الحفظ) ليصبح الإجمالي الفعلي مساويًا تمامًا لما طلبته المديرة
+ */
 export async function adjustTeacherVolunteerHoursAction(
   userId: string,
   _prev: TeacherActionState | undefined,
@@ -126,7 +131,7 @@ export async function adjustTeacherVolunteerHoursAction(
 
   const teacher = await db.user.findUnique({
     where: { id: userId },
-    include: { teacherHalaqa: { select: { trackId: true } } },
+    include: { teacherHalaqa: { select: { id: true, trackId: true } } },
   });
   if (!teacher || teacher.role !== "TEACHER") return { error: "المعلمة غير موجودة" };
 
@@ -134,14 +139,19 @@ export async function adjustTeacherVolunteerHoursAction(
     return { error: "لا تملكين صلاحية تعديل بيانات هذه المعلمة" };
   }
 
-  const parsed = volunteerAdjustmentSchema.safeParse(formData.get("adjustment"));
+  const parsed = volunteerTotalHoursSchema.safeParse(formData.get("totalHours"));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   }
 
+  const attendanceDays = teacher.teacherHalaqa
+    ? await computeAttendanceDays(teacher.id, teacher.teacherHalaqa.id)
+    : 0;
+  const newAdjustment = parsed.data - attendanceDays;
+
   await db.user.update({
     where: { id: userId },
-    data: { volunteerHoursAdjustment: parsed.data },
+    data: { volunteerHoursAdjustment: newAdjustment },
   });
 
   await logAudit({
@@ -150,10 +160,11 @@ export async function adjustTeacherVolunteerHoursAction(
     targetType: "User",
     targetId: teacher.id,
     targetLabel: teacher.name,
-    message: `عدّلت الساعات التطوعية اليدوية للمعلمة إلى ${parsed.data}`,
+    message: `عدّلت إجمالي الساعات التطوعية للمعلمة إلى ${parsed.data} ساعة`,
   });
 
   revalidatePath("/teachers");
+  revalidatePath("/");
   return { success: "تم تحديث الساعات التطوعية" };
 }
 

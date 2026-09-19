@@ -8,14 +8,12 @@ const initialState: TeacherActionState = {};
 export function VolunteerHoursCell({
   userId,
   totalHours,
-  adjustment,
 }: {
   userId: string;
   totalHours: number;
-  adjustment: number;
 }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(adjustment);
+  const [draft, setDraft] = useState(totalHours);
   const [state, formAction, pending] = useActionState(
     adjustTeacherVolunteerHoursAction.bind(null, userId),
     initialState
@@ -30,7 +28,7 @@ export function VolunteerHoursCell({
   if (isEditing) {
     return (
       <form action={formAction} className="flex items-center gap-2">
-        <input type="hidden" name="adjustment" value={draft} />
+        <input type="hidden" name="totalHours" value={draft} />
         <button
           type="button"
           onClick={() => setDraft((d) => d - 1)}
@@ -52,7 +50,7 @@ export function VolunteerHoursCell({
         </button>
         <button
           type="submit"
-          disabled={pending || draft === adjustment}
+          disabled={pending || draft === totalHours}
           className="rounded-lg bg-brand text-white text-xs font-medium px-2.5 py-1.5 hover:bg-brand-dark disabled:opacity-60"
         >
           {pending ? "..." : "حفظ"}
@@ -60,7 +58,7 @@ export function VolunteerHoursCell({
         <button
           type="button"
           onClick={() => {
-            setDraft(adjustment);
+            setDraft(totalHours);
             setIsEditing(false);
           }}
           className="text-xs text-slate-500 dark:text-slate-400 hover:underline"
@@ -78,10 +76,10 @@ export function VolunteerHoursCell({
       <button
         type="button"
         onClick={() => {
-          setDraft(adjustment);
+          setDraft(totalHours);
           setIsEditing(true);
         }}
-        title={`تعديل يدوي حالي: ${adjustment}`}
+        title={`التوتال الحالي: ${totalHours}`}
         className="text-xs text-brand hover:underline"
       >
         تعديل

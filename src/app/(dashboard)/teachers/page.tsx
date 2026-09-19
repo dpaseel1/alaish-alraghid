@@ -11,6 +11,7 @@ import { RevealNationalId } from "@/components/teachers/RevealNationalId";
 import { TeacherProfileButton } from "@/components/teachers/TeacherProfileButton";
 import { ForceLogoutButton } from "@/components/ui/ForceLogoutButton";
 import { VolunteerHoursCell } from "@/components/teachers/VolunteerHoursCell";
+import { computeAttendanceDaysForTeachers } from "@/lib/volunteerHours";
 import { ResetTeacherPasswordButton } from "@/components/teachers/ResetTeacherPasswordButton";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -45,39 +46,10 @@ export default async function TeachersPage() {
   const others = teachers.filter((t) => t.status !== "PENDING");
 
   // احتساب الساعات التطوعية لكل المعلمات دفعة واحدة (بدل استعلام منفصل لكل معلمة) لتفادي N+1
-  const halaqaIds = teachers.map((t) => t.teacherHalaqa?.id).filter((id): id is string => !!id);
-  const teacherIds = teachers.map((t) => t.id);
-  const [allLogs, allAttendance] = await Promise.all([
-    db.attendanceLog.findMany({
-      where: { halaqaId: { in: halaqaIds }, dataSubmitted: true },
-      select: { halaqaId: true, date: true },
-    }),
-    db.staffAttendance.findMany({
-      where: { userId: { in: teacherIds }, status: "PRESENT" },
-      select: { userId: true, date: true },
-    }),
-  ]);
-  const submittedDatesByHalaqa = new Map<string, Set<number>>();
-  for (const log of allLogs) {
-    const set = submittedDatesByHalaqa.get(log.halaqaId) ?? new Set<number>();
-    set.add(log.date.getTime());
-    submittedDatesByHalaqa.set(log.halaqaId, set);
-  }
-  const presentDatesByUser = new Map<string, Set<number>>();
-  for (const a of allAttendance) {
-    const set = presentDatesByUser.get(a.userId) ?? new Set<number>();
-    set.add(a.date.getTime());
-    presentDatesByUser.set(a.userId, set);
-  }
+  const attendanceDaysByTeacher = await computeAttendanceDaysForTeachers(teachers);
   const volunteerHoursByTeacher = new Map<string, number>();
   for (const t of teachers) {
-    const submittedDates = t.teacherHalaqa ? submittedDatesByHalaqa.get(t.teacherHalaqa.id) : null;
-    const presentDates = presentDatesByUser.get(t.id);
-    const attendanceDays =
-      submittedDates && presentDates
-        ? [...submittedDates].filter((d) => presentDates.has(d)).length
-        : 0;
-    volunteerHoursByTeacher.set(t.id, attendanceDays + t.volunteerHoursAdjustment);
+    volunteerHoursByTeacher.set(t.id, (attendanceDaysByTeacher.get(t.id) ?? 0) + t.volunteerHoursAdjustment);
   }
 
   return (
@@ -214,11 +186,7 @@ export default async function TeachersPage() {
                     />
                   </td>
                   <td className="px-5 py-3">
-                    <VolunteerHoursCell
-                      userId={t.id}
-                      totalHours={volunteerHoursByTeacher.get(t.id) ?? 0}
-                      adjustment={t.volunteerHoursAdjustment}
-                    />
+                    <VolunteerHoursCell userId={t.id} totalHours={volunteerHoursByTeacher.get(t.id) ?? 0} />
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3 flex-wrap">
