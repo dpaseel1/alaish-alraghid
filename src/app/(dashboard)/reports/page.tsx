@@ -188,12 +188,13 @@ export default async function ReportsPage({
                 <th className="px-5 py-3 font-medium">الحلقة</th>
                 <th className="px-5 py-3 font-medium">التاريخ</th>
                 <th className="px-5 py-3 font-medium">الحالة</th>
+                <th className="px-5 py-3 font-medium">سبب الغياب</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {absentees.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400 dark:text-slate-500">
                     لا توجد حالات غياب مسجّلة في هذه الفترة
                   </td>
                 </tr>
@@ -211,6 +212,9 @@ export default async function ReportsPage({
                   </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
                     {STUDENT_ATTENDANCE_LABELS[a.status]}
+                  </td>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
+                    {a.reason ?? "—"}
                   </td>
                 </tr>
               ))}

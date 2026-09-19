@@ -115,6 +115,7 @@ export async function buildAttendanceRows(
     "الحلقة": a.attendanceLog.halaqa.name,
     "التاريخ": a.attendanceLog.date.toISOString().slice(0, 10),
     "الحالة": STUDENT_ATTENDANCE_LABELS[a.status],
+    "سبب الغياب": a.reason ?? "",
   }));
 }
 

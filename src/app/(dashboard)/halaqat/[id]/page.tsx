@@ -82,12 +82,13 @@ export default async function HalaqaDetailPage({
     include: { studentAttendance: true },
   });
 
-  const weekAttendance: Record<string, Record<string, StudentAttendanceStatus>> = {};
+  const weekAttendance: Record<string, Record<string, { status: StudentAttendanceStatus; reason: string | null }>> =
+    {};
   for (const log of weekLogs) {
     const dateIso = log.date.toISOString().slice(0, 10);
     for (const a of log.studentAttendance) {
       weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
-      weekAttendance[a.studentId][dateIso] = a.status;
+      weekAttendance[a.studentId][dateIso] = { status: a.status, reason: a.reason };
     }
   }
 
@@ -243,14 +244,15 @@ export default async function HalaqaDetailPage({
                       {s.name}
                     </td>
                     {weekDays.map((day) => {
-                      const status = weekAttendance[s.id]?.[day.iso];
+                      const record = weekAttendance[s.id]?.[day.iso];
                       return (
                         <td key={day.iso} className="px-3 py-3 text-center">
-                          {status ? (
+                          {record ? (
                             <span
-                              className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${ATTENDANCE_BADGE_CLASS[status]}`}
+                              title={record.reason ?? undefined}
+                              className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${ATTENDANCE_BADGE_CLASS[record.status]}`}
                             >
-                              {STUDENT_ATTENDANCE_LABELS[status]}
+                              {STUDENT_ATTENDANCE_LABELS[record.status]}
                             </span>
                           ) : (
                             <span className="text-slate-300 dark:text-slate-600">—</span>

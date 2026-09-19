@@ -848,13 +848,21 @@ export async function revealStudentNationalIdAction(
   }
 }
 
-/** تبديل حضور/غياب طالبة ليوم واحد ضمن الأسبوع الحالي، مقيّد بأيام انعقاد الحلقة المحددة (وقد تشمل الجمعة/السبت) إن حُدِّدت، وإلا فالأسبوع الدراسي الافتراضي (الأحد-الخميس) */
+/**
+ * تبديل حضور/غياب طالبة ليوم واحد ضمن الأسبوع الحالي، مقيّد بأيام انعقاد الحلقة المحددة (وقد تشمل الجمعة/السبت)
+ * إن حُدِّدت، وإلا فالأسبوع الدراسي الافتراضي (الأحد-الخميس). حالة "غياب بعذر" تتطلب سبب إجباري (نص غير فارغ)،
+ * ويُحفظ معها؛ باقي الحالات لا تحتفظ بأي سبب (يُمسح تلقائيًا)
+ */
 export async function toggleStudentAttendanceAction(
   studentId: string,
   dateIso: string,
-  status: StudentAttendanceStatus
+  status: StudentAttendanceStatus,
+  reason?: string
 ) {
   if (!STUDENT_ATTENDANCE_STATUSES.includes(status)) return;
+
+  const trimmedReason = reason?.trim() || "";
+  if (status === "ABSENT_EXCUSED" && !trimmedReason) return; // السبب إجباري لحالة الغياب بعذر
 
   const student = await db.student.findUnique({
     where: { id: studentId },
@@ -891,7 +899,10 @@ export async function toggleStudentAttendanceAction(
     },
   });
 
-  const shouldClear = existing?.status === status;
+  // إعادة الضغط على نفس الحالة تُلغي التحضير (مسح) — إلا لحالة "غياب بعذر" لأن الضغط عليها
+  // مجددًا يعني تعديل نص السبب، لا إلغاء التحضير
+  const shouldClear = existing?.status === status && status !== "ABSENT_EXCUSED";
+  const newReason = status === "ABSENT_EXCUSED" ? trimmedReason : null;
 
   if (shouldClear) {
     await db.studentAttendance.delete({ where: { id: existing!.id } });
@@ -903,8 +914,8 @@ export async function toggleStudentAttendanceAction(
           studentId,
         },
       },
-      create: { attendanceLogId: attendanceLog.id, studentId, status },
-      update: { status },
+      create: { attendanceLogId: attendanceLog.id, studentId, status, reason: newReason },
+      update: { status, reason: newReason },
     });
   }
 
@@ -916,7 +927,7 @@ export async function toggleStudentAttendanceAction(
     targetLabel: student.name,
     message: shouldClear
       ? `أزالت تحضير الطالبة ليوم ${dateIso}`
-      : `سجّلت (${STUDENT_ATTENDANCE_LABELS[status]}) للطالبة ليوم ${dateIso}`,
+      : `سجّلت (${STUDENT_ATTENDANCE_LABELS[status]}${newReason ? `: ${newReason}` : ""}) للطالبة ليوم ${dateIso}`,
   });
 
   revalidatePath("/students");

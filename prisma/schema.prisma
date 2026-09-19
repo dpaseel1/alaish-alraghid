@@ -243,6 +243,7 @@ model StudentAttendance {
   studentId       String
   student         Student                  @relation(fields: [studentId], references: [id])
   status          StudentAttendanceStatus  @default(PRESENT)
+  reason          String? // سبب الغياب بعذر (إجباري عند ABSENT_EXCUSED فقط)
 
   @@unique([attendanceLogId, studentId])
 }

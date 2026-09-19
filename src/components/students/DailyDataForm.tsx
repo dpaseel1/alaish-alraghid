@@ -22,6 +22,11 @@ type WeekDay = {
   label: string;
 };
 
+type AttendanceRecord = {
+  status: StudentAttendanceStatus;
+  reason: string | null;
+};
+
 const initialState: StudentActionState = {};
 
 const IS_ABSENT = (status: StudentAttendanceStatus | undefined) =>
@@ -61,7 +66,7 @@ export function DailyDataForm({
   students: Student[];
   weekDays: WeekDay[];
   todayIso: string;
-  weekAttendance: Record<string, Record<string, StudentAttendanceStatus>>;
+  weekAttendance: Record<string, Record<string, AttendanceRecord>>;
   weekRecitation?: Record<string, boolean>;
   recitationEnabled?: boolean;
   uniformQuota?: boolean;
@@ -296,13 +301,13 @@ export function DailyDataForm({
                           {s.memorizedPagesTotal}
                         </td>
                         {weekDays.map((day) => {
-                          const status = weekAttendance[s.id]?.[day.iso];
+                          const record = weekAttendance[s.id]?.[day.iso];
                           const locked = isLocked(day.iso);
-                          const inputsDisabled = locked || IS_ABSENT(status);
+                          const inputsDisabled = locked || IS_ABSENT(record?.status);
                           return (
                             <td key={day.iso} className={`px-2 py-2 align-top ${locked ? "opacity-40" : ""}`}>
                               <div className="flex flex-col items-center gap-1.5">
-                                <AttendanceDayCell studentId={s.id} day={day} current={status} locked={locked} />
+                                <AttendanceDayCell studentId={s.id} day={day} current={record} locked={locked} />
                                 <input
                                   dir="ltr"
                                   name={`pages_${s.id}_${day.iso}`}
@@ -418,14 +423,29 @@ function AttendanceDayCell({
 }: {
   studentId: string;
   day: WeekDay;
-  current: StudentAttendanceStatus | undefined;
+  current: AttendanceRecord | undefined;
   locked: boolean;
 }) {
   const [pending, startTransition] = useTransition();
-  const setStatus = (status: StudentAttendanceStatus) =>
+  const [showReasonInput, setShowReasonInput] = useState(false);
+  const [reasonDraft, setReasonDraft] = useState(current?.reason ?? "");
+
+  const setStatus = (status: StudentAttendanceStatus, reason?: string) =>
     startTransition(() => {
-      toggleStudentAttendanceAction(studentId, day.iso, status);
+      toggleStudentAttendanceAction(studentId, day.iso, status, reason);
     });
+
+  const openReasonInput = () => {
+    setReasonDraft(current?.reason ?? "");
+    setShowReasonInput(true);
+  };
+
+  const confirmExcused = () => {
+    const trimmed = reasonDraft.trim();
+    if (!trimmed) return;
+    setStatus("ABSENT_EXCUSED", trimmed);
+    setShowReasonInput(false);
+  };
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -436,9 +456,12 @@ function AttendanceDayCell({
             type="button"
             title="حضور"
             disabled={locked || pending}
-            onClick={() => setStatus("PRESENT")}
+            onClick={() => {
+              setShowReasonInput(false);
+              setStatus("PRESENT");
+            }}
             className={
-              current === "PRESENT"
+              current?.status === "PRESENT"
                 ? "flex h-7 w-7 items-center justify-center bg-emerald-600 text-white disabled:cursor-not-allowed"
                 : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-emerald-50 dark:hover:enabled:bg-emerald-950/30 hover:enabled:text-emerald-600 disabled:cursor-not-allowed"
             }
@@ -449,9 +472,12 @@ function AttendanceDayCell({
             type="button"
             title="غياب"
             disabled={locked || pending}
-            onClick={() => setStatus("ABSENT_UNEXCUSED")}
+            onClick={() => {
+              setShowReasonInput(false);
+              setStatus("ABSENT_UNEXCUSED");
+            }}
             className={
-              IS_ABSENT(current)
+              IS_ABSENT(current?.status)
                 ? "flex h-7 w-7 items-center justify-center bg-red-600 text-white disabled:cursor-not-allowed"
                 : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-red-50 dark:hover:enabled:bg-red-950/30 hover:enabled:text-red-600 disabled:cursor-not-allowed"
             }
@@ -459,35 +485,79 @@ function AttendanceDayCell({
             <XIcon className="h-4 w-4" />
           </button>
         </div>
-        {IS_ABSENT(current) && !locked && (
-          <div className="flex items-center rounded-md overflow-hidden border border-slate-200 dark:border-slate-600 text-[10px]">
-            <button
-              type="button"
-              title="غياب بعذر"
-              disabled={pending}
-              onClick={() => setStatus("ABSENT_EXCUSED")}
-              className={`px-1.5 py-0.5 font-medium ${
-                current === "ABSENT_EXCUSED"
-                  ? "bg-amber-600 text-white"
-                  : "bg-white dark:bg-slate-800 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-              }`}
-            >
-              بعذر
-            </button>
-            <button
-              type="button"
-              title="غياب بدون عذر"
-              disabled={pending}
-              onClick={() => setStatus("ABSENT_UNEXCUSED")}
-              className={`px-1.5 py-0.5 font-medium ${
-                current === "ABSENT_UNEXCUSED"
-                  ? "bg-red-600 text-white"
-                  : "bg-white dark:bg-slate-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-              }`}
-            >
-              بدون
-            </button>
-          </div>
+        {IS_ABSENT(current?.status) && !locked && (
+          <>
+            {showReasonInput ? (
+              <div className="flex flex-col items-center gap-1 w-28">
+                <input
+                  type="text"
+                  value={reasonDraft}
+                  onChange={(e) => setReasonDraft(e.target.value)}
+                  placeholder="سبب الغياب (إجباري)"
+                  autoFocus
+                  className="w-full rounded-md border border-amber-300 dark:border-amber-700 px-1.5 py-1 text-[10px] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                />
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={pending || !reasonDraft.trim()}
+                    onClick={confirmExcused}
+                    className="rounded bg-amber-600 text-white text-[10px] font-medium px-2 py-0.5 disabled:opacity-50"
+                  >
+                    حفظ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowReasonInput(false)}
+                    className="text-[10px] text-slate-500 dark:text-slate-400 hover:underline"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center rounded-md overflow-hidden border border-slate-200 dark:border-slate-600 text-[10px]">
+                  <button
+                    type="button"
+                    title="غياب بعذر"
+                    disabled={pending}
+                    onClick={openReasonInput}
+                    className={`px-1.5 py-0.5 font-medium ${
+                      current?.status === "ABSENT_EXCUSED"
+                        ? "bg-amber-600 text-white"
+                        : "bg-white dark:bg-slate-800 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    }`}
+                  >
+                    بعذر
+                  </button>
+                  <button
+                    type="button"
+                    title="غياب بدون عذر"
+                    disabled={pending}
+                    onClick={() => setStatus("ABSENT_UNEXCUSED")}
+                    className={`px-1.5 py-0.5 font-medium ${
+                      current?.status === "ABSENT_UNEXCUSED"
+                        ? "bg-red-600 text-white"
+                        : "bg-white dark:bg-slate-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                    }`}
+                  >
+                    بدون
+                  </button>
+                </div>
+                {current?.status === "ABSENT_EXCUSED" && current.reason && (
+                  <button
+                    type="button"
+                    onClick={openReasonInput}
+                    title={`سبب الغياب: ${current.reason} (اضغطي للتعديل)`}
+                    className="max-w-[90px] truncate text-[9px] text-amber-700 dark:text-amber-400 underline decoration-dotted"
+                  >
+                    {current.reason}
+                  </button>
+                )}
+              </>
+            )}
+          </>
         )}
       </div>
     </div>

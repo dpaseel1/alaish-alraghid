@@ -32,12 +32,13 @@ async function buildWeekWorkspace(halaqa: { id: string; days: string[]; students
     include: { studentAttendance: true },
   });
 
-  const weekAttendance: Record<string, Record<string, StudentAttendanceStatus>> = {};
+  const weekAttendance: Record<string, Record<string, { status: StudentAttendanceStatus; reason: string | null }>> =
+    {};
   for (const log of weekLogs) {
     const dateIso = log.date.toISOString().slice(0, 10);
     for (const a of log.studentAttendance) {
       weekAttendance[a.studentId] = weekAttendance[a.studentId] ?? {};
-      weekAttendance[a.studentId][dateIso] = a.status;
+      weekAttendance[a.studentId][dateIso] = { status: a.status, reason: a.reason };
     }
   }
 
