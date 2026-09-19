@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import {
   submitWeeklyDataAction,
   toggleStudentAttendanceAction,
@@ -426,68 +426,72 @@ function AttendanceDayCell({
   current: StudentAttendanceStatus | undefined;
   locked: boolean;
 }) {
+  const [pending, startTransition] = useTransition();
+  const setStatus = (status: StudentAttendanceStatus) =>
+    startTransition(() => {
+      toggleStudentAttendanceAction(studentId, day.iso, status);
+    });
+
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="text-[10px] text-slate-400 dark:text-slate-500">{day.label}</span>
       <div className="flex flex-col items-center gap-1">
         <div className="flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
-          <form action={toggleStudentAttendanceAction.bind(null, studentId, day.iso, "PRESENT")}>
-            <button
-              type="submit"
-              title="حضور"
-              disabled={locked}
-              className={
-                current === "PRESENT"
-                  ? "flex h-7 w-7 items-center justify-center bg-emerald-600 text-white disabled:cursor-not-allowed"
-                  : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-emerald-50 dark:hover:enabled:bg-emerald-950/30 hover:enabled:text-emerald-600 disabled:cursor-not-allowed"
-              }
-            >
-              <CheckIcon className="h-4 w-4" />
-            </button>
-          </form>
-          <form action={toggleStudentAttendanceAction.bind(null, studentId, day.iso, "ABSENT_UNEXCUSED")}>
-            <button
-              type="submit"
-              title="غياب"
-              disabled={locked}
-              className={
-                IS_ABSENT(current)
-                  ? "flex h-7 w-7 items-center justify-center bg-red-600 text-white disabled:cursor-not-allowed"
-                  : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-red-50 dark:hover:enabled:bg-red-950/30 hover:enabled:text-red-600 disabled:cursor-not-allowed"
-              }
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
-          </form>
+          <button
+            type="button"
+            title="حضور"
+            disabled={locked || pending}
+            onClick={() => setStatus("PRESENT")}
+            className={
+              current === "PRESENT"
+                ? "flex h-7 w-7 items-center justify-center bg-emerald-600 text-white disabled:cursor-not-allowed"
+                : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-emerald-50 dark:hover:enabled:bg-emerald-950/30 hover:enabled:text-emerald-600 disabled:cursor-not-allowed"
+            }
+          >
+            <CheckIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            title="غياب"
+            disabled={locked || pending}
+            onClick={() => setStatus("ABSENT_UNEXCUSED")}
+            className={
+              IS_ABSENT(current)
+                ? "flex h-7 w-7 items-center justify-center bg-red-600 text-white disabled:cursor-not-allowed"
+                : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:enabled:bg-red-50 dark:hover:enabled:bg-red-950/30 hover:enabled:text-red-600 disabled:cursor-not-allowed"
+            }
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
         </div>
         {IS_ABSENT(current) && !locked && (
           <div className="flex items-center rounded-md overflow-hidden border border-slate-200 dark:border-slate-600 text-[10px]">
-            <form action={toggleStudentAttendanceAction.bind(null, studentId, day.iso, "ABSENT_EXCUSED")}>
-              <button
-                type="submit"
-                title="غياب بعذر"
-                className={`px-1.5 py-0.5 font-medium ${
-                  current === "ABSENT_EXCUSED"
-                    ? "bg-amber-600 text-white"
-                    : "bg-white dark:bg-slate-800 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                }`}
-              >
-                بعذر
-              </button>
-            </form>
-            <form action={toggleStudentAttendanceAction.bind(null, studentId, day.iso, "ABSENT_UNEXCUSED")}>
-              <button
-                type="submit"
-                title="غياب بدون عذر"
-                className={`px-1.5 py-0.5 font-medium ${
-                  current === "ABSENT_UNEXCUSED"
-                    ? "bg-red-600 text-white"
-                    : "bg-white dark:bg-slate-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                }`}
-              >
-                بدون
-              </button>
-            </form>
+            <button
+              type="button"
+              title="غياب بعذر"
+              disabled={pending}
+              onClick={() => setStatus("ABSENT_EXCUSED")}
+              className={`px-1.5 py-0.5 font-medium ${
+                current === "ABSENT_EXCUSED"
+                  ? "bg-amber-600 text-white"
+                  : "bg-white dark:bg-slate-800 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              }`}
+            >
+              بعذر
+            </button>
+            <button
+              type="button"
+              title="غياب بدون عذر"
+              disabled={pending}
+              onClick={() => setStatus("ABSENT_UNEXCUSED")}
+              className={`px-1.5 py-0.5 font-medium ${
+                current === "ABSENT_UNEXCUSED"
+                  ? "bg-red-600 text-white"
+                  : "bg-white dark:bg-slate-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+              }`}
+            >
+              بدون
+            </button>
           </div>
         )}
       </div>
@@ -496,36 +500,42 @@ function AttendanceDayCell({
 }
 
 function RecitationCell({ studentId, recited }: { studentId: string; recited: boolean }) {
+  const [pending, startTransition] = useTransition();
+  const setRecited = (value: boolean) =>
+    startTransition(() => {
+      toggleStudentRecitationAction(studentId, value);
+    });
+
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">السرد</span>
       <div className="flex items-center rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
-        <form action={toggleStudentRecitationAction.bind(null, studentId, true)}>
-          <button
-            type="submit"
-            title="سردت"
-            className={
-              recited
-                ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white"
-                : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 hover:text-violet-600"
-            }
-          >
-            <CheckIcon className="h-4 w-4" />
-          </button>
-        </form>
-        <form action={toggleStudentRecitationAction.bind(null, studentId, false)}>
-          <button
-            type="submit"
-            title="لم تسرد"
-            className={
-              !recited
-                ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white"
-                : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
-            }
-          >
-            <XIcon className="h-4 w-4" />
-          </button>
-        </form>
+        <button
+          type="button"
+          title="سردت"
+          disabled={pending}
+          onClick={() => setRecited(true)}
+          className={
+            recited
+              ? "flex h-7 w-7 items-center justify-center bg-violet-600 text-white"
+              : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-violet-50 dark:hover:bg-violet-950/30 hover:text-violet-600"
+          }
+        >
+          <CheckIcon className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          title="لم تسرد"
+          disabled={pending}
+          onClick={() => setRecited(false)}
+          className={
+            !recited
+              ? "flex h-7 w-7 items-center justify-center bg-slate-400 text-white"
+              : "flex h-7 w-7 items-center justify-center bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
+          }
+        >
+          <XIcon className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
