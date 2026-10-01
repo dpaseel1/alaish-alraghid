@@ -72,7 +72,9 @@ export default async function AttendancePage({
   const canExportStaff = isAdmin || user.role === "SUPERVISOR";
   const { from, to, staffFrom, staffTo, staffQuick: staffQuickParam } = await searchParams;
 
-  const weekDayDates = riyadhWeekDays();
+  const today = riyadhToday();
+  // لا تُعرض ولا تُحتسب أعمدة أيام مستقبلية لم تحن بعد ضمن أسبوع الطاقم الحالي
+  const weekDayDates = riyadhWeekDays().filter((d) => d.getTime() <= today.getTime());
   const weekDays = weekDayDates.map((d, i) => ({ iso: toIso(d), label: WEEKDAY_LABELS[i] }));
 
   // حضور المعلمة الشخصي مقيّد بأيام انعقاد حلقتها (وقد تشمل الجمعة/السبت)؛ المشرفة مقيّدة باتحاد أيام كل حلقات مسارها،
@@ -91,9 +93,9 @@ export default async function AttendancePage({
       ? new Set(myHalaqat.flatMap((h) => (h.days.length > 0 ? h.days : HALAQA_DAYS.slice(0, 5))))
       : null;
   const fullWeek = riyadhFullWeekDays();
-  const myWeekDayDates = myScheduledDays
-    ? fullWeek.filter((d) => myScheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
-    : weekDayDates;
+  const myWeekDayDates = (
+    myScheduledDays ? fullWeek.filter((d) => myScheduledDays.has(HALAQA_DAYS[d.getUTCDay()])) : weekDayDates
+  ).filter((d) => d.getTime() <= today.getTime());
   const myWeekDays = myScheduledDays
     ? myWeekDayDates.map((d) => ({ iso: toIso(d), label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()]] }))
     : weekDays;
@@ -106,7 +108,6 @@ export default async function AttendancePage({
   const exportQuery = new URLSearchParams({ from: exportFrom, to: exportTo }).toString();
   const thisWeekFrom = weekDays[0]?.iso ?? toIso(riyadhToday());
   const thisWeekTo = weekDays[weekDays.length - 1]?.iso ?? toIso(riyadhToday());
-  const today = riyadhToday();
 
   // نطاق تصدير حضور الطاقم (المعلمات/المشرفات): هذا الأسبوع/هذا الشهر افتراضيًا، أو مدى مخصّص
   const staffQuick = staffQuickParam || (!staffFrom && !staffTo ? "week" : undefined);
@@ -128,6 +129,8 @@ export default async function AttendancePage({
     staffToDate = staffTo ? new Date(staffTo) : week[6];
     staffToDate.setUTCHours(0, 0, 0, 0);
   }
+  // لا يُحتسب أي نطاق تصدير يتجاوز اليوم الحالي، حتى لو اختير فلتر أو تاريخ مستقبلي يدويًا
+  if (staffToDate.getTime() > today.getTime()) staffToDate = today;
   function staffQuickHref(q: string) {
     return `/attendance?staffQuick=${q}`;
   }

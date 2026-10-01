@@ -13,8 +13,24 @@ import { computeAttendanceDays } from "@/lib/volunteerHours";
 
 export type TeacherActionState = { error?: string; success?: string };
 
+/** تتحقق أن الفاعلة (مشرفة) تملك صلاحية إدارة هذه المعلمة: إما معلمة بلا حلقة بعد (مجموعة الطلبات المشتركة
+ *  قبل التعيين)، أو معلمة معيّنة لحلقة ضمن مسار المشرفة نفسه. ترفض أي تلاعب بمعلمة معيّنة لمسار آخر */
+async function requireTeacherInScope(actor: { role: string; supervisedTrackId: string | null }, userId: string) {
+  const teacher = await db.user.findUnique({
+    where: { id: userId },
+    include: { teacherHalaqa: { select: { trackId: true } } },
+  });
+  if (!teacher || teacher.role !== "TEACHER") return null;
+  if (actor.role === "SUPERVISOR" && teacher.teacherHalaqa && teacher.teacherHalaqa.trackId !== actor.supervisedTrackId) {
+    return null;
+  }
+  return teacher;
+}
+
 export async function approveTeacherAction(userId: string) {
   const actor = await requireRole("ADMIN", "SUPERVISOR");
+  const target = await requireTeacherInScope(actor, userId);
+  if (!target) return;
   const teacher = await db.user.update({
     where: { id: userId },
     data: { status: "ACTIVE" },
@@ -32,6 +48,8 @@ export async function approveTeacherAction(userId: string) {
 
 export async function rejectTeacherAction(userId: string) {
   const actor = await requireRole("ADMIN", "SUPERVISOR");
+  const target = await requireTeacherInScope(actor, userId);
+  if (!target) return;
   const teacher = await db.user.update({
     where: { id: userId },
     data: { status: "REJECTED" },
@@ -49,6 +67,8 @@ export async function rejectTeacherAction(userId: string) {
 
 export async function unrejectTeacherAction(userId: string) {
   const actor = await requireRole("ADMIN", "SUPERVISOR");
+  const target = await requireTeacherInScope(actor, userId);
+  if (!target) return;
   const teacher = await db.user.update({
     where: { id: userId },
     data: { status: "ACTIVE" },
@@ -66,6 +86,8 @@ export async function unrejectTeacherAction(userId: string) {
 
 export async function suspendTeacherAction(userId: string) {
   const actor = await requireRole("ADMIN", "SUPERVISOR");
+  const target = await requireTeacherInScope(actor, userId);
+  if (!target) return;
   const teacher = await db.user.update({
     where: { id: userId },
     data: { status: "SUSPENDED" },
@@ -83,6 +105,8 @@ export async function suspendTeacherAction(userId: string) {
 
 export async function reactivateTeacherAction(userId: string) {
   const actor = await requireRole("ADMIN", "SUPERVISOR");
+  const target = await requireTeacherInScope(actor, userId);
+  if (!target) return;
   const teacher = await db.user.update({
     where: { id: userId },
     data: { status: "ACTIVE" },

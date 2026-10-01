@@ -8,7 +8,7 @@ import { DeleteHalaqaButton } from "@/components/halaqat/DeleteHalaqaButton";
 import { ToggleHalaqaActiveButton } from "@/components/halaqat/ToggleHalaqaActiveButton";
 import { StudentNumbersRow } from "@/components/students/StudentNumbersRow";
 import { HALAQA_DAYS, HALAQA_DAY_LABELS, type HalaqaDay } from "@/lib/halaqaDays";
-import { riyadhFullWeekDays } from "@/lib/timezone";
+import { riyadhFullWeekDays, riyadhToday } from "@/lib/timezone";
 import { STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
 import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 
@@ -69,9 +69,11 @@ export default async function HalaqaDetailPage({
 
   const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : null;
   const fullWeek = riyadhFullWeekDays();
-  const weekDayDates = scheduledDays
-    ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
-    : fullWeek.slice(0, 5);
+  const today = riyadhToday();
+  // لا تُعرض أعمدة أيام مستقبلية لم تحن بعد ضمن أسبوع الحلقة الحالي
+  const weekDayDates = (
+    scheduledDays ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()])) : fullWeek.slice(0, 5)
+  ).filter((d) => d.getTime() <= today.getTime());
   const weekDays = weekDayDates.map((d) => ({
     iso: d.toISOString().slice(0, 10),
     label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],

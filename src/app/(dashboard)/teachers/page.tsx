@@ -34,8 +34,9 @@ export default async function TeachersPage() {
   const teachers = await db.user.findMany({
     where: {
       role: "TEACHER",
+      // المشرفة ترى معلمات مسارها المعيّنات + المعلمات غير المعيّنات لأي حلقة بعد (مجموعة الطلبات المشتركة قبل التعيين)
       ...(user.role === "SUPERVISOR"
-        ? { teacherHalaqa: { trackId: user.supervisedTrackId ?? "__no_track__" } }
+        ? { OR: [{ teacherHalaqa: { trackId: user.supervisedTrackId ?? "__no_track__" } }, { teacherHalaqa: null }] }
         : {}),
     },
     include: { teacherHalaqa: { select: { id: true, name: true } } },

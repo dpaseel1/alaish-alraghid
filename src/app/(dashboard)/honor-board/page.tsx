@@ -78,13 +78,15 @@ export default async function HonorBoardPage({
     }),
   ]);
 
+  const today = riyadhToday();
   const weekStars = weekStudents
     .map((s) => {
       // أيام انعقاد الحلقة المتوقعة هذا الأسبوع: أيامها المحددة (وقد تشمل الجمعة/السبت)، أو الأسبوع الدراسي الافتراضي (الأحد-الخميس) إن لم تُحدَّد أيام
+      // تُحتسب فقط الأيام التي حلّت فعلًا حتى الآن، حتى لا تبقى "نجمات الأسبوع" فارغة قبل انتهاء الأسبوع كاملًا
       const scheduledDays = s.halaqa.days.length > 0 ? new Set(s.halaqa.days) : null;
-      const expectedDays = scheduledDays
-        ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
-        : fullWeek.slice(0, 5);
+      const expectedDays = (
+        scheduledDays ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()])) : fullWeek.slice(0, 5)
+      ).filter((d) => d.getTime() <= today.getTime());
       const presentDays = new Set(
         s.attendanceRecords.map((a) => a.attendanceLog.date.getTime())
       );
