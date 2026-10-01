@@ -8,7 +8,8 @@ export function dayLabelForIso(dateIso: string) {
   return HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()]];
 }
 
-/** نص خانة اليوم في الجدول: أيقونة غياب، أو "ح: X | م: Y | س: Z" حسب توفر البيانات، أو "—" إن لم تُدخَل بيانات بعد */
+/** نص خانة اليوم في الجدول: علامة حضور/غياب واضحة (✓ حضور، ❌ غياب بدون عذر، ⭕ غياب بعذر)،
+ *  مع تفاصيل الأوجه/المراجعة/السرد بجانب علامة الحضور إن وُجدت، أو "—" إن لم تُدخَل بيانات بعد */
 export function cellText(cell: DayCell): string {
   if (cell.status === "ABSENT_EXCUSED") return "⭕";
   if (cell.status === "ABSENT_UNEXCUSED") return "❌";
@@ -16,5 +17,6 @@ export function cellText(cell: DayCell): string {
   if (cell.pagesMemorized !== null) parts.push(`ح: ${cell.pagesMemorized}`);
   if (cell.pagesReviewed !== null) parts.push(`م: ${cell.pagesReviewed}`);
   if (cell.isNarrationDay && cell.sardPages !== null) parts.push(`س: ${cell.sardPages}`);
+  if (cell.status === "PRESENT") return parts.length > 0 ? `✓ ${parts.join(" | ")}` : "✓";
   return parts.length > 0 ? parts.join(" | ") : "—";
 }
