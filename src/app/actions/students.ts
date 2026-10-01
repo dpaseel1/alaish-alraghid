@@ -7,7 +7,7 @@ import { requireRole, requireUser, isAdminRole } from "@/lib/session";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { riyadhToday, riyadhFullWeekDays, riyadhWeekStart } from "@/lib/timezone";
-import { HALAQA_DAYS } from "@/lib/halaqaDays";
+import { HALAQA_DAYS, DEFAULT_HALAQA_DAYS } from "@/lib/halaqaDays";
 import { requiredStudentProfileFields, nameSchema } from "@/lib/validation";
 import { STUDENT_IMPORT_FIELDS, type StudentImportFieldKey } from "@/lib/studentImportFields";
 import { encryptNationalId, decryptNationalId, lastFourOf } from "@/lib/crypto";
@@ -15,7 +15,7 @@ import { normalizeDigits, normalizeDecimal } from "@/lib/numbers";
 import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 import { STUDENT_ATTENDANCE_STATUSES, STUDENT_ATTENDANCE_LABELS } from "@/lib/studentAttendance";
 
-export type StudentActionState = { error?: string; success?: string };
+export type StudentActionState = { error?: string; success?: string; warning?: string };
 
 const studentSchema = z.object({
   name: nameSchema,
@@ -25,13 +25,21 @@ const studentSchema = z.object({
   ...requiredStudentProfileFields,
 });
 
-/** الأيام المسموح بها لتسجيل الحضور: أيام انعقاد الحلقة المحددة ضمن الأسبوع الحالي، أو الأسبوع الدراسي الافتراضي (الأحد-الخميس) إن لم تُحدَّد أيام */
-function getValidHalaqaDates(days: string[]): number[] {
+/** الأيام المسموح بها لتسجيل الحضور: أيام انعقاد الحلقة المحددة ضمن أسبوع معيّن (الحالي افتراضيًا، أو أسبوع سابق عبر weekOffset)،
+ *  أو الأسبوع الدراسي الافتراضي (الأحد-الخميس) إن لم تُحدَّد أيام */
+function getValidHalaqaDates(days: string[], weekOffset = 0): number[] {
   const scheduledDays = days.length > 0 ? new Set(days) : null;
-  const fullWeek = riyadhFullWeekDays();
+  const fullWeek = riyadhFullWeekDays(weekOffset);
   return (
     scheduledDays ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()])) : fullWeek.slice(0, 5)
   ).map((d) => d.getTime());
+}
+
+/** تحوّل قيمة weekOffset القادمة من الفورم لعدد صحيح آمن (لا تتجاوز أسبوع المستقبل، وبحد أقصى 5 سنوات للخلف) */
+function parseWeekOffset(raw: FormDataEntryValue | null): number {
+  const n = Math.trunc(Number(raw ?? 0));
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(0, Math.max(-260, n));
 }
 
 async function assertHalaqaAccess(halaqaId: string) {
@@ -477,13 +485,28 @@ export async function submitWeeklyDataAction(
   const { user, halaqa } = resolved;
 
   const today = riyadhToday();
+  const invalidCells: string[] = [];
 
   if (halaqa.uniformQuota) {
+    // تاريخ الإدخال: "اليوم" افتراضيًا، أو تاريخ سابق تختاره المعلمة (لتدارك يوم فاتها) بشرط ألا يتجاوز اليوم
+    // الحالي وأن يطابق أحد أيام انعقاد الحلقة (أو الأحد-الخميس الافتراضية إن لم تُحدَّد أيام)
+    const entryDateRaw = String(formData.get("entryDate") ?? "").trim();
+    const entryDate = entryDateRaw ? new Date(entryDateRaw) : today;
+    const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : new Set(DEFAULT_HALAQA_DAYS);
+    const entryDateValid =
+      !Number.isNaN(entryDate.getTime()) &&
+      entryDate.getTime() <= today.getTime() &&
+      scheduledDays.has(HALAQA_DAYS[entryDate.getUTCDay()]);
+    if (entryDateRaw && !entryDateValid) {
+      return { error: "الرجاء اختيار تاريخ صحيح من أيام انعقاد الحلقة ولا يتجاوز اليوم الحالي" };
+    }
+    const targetDate = entryDateValid ? entryDate : today;
+
     await db.attendanceLog.upsert({
-      where: { halaqaId_date: { halaqaId: halaqa.id, date: today } },
+      where: { halaqaId_date: { halaqaId: halaqa.id, date: targetDate } },
       create: {
         halaqaId: halaqa.id,
-        date: today,
+        date: targetDate,
         teacherPresent: true,
         dataSubmitted: true,
         submittedAt: new Date(),
@@ -494,6 +517,17 @@ export async function submitWeeklyDataAction(
     const uniformQuotaRaw = String(formData.get("quota") ?? "").trim();
     const uniformQuotaNormalized = uniformQuotaRaw ? normalizeDecimal(uniformQuotaRaw).trim() : "";
 
+    // قيمة الأوجه مشتركة بين كل الطالبات، فإن كانت غير صالحة نتجاهلها للجميع (مرة وحدة) بدل رفض الحفظ بالكامل
+    let sharedPages = 0;
+    if (uniformQuotaNormalized) {
+      const parsedPages = Number(uniformQuotaNormalized);
+      if (Number.isFinite(parsedPages) && parsedPages >= 0) {
+        sharedPages = parsedPages;
+      } else {
+        invalidCells.push(`عدد الأوجه المضافة اليوم لكل الطالبات ("${uniformQuotaRaw}")`);
+      }
+    }
+
     const entries: {
       student: (typeof halaqa.students)[number];
       pages: number;
@@ -501,36 +535,28 @@ export async function submitWeeklyDataAction(
       pagesReviewed: number;
     }[] = [];
     for (const student of halaqa.students) {
-      const pagesStr = uniformQuotaNormalized;
       const quota = uniformQuotaRaw;
 
       const pagesReviewedRaw = halaqa.recitationEnabled ? formData.get(`pagesReviewed_${student.id}`) : null;
       const pagesReviewedStr = pagesReviewedRaw ? normalizeDecimal(String(pagesReviewedRaw)).trim() : "";
       let pagesReviewed = 0;
       if (pagesReviewedStr) {
-        pagesReviewed = Number(pagesReviewedStr);
-        if (!Number.isFinite(pagesReviewed) || pagesReviewed < 0) {
-          return { error: `الرجاء إدخال رقم صالح لعدد أوجه المراجعة لـ"${student.name}"` };
+        const parsedReviewed = Number(pagesReviewedStr);
+        if (Number.isFinite(parsedReviewed) && parsedReviewed >= 0) {
+          pagesReviewed = parsedReviewed;
+        } else {
+          invalidCells.push(`عدد أوجه المراجعة لـ"${student.name}"`);
         }
       }
 
-      if (!pagesStr) {
-        entries.push({ student, pages: 0, quota, pagesReviewed });
-        continue;
-      }
-
-      const pages = Number(pagesStr);
-      if (!Number.isFinite(pages) || pages < 0) {
-        return { error: `الرجاء إدخال رقم صالح للأوجه المحفوظة لـ"${student.name}"` };
-      }
-      entries.push({ student, pages, quota, pagesReviewed });
+      entries.push({ student, pages: sharedPages, quota, pagesReviewed });
     }
 
     for (const { student, pages, quota, pagesReviewed } of entries) {
       if (pages > 0 || pagesReviewed > 0) {
         await upsertMemorizationDelta({
           studentId: student.id,
-          date: today,
+          date: targetDate,
           pages,
           quota,
           pagesReviewed,
@@ -540,20 +566,23 @@ export async function submitWeeklyDataAction(
         // النصاب أُدخل لكن ما أُدخل عدد أوجه لهذه الطالبة اليوم — يُحفظ النصاب بلا التأثير على
         // عدد الأوجه المحفوظة سابقًا لهذا اليوم إن وُجد
         await db.memorizationRecord.upsert({
-          where: { studentId_date: { studentId: student.id, date: today } },
-          create: { studentId: student.id, date: today, pagesMemorized: 0, quota, enteredById: user.id },
+          where: { studentId_date: { studentId: student.id, date: targetDate } },
+          create: { studentId: student.id, date: targetDate, pagesMemorized: 0, quota, enteredById: user.id },
           update: { quota, enteredById: user.id },
         });
         await db.student.update({ where: { id: student.id }, data: { currentQuota: quota } });
       }
     }
   } else {
+    // الأسبوع المستهدف: الحالي افتراضيًا، أو أسبوع سابق تختاره المعلمة من أزرار التنقل (لتدارك أسبوع فاتها)
+    const weekOffset = parseWeekOffset(formData.get("weekOffset"));
+
     // إعادة تحقق مستقلة عن العميل: الأيام القابلة للتعديل = أيام انعقاد الحلقة ∩ (اليوم الحالي فما قبل)
-    const editableDates = getValidHalaqaDates(halaqa.days)
+    const editableDates = getValidHalaqaDates(halaqa.days, weekOffset)
       .filter((t) => t <= today.getTime())
       .map((t) => new Date(t));
     if (editableDates.length === 0) {
-      return { error: "لا يوجد يوم من أيام انعقاد الحلقة قابل للتعديل هذا الأسبوع بعد" };
+      return { error: "لا يوجد يوم من أيام انعقاد الحلقة قابل للتعديل ضمن هذا الأسبوع" };
     }
 
     const entries: {
@@ -579,17 +608,21 @@ export async function submitWeeklyDataAction(
         const pagesReviewedStr = pagesReviewedRaw ? normalizeDecimal(String(pagesReviewedRaw)).trim() : "";
         let pagesReviewed = 0;
         if (pagesReviewedStr) {
-          pagesReviewed = Number(pagesReviewedStr);
-          if (!Number.isFinite(pagesReviewed) || pagesReviewed < 0) {
-            return { error: `الرجاء إدخال رقم صالح لعدد أوجه المراجعة لـ"${student.name}" ليوم ${dateIso}` };
+          const parsedReviewed = Number(pagesReviewedStr);
+          if (Number.isFinite(parsedReviewed) && parsedReviewed >= 0) {
+            pagesReviewed = parsedReviewed;
+          } else {
+            invalidCells.push(`عدد أوجه المراجعة لـ"${student.name}" ليوم ${dateIso}`);
           }
         }
 
         let pages = 0;
         if (pagesStr) {
-          pages = Number(pagesStr);
-          if (!Number.isFinite(pages) || pages < 0) {
-            return { error: `الرجاء إدخال رقم صالح للأوجه المحفوظة لـ"${student.name}" ليوم ${dateIso}` };
+          const parsedPages = Number(pagesStr);
+          if (Number.isFinite(parsedPages) && parsedPages >= 0) {
+            pages = parsedPages;
+          } else {
+            invalidCells.push(`عدد الأوجه المحفوظة لـ"${student.name}" ليوم ${dateIso}`);
           }
         }
 
@@ -599,7 +632,9 @@ export async function submitWeeklyDataAction(
       }
     }
 
-    const touchedDates = new Set<string>([today.toISOString().slice(0, 10)]);
+    // يُعلَّم اليوم الحالي "مُرسَل" دائمًا فقط عند تعديل الأسبوع الحالي فعليًا، حتى لا يتأثر تنبيه
+    // "تم الإرسال اليوم" بتعديل أسبوع سابق لا يمس بيانات اليوم
+    const touchedDates = new Set<string>(weekOffset === 0 ? [today.toISOString().slice(0, 10)] : []);
     for (const e of entries) {
       touchedDates.add(e.dateIso);
       await upsertMemorizationDelta({
@@ -634,6 +669,13 @@ export async function submitWeeklyDataAction(
   revalidatePath("/students");
   revalidatePath("/");
   revalidatePath("/reports");
+
+  if (invalidCells.length > 0) {
+    return {
+      success: "تم حفظ باقي البيانات بنجاح",
+      warning: `تم تجاهل القيم التالية لأنها غير صالحة، الرجاء مراجعتها وإعادة إدخالها: ${invalidCells.join("، ")}`,
+    };
+  }
   return { success: "تم حفظ البيانات بنجاح" };
 }
 
@@ -873,9 +915,11 @@ export async function toggleStudentAttendanceAction(
   const { ok, user } = await assertHalaqaAccess(student.halaqaId);
   if (!ok) return;
 
+  // يُسمح بتحضير أي يوم سابق (لا يُحصر بالأسبوع الحالي) بشرط أن يطابق أحد أيام انعقاد الحلقة ولا يتجاوز اليوم الحالي
   const date = new Date(dateIso);
-  const validDates = getValidHalaqaDates(student.halaqa.days);
-  if (!validDates.includes(date.getTime())) return; // منع التلاعب بتواريخ خارج الأيام المسموحة
+  const scheduledDays = student.halaqa.days.length > 0 ? new Set(student.halaqa.days) : new Set(DEFAULT_HALAQA_DAYS);
+  if (Number.isNaN(date.getTime())) return;
+  if (!scheduledDays.has(HALAQA_DAYS[date.getUTCDay()])) return; // منع التلاعب بتواريخ خارج أيام انعقاد الحلقة
   if (date.getTime() > riyadhToday().getTime()) return; // منع تحضير يوم مستقبلي لم يحن بعد
 
   const attendanceLog = await db.attendanceLog.upsert({
@@ -935,8 +979,9 @@ export async function toggleStudentAttendanceAction(
   revalidatePath("/honor-board");
 }
 
-/** تبديل حالة "سرد" الطالبة لهذا الأسبوع (خانة أسبوعية واحدة، منفصلة عن خانة "عدد أوجه المراجعة" اليومية). */
-export async function toggleStudentRecitationAction(studentId: string, recited: boolean) {
+/** تبديل حالة "سرد" الطالبة لأسبوع معيّن (خانة أسبوعية واحدة، منفصلة عن خانة "عدد أوجه المراجعة" اليومية).
+ *  weekOffset بالأسابيع نسبةً للأسبوع الحالي (0 = الحالي) لتعديل سرد أسبوع سابق */
+export async function toggleStudentRecitationAction(studentId: string, recited: boolean, weekOffset = 0) {
   const student = await db.student.findUnique({
     where: { id: studentId },
     include: { halaqa: true },
@@ -946,8 +991,9 @@ export async function toggleStudentRecitationAction(studentId: string, recited: 
   const { ok, user } = await assertHalaqaAccess(student.halaqaId);
   if (!ok) return;
   if (!student.halaqa.recitationEnabled) return;
+  if (!Number.isFinite(weekOffset) || weekOffset > 0) return; // منع سرد أسبوع مستقبلي
 
-  const weekStart = riyadhWeekStart();
+  const weekStart = riyadhWeekStart(Math.max(-260, Math.trunc(weekOffset)));
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
@@ -1013,15 +1059,22 @@ export async function importAttendanceExcelAction(
   if ("error" in resolved) return { successCount: 0, absentCount: 0, failures: [], error: resolved.error };
   const { user, halaqa } = resolved;
 
+  // بخلاف شبكة التحضير اليومية، استيراد الحضور من Excel يسمح باختيار أي أسبوع سابق (لا يُحصر بالأسبوع الحالي)،
+  // فيُتحقق فقط من أن التاريخ من أيام انعقاد الحلقة ولا يتجاوز اليوم الحالي
   const dateIso = String(formData.get("dateIso") ?? "");
   const date = new Date(dateIso);
-  const validDates = getValidHalaqaDates(halaqa.days);
-  if (!dateIso || !validDates.includes(date.getTime())) {
+  const today = riyadhToday();
+  const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : new Set(DEFAULT_HALAQA_DAYS);
+  const isValidDate =
+    !Number.isNaN(date.getTime()) &&
+    date.getTime() <= today.getTime() &&
+    scheduledDays.has(HALAQA_DAYS[date.getUTCDay()]);
+  if (!dateIso || !isValidDate) {
     return {
       successCount: 0,
       absentCount: 0,
       failures: [],
-      error: "الرجاء اختيار يوم صحيح من أيام انعقاد الحلقة هذا الأسبوع",
+      error: "الرجاء اختيار تاريخ صحيح من أيام انعقاد الحلقة ولا يتجاوز اليوم الحالي",
     };
   }
 

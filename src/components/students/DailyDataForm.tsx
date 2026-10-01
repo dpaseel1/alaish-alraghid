@@ -61,6 +61,7 @@ export function DailyDataForm({
   weekPages,
   weekQuota,
   weekPagesReviewed,
+  weekOffset = 0,
 }: {
   halaqaId?: string;
   students: Student[];
@@ -74,6 +75,8 @@ export function DailyDataForm({
   weekPages?: Record<string, Record<string, number>>;
   weekQuota?: Record<string, Record<string, string>>;
   weekPagesReviewed?: Record<string, Record<string, number>>;
+  /** الأسبوع المعروض نسبةً للأسبوع الحالي (0 = الحالي، -1 = الأسبوع الماضي، ...) */
+  weekOffset?: number;
 }) {
   const [state, formAction, pending] = useActionState(
     submitWeeklyDataAction,
@@ -82,10 +85,14 @@ export function DailyDataForm({
 
   const isLocked = (dateIso: string) => dateIso > todayIso;
 
-  // وضع النصاب الموحّد: خانة إدخال واحدة لليوم الحالي تُطبَّق على كل الطالبات - بلا تغيير عن السابق
+  // يوم الإدخال الافتراضي: اليوم الحقيقي عند عرض الأسبوع الحالي، أو آخر يوم انعقاد ضمن الأسبوع المعروض لو كان سابقًا
+  const defaultEntryIso = weekOffset === 0 ? todayIso : weekDays[weekDays.length - 1]?.iso ?? todayIso;
+
+  // وضع النصاب الموحّد: خانة إدخال واحدة لتاريخ محدد (اليوم افتراضيًا، أو تاريخ سابق تختاره المعلمة) تُطبَّق على كل الطالبات
+  const [entryDate, setEntryDate] = useState(defaultEntryIso);
   const [uniformQuotaValue, setUniformQuotaValue] = useState(
     Object.values(weekQuota ?? {})
-      .map((byDate) => byDate[todayIso])
+      .map((byDate) => byDate[defaultEntryIso])
       .find((v) => v !== undefined) ?? ""
   );
   const uniformQuotaNumber = Number(normalizeDecimal(uniformQuotaValue));
@@ -110,7 +117,7 @@ export function DailyDataForm({
     const normalized = normalizeDecimal(bulkFillValue).trim();
     setPagesState((prev) => {
       const next = { ...prev };
-      for (const s of students) next[s.id] = { ...next[s.id], [todayIso]: normalized };
+      for (const s of students) next[s.id] = { ...next[s.id], [defaultEntryIso]: normalized };
       return next;
     });
   };
@@ -119,7 +126,9 @@ export function DailyDataForm({
     <div className="space-y-6">
       {students.length > 0 && weekDays.length === 0 && (
         <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-4 py-3">
-          لا يوجد يوم من أيام انعقاد الحلقة ضمن الأسبوع الدراسي الحالي (الأحد-الخميس)، لذا لا تظهر شبكة تحضير هذا الأسبوع.
+          {weekOffset === 0
+            ? "لم يحن بعد يوم انعقاد الحلقة هذا الأسبوع، لذا تظهر شبكة التحضير بعد حلول موعد الدرس لا قبله."
+            : "لا يوجد يوم من أيام انعقاد الحلقة ضمن هذا الأسبوع، لذا لا تظهر شبكة تحضير له."}
         </p>
       )}
 
@@ -156,7 +165,7 @@ export function DailyDataForm({
                             );
                           })}
                           {recitationEnabled && (
-                            <RecitationCell studentId={s.id} recited={weekRecitation?.[s.id] ?? false} />
+                            <RecitationCell studentId={s.id} recited={weekRecitation?.[s.id] ?? false} weekOffset={weekOffset} />
                           )}
                         </div>
                       </td>
@@ -175,8 +184,24 @@ export function DailyDataForm({
             <FormMessages alreadySubmitted={alreadySubmitted} state={state} />
 
             <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">تاريخ الإدخال</label>
+              <input
+                type="date"
+                dir="ltr"
+                name="entryDate"
+                value={entryDate}
+                max={todayIso}
+                onChange={(e) => setEntryDate(e.target.value)}
+                className="w-48 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                اليوم افتراضيًا، ويمكن اختيار تاريخ سابق لتدارك يوم انعقاد فاتك تسجيله
+              </p>
+            </div>
+
+            <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                عدد الأوجه المضافة اليوم لكل الطالبات
+                عدد الأوجه المضافة لكل الطالبات بتاريخ الإدخال أعلاه
               </label>
               <input
                 dir="ltr"
@@ -197,7 +222,7 @@ export function DailyDataForm({
                   <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-right">
                     <th className="px-4 py-2 font-medium">الطالبة</th>
                     <th className="px-4 py-2 font-medium">عدد الأوجه</th>
-                    <th className="px-4 py-2 font-medium">المتوقع بعد اليوم</th>
+                    <th className="px-4 py-2 font-medium">المتوقع بعد الإدخال</th>
                     {recitationEnabled && <th className="px-4 py-2 font-medium">عدد أوجه المراجعة</th>}
                   </tr>
                 </thead>
@@ -222,9 +247,10 @@ export function DailyDataForm({
                       {recitationEnabled && (
                         <td className="px-4 py-2">
                           <input
+                            key={entryDate}
                             dir="ltr"
                             name={`pagesReviewed_${s.id}`}
-                            defaultValue={weekPagesReviewed?.[s.id]?.[todayIso] ?? ""}
+                            defaultValue={weekPagesReviewed?.[s.id]?.[entryDate] ?? ""}
                             className="w-24 rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-sm"
                             placeholder="0"
                           />
@@ -245,7 +271,7 @@ export function DailyDataForm({
             <div className="flex items-end gap-2 flex-wrap">
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                  تعبئة سريعة لأوجه اليوم لكل الطالبات
+                  تعبئة سريعة لأوجه {weekOffset === 0 ? "اليوم" : "آخر يوم بالأسبوع المعروض"} لكل الطالبات
                 </label>
                 <input
                   dir="ltr"
@@ -263,13 +289,14 @@ export function DailyDataForm({
                 تطبيق على الكل
               </button>
               <p className="text-xs text-slate-400 dark:text-slate-500 basis-full">
-                تُطبَّق فقط على عمود اليوم الحالي، وتبقى خانة كل طالبة قابلة للتعديل الفردي قبل الحفظ
+                تُطبَّق فقط على عمود {weekOffset === 0 ? "اليوم الحالي" : "آخر يوم ضمن الأسبوع المعروض"}، وتبقى خانة كل طالبة قابلة للتعديل الفردي قبل الحفظ
               </p>
             </div>
           )}
 
           <form action={formAction} className="space-y-4">
             {halaqaId && <input type="hidden" name="halaqaId" value={halaqaId} />}
+            <input type="hidden" name="weekOffset" value={weekOffset} />
             <FormMessages alreadySubmitted={alreadySubmitted} state={state} />
 
             {students.length > 0 && weekDays.length > 0 && (
@@ -346,7 +373,7 @@ export function DailyDataForm({
                         })}
                         {recitationEnabled && (
                           <td className="px-3 py-2 text-center">
-                            <RecitationCell studentId={s.id} recited={weekRecitation?.[s.id] ?? false} />
+                            <RecitationCell studentId={s.id} recited={weekRecitation?.[s.id] ?? false} weekOffset={weekOffset} />
                           </td>
                         )}
                       </tr>
@@ -382,6 +409,11 @@ function FormMessages({
       {state?.success && (
         <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 text-sm px-4 py-3">
           {state.success}
+        </div>
+      )}
+      {state?.warning && (
+        <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-400 text-sm px-4 py-3">
+          {state.warning}
         </div>
       )}
       {state?.error && (
@@ -564,11 +596,19 @@ function AttendanceDayCell({
   );
 }
 
-function RecitationCell({ studentId, recited }: { studentId: string; recited: boolean }) {
+function RecitationCell({
+  studentId,
+  recited,
+  weekOffset = 0,
+}: {
+  studentId: string;
+  recited: boolean;
+  weekOffset?: number;
+}) {
   const [pending, startTransition] = useTransition();
   const setRecited = (value: boolean) =>
     startTransition(() => {
-      toggleStudentRecitationAction(studentId, value);
+      toggleStudentRecitationAction(studentId, value, weekOffset);
     });
 
   return (

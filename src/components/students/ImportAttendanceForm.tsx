@@ -3,6 +3,25 @@
 import { useActionState, useMemo, useRef, useState } from "react";
 import { importAttendanceExcelAction, type ImportAttendanceResult } from "@/app/actions/students";
 import { normalizeArabicName } from "@/lib/arabicName";
+import { HALAQA_DAYS, HALAQA_DAY_LABELS, DEFAULT_HALAQA_DAYS, type HalaqaDay } from "@/lib/halaqaDays";
+
+function toIsoLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** أقرب تاريخ (اليوم أو قبله) يوافق أحد أيام انعقاد الحلقة، ليكون قيمة مبدئية مناسبة لحقل التاريخ */
+function mostRecentScheduledDate(scheduledDays: Set<string>): string {
+  const today = new Date();
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    if (scheduledDays.has(HALAQA_DAYS[d.getDay()])) return toIsoLocal(d);
+  }
+  return toIsoLocal(today);
+}
 
 const initialState: ImportAttendanceResult = { successCount: 0, absentCount: 0, failures: [] };
 
@@ -41,16 +60,25 @@ function suggestNameColumn(headers: string[]): number | null {
 
 export function ImportAttendanceForm({
   halaqaId,
-  weekDays,
+  scheduledDays,
   students,
 }: {
   halaqaId?: string;
-  weekDays: { iso: string; label: string }[];
+  scheduledDays: string[];
   students: Student[];
 }) {
   const [state, formAction, pending] = useActionState(importAttendanceExcelAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
+
+  const allowedDays = useMemo(
+    () => new Set(scheduledDays.length > 0 ? scheduledDays : DEFAULT_HALAQA_DAYS),
+    [scheduledDays]
+  );
+  const [dateIso, setDateIso] = useState(() => mostRecentScheduledDate(allowedDays));
+  const todayIso = useMemo(() => toIsoLocal(new Date()), []);
+  const selectedWeekday = dateIso ? HALAQA_DAYS[new Date(`${dateIso}T00:00:00`).getDay()] : null;
+  const dateMatchesSchedule = !!selectedWeekday && allowedDays.has(selectedWeekday);
 
   const [headers, setHeaders] = useState<string[] | null>(null);
   const [dataRows, setDataRows] = useState<string[][] | null>(null);
@@ -128,9 +156,7 @@ export function ImportAttendanceForm({
   const unmatchedStudents = matches
     ? students.filter((s) => !new Set(matchedStudentIds).has(s.id))
     : [];
-  const canSubmit = matches !== null && matchedCount > 0;
-
-  if (weekDays.length === 0) return null;
+  const canSubmit = matches !== null && matchedCount > 0 && dateMatchesSchedule;
 
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
@@ -160,18 +186,18 @@ export function ImportAttendanceForm({
 
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">اليوم</label>
-                <select
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                  التاريخ (اختاري الأسبوع واليوم)
+                </label>
+                <input
+                  type="date"
                   name="dateIso"
                   required
+                  value={dateIso}
+                  max={todayIso}
+                  onChange={(e) => setDateIso(e.target.value)}
                   className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 px-3 py-2"
-                >
-                  {weekDays.map((day) => (
-                    <option key={day.iso} value={day.iso}>
-                      {day.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">ملف Excel</label>
@@ -185,6 +211,15 @@ export function ImportAttendanceForm({
                 />
               </div>
             </div>
+
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              أيام انعقاد الحلقة: {[...allowedDays].map((d) => HALAQA_DAY_LABELS[d as HalaqaDay]).join("، ")}
+            </p>
+            {!dateMatchesSchedule && (
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                التاريخ المختار لا يوافق أيام انعقاد الحلقة، الرجاء اختيار يوم آخر
+              </p>
+            )}
 
             {readError && <p className="text-sm text-red-600 dark:text-red-400">{readError}</p>}
 

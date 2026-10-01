@@ -60,6 +60,10 @@ export default async function SupervisorDashboardPage({
     toDate.setUTCHours(0, 0, 0, 0);
   }
 
+  // لا يُعرض ولا يُحتسب أي نطاق يتجاوز اليوم الحالي، حتى لو اختير فلتر أو تاريخ مستقبلي يدويًا
+  const today = riyadhToday();
+  if (toDate.getTime() > today.getTime()) toDate = today;
+
   const trackScopeForSelect = user.role === "SUPERVISOR" ? { trackId: user.supervisedTrackId ?? "__no_track__" } : trackId ? { trackId } : {};
 
   const [tracksForSelect, halaqatForSelect, data] = await Promise.all([

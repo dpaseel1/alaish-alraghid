@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { HALAQA_DAYS, DEFAULT_HALAQA_DAYS, HALAQA_DAY_LABELS, NARRATION_DAY, type HalaqaDay } from "@/lib/halaqaDays";
+import { riyadhToday } from "@/lib/timezone";
 import type { TrackType, User } from "@/generated/prisma/client";
 
 function toIso(d: Date) {
@@ -15,12 +16,15 @@ function weekStartOf(date: Date): Date {
   return d;
 }
 
-/** كل التواريخ ضمن [from,to] (شاملة) التي توافق أيام انعقاد الحلقة، أو الأحد-الخميس افتراضيًا */
+/** كل التواريخ ضمن [from,to] (شاملة) التي توافق أيام انعقاد الحلقة، أو الأحد-الخميس افتراضيًا.
+ *  لا تتجاوز اليوم الحالي أبدًا حتى لو تجاوزه to (تفاديًا لعرض أيام انعقاد مستقبلية لم تنعقد بعد) */
 function enumerateMeetingDates(days: string[], from: Date, to: Date): Date[] {
   const scheduledDays = new Set<HalaqaDay>((days.length > 0 ? days : DEFAULT_HALAQA_DAYS) as HalaqaDay[]);
+  const today = riyadhToday();
+  const effectiveTo = to.getTime() > today.getTime() ? today : to;
   const dates: Date[] = [];
   const cursor = new Date(from);
-  while (cursor.getTime() <= to.getTime()) {
+  while (cursor.getTime() <= effectiveTo.getTime()) {
     const code = HALAQA_DAYS[cursor.getUTCDay()];
     if (scheduledDays.has(code)) dates.push(new Date(cursor));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
@@ -110,18 +114,16 @@ export async function buildSupervisorDashboard({
   const studentIds = halaqat.flatMap((h) => h.students.map((s) => s.id));
   const teacherIds = [...new Set(halaqat.map((h) => h.teacherId).filter((id): id is string => !!id))];
 
-  // نحسب مسبقًا التواريخ الفعلية لكل حلقة، وأسابيع يوم السرد المطلوبة، لتفادي أي استعلام داخل الحلقة (N+1)
+  // نحسب مسبقًا التواريخ الفعلية لكل حلقة، لتفادي أي استعلام داخل الحلقة (N+1)
   const meetingDatesByHalaqa = new Map<string, Date[]>();
-  const narrationWeekStarts = new Set<string>();
   for (const h of halaqat) {
-    const dates = enumerateMeetingDates(h.days, from, to);
-    meetingDatesByHalaqa.set(h.id, dates);
-    for (const d of dates) {
-      if (HALAQA_DAYS[d.getUTCDay()] === NARRATION_DAY) {
-        narrationWeekStarts.add(weekStartOf(d).toISOString());
-      }
-    }
+    meetingDatesByHalaqa.set(h.id, enumerateMeetingDates(h.days, from, to));
   }
+
+  // يوم السرد ثابت (الخميس) لكل الحلقات بغض النظر عن أيامها الفعلية، لذا تُحسب أسابيعه بمعزل عن meetingDates
+  // الخاصة بكل حلقة - وإلا لن يظهر أي سرد أبدًا لحلقة أيامها لا تشمل الخميس (كحلقة تنعقد السبت فقط)
+  const narrationDatesInRange = enumerateMeetingDates([NARRATION_DAY], from, to);
+  const narrationWeekStarts = new Set<string>(narrationDatesInRange.map((d) => weekStartOf(d).toISOString()));
 
   const [memoRecords, attendanceRecords, weeklyRecitations, staffAttendance] = await Promise.all([
     studentIds.length > 0
@@ -213,11 +215,17 @@ export async function buildSupervisorDashboard({
         if (isNarrationDay) {
           const rec = weeklyRecByKey.get(`${s.id}_${weekStartOf(date).toISOString()}`);
           sardPages = rec?.recited ? rec.pagesRecorded : 0;
-          sard += sardPages;
         }
 
         return { dateIso, status, pagesMemorized, pagesReviewed, isNarrationDay, sardPages };
       });
+
+      // إجمالي السرد يُحسب من أسابيع الخميس ضمن المدى كاملةً (بمعزل عن أيام انعقاد الحلقة)، تفاديًا لتصفير السرد
+      // في الحلقات التي لا ينعقد الخميس من ضمن أيامها
+      for (const weekIso of narrationWeekStarts) {
+        const rec = weeklyRecByKey.get(`${s.id}_${weekIso}`);
+        if (rec?.recited) sard += rec.pagesRecorded;
+      }
 
       const attendanceTotal = present + excused + unexcused;
       halaqaMemorized += memorized;

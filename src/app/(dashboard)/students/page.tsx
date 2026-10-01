@@ -14,13 +14,25 @@ import { HalaqaSelect } from "@/components/students/HalaqaSelect";
 import { ExportButton } from "@/components/export/ExportButton";
 import type { StudentAttendanceStatus } from "@/generated/prisma/client";
 
-/** يجلب بيانات الأسبوع الحالي كاملة (لا اليوم فقط) لحلقة معيّنة: الحضور، الأوجه/النصاب/المراجعة لكل يوم انعقاد، والسرد الأسبوعي */
-async function buildWeekWorkspace(halaqa: { id: string; days: string[]; students: { id: string }[] }) {
+/** يحصر weekOffset القادم من رابط الصفحة لعدد صحيح آمن (لا يتجاوز الأسبوع الحالي، وبحد أقصى 5 سنوات للخلف) */
+function parseWeekOffsetParam(raw: string | undefined): number {
+  const n = Math.trunc(Number(raw ?? 0));
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(0, Math.max(-260, n));
+}
+
+/** يجلب بيانات أسبوع كاملة (لا اليوم فقط) لحلقة معيّنة: الحضور، الأوجه/النصاب/المراجعة لكل يوم انعقاد، والسرد الأسبوعي.
+ *  weekOffset بالأسابيع نسبةً للأسبوع الحالي (0 = الحالي، -1 = الأسبوع الماضي، ...) لتدارك أسبوع فات */
+async function buildWeekWorkspace(
+  halaqa: { id: string; days: string[]; students: { id: string }[] },
+  weekOffset = 0
+) {
+  const today = riyadhToday();
   const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : null;
-  const fullWeek = riyadhFullWeekDays();
-  const weekDayDates = scheduledDays
-    ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()]))
-    : fullWeek.slice(0, 5);
+  const fullWeek = riyadhFullWeekDays(weekOffset);
+  const weekDayDates = (
+    scheduledDays ? fullWeek.filter((d) => scheduledDays.has(HALAQA_DAYS[d.getUTCDay()])) : fullWeek.slice(0, 5)
+  ).filter((d) => weekOffset < 0 || d.getTime() <= today.getTime());
   const weekDays = weekDayDates.map((d) => ({
     iso: d.toISOString().slice(0, 10),
     label: HALAQA_DAY_LABELS[HALAQA_DAYS[d.getUTCDay()] as HalaqaDay],
@@ -42,7 +54,7 @@ async function buildWeekWorkspace(halaqa: { id: string; days: string[]; students
     }
   }
 
-  const todayIso = riyadhToday().toISOString().slice(0, 10);
+  const todayIso = today.toISOString().slice(0, 10);
   const todayLog = weekLogs.find((log) => log.date.toISOString().slice(0, 10) === todayIso);
 
   const weekMemorization = await db.memorizationRecord.findMany({
@@ -60,11 +72,15 @@ async function buildWeekWorkspace(halaqa: { id: string; days: string[]; students
   }
 
   const weekRecitationRows = await db.weeklyRecitation.findMany({
-    where: { weekStart: riyadhWeekStart(), studentId: { in: studentIds } },
+    where: { weekStart: riyadhWeekStart(weekOffset), studentId: { in: studentIds } },
     select: { studentId: true, recited: true },
   });
   const weekRecitation: Record<string, boolean> = {};
   for (const r of weekRecitationRows) weekRecitation[r.studentId] = r.recited;
+
+  // لأسبوع سابق (weekOffset غير صفر) لا يوجد مفهوم "اليوم" ضمنه، فيُعتمد "هل أُرسلت بيانات أي يوم منه؟" كمؤشر بديل
+  const alreadySubmitted =
+    weekOffset === 0 ? (todayLog?.dataSubmitted ?? false) : weekLogs.some((log) => log.dataSubmitted);
 
   return {
     weekDays,
@@ -74,18 +90,72 @@ async function buildWeekWorkspace(halaqa: { id: string; days: string[]; students
     weekPages,
     weekQuota,
     weekPagesReviewed,
-    alreadySubmitted: todayLog?.dataSubmitted ?? false,
+    alreadySubmitted,
   };
+}
+
+function WeekNavigator({
+  weekOffset,
+  weekDays,
+  basePath,
+  extraParams,
+}: {
+  weekOffset: number;
+  weekDays: { iso: string; label: string }[];
+  basePath: string;
+  extraParams: Record<string, string | undefined>;
+}) {
+  const buildHref = (offset: number) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(extraParams)) {
+      if (value) params.set(key, value);
+    }
+    if (offset !== 0) params.set("week", String(offset));
+    const qs = params.toString();
+    return qs ? `${basePath}?${qs}` : basePath;
+  };
+
+  const rangeLabel =
+    weekDays.length > 0
+      ? `${weekDays[0].iso} إلى ${weekDays[weekDays.length - 1].iso}`
+      : null;
+
+  return (
+    <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
+      <Link
+        href={buildHref(weekOffset - 1)}
+        className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+      >
+        الأسبوع السابق
+      </Link>
+      <div className="text-sm text-slate-500 dark:text-slate-400 text-center">
+        {weekOffset === 0 ? "الأسبوع الحالي" : `أسبوع سابق (${rangeLabel ?? ""})`}
+      </div>
+      {weekOffset < 0 ? (
+        <Link
+          href={buildHref(weekOffset + 1)}
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+        >
+          الأسبوع التالي
+        </Link>
+      ) : (
+        <span className="rounded-lg border border-transparent px-3 py-1.5 text-sm text-transparent select-none">
+          الأسبوع التالي
+        </span>
+      )}
+    </div>
+  );
 }
 
 export default async function StudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ halaqaId?: string; archived?: string }>;
+  searchParams: Promise<{ halaqaId?: string; archived?: string; week?: string }>;
 }) {
   const user = await requireUser();
-  const { halaqaId, archived } = await searchParams;
+  const { halaqaId, archived, week } = await searchParams;
   const isArchiveView = archived === "1";
+  const weekOffset = parseWeekOffsetParam(week);
 
   const ArchiveTabs = (
     <div className="flex items-center gap-2 print:hidden">
@@ -135,7 +205,7 @@ export default async function StudentsPage({
     // إن حدّدت المديرة أيام انعقاد للحلقة (وقد تشمل الجمعة/السبت)، تُقتصر شبكة التحضير على تلك الأيام تحديدًا.
     // إن لم تُحدَّد أيام، يُستخدم الأسبوع الدراسي الافتراضي (الأحد-الخميس) كما كان سابقًا
     const scheduledDays = halaqa.days.length > 0 ? new Set(halaqa.days) : null;
-    const workspace = !isArchiveView ? await buildWeekWorkspace(halaqa) : null;
+    const workspace = !isArchiveView ? await buildWeekWorkspace(halaqa, weekOffset) : null;
 
     return (
       <div className="space-y-6">
@@ -148,15 +218,25 @@ export default async function StudentsPage({
 
         {!isArchiveView && (
           <>
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-              <div className="mb-4">
-                <h2 className="font-semibold text-slate-800 dark:text-slate-100">بيانات اليوم</h2>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm space-y-4">
+              <div>
+                <h2 className="font-semibold text-slate-800 dark:text-slate-100">
+                  {weekOffset === 0 ? "بيانات اليوم" : "بيانات أسبوع سابق"}
+                </h2>
                 {scheduledDays && (
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                     أيام انعقاد الحلقة: {halaqa.days.map((d) => HALAQA_DAY_LABELS[d as HalaqaDay]).join("، ")}
                   </p>
                 )}
               </div>
+              {workspace && (
+                <WeekNavigator
+                  weekOffset={weekOffset}
+                  weekDays={workspace.weekDays}
+                  basePath="/students"
+                  extraParams={{ archived }}
+                />
+              )}
               {workspace && (
                 <DailyDataForm
                   students={halaqa.students}
@@ -170,11 +250,12 @@ export default async function StudentsPage({
                   weekPages={workspace.weekPages}
                   weekQuota={workspace.weekQuota}
                   weekPagesReviewed={workspace.weekPagesReviewed}
+                  weekOffset={weekOffset}
                 />
               )}
             </div>
 
-            <ImportAttendanceForm weekDays={workspace?.weekDays ?? []} students={halaqa.students} />
+            <ImportAttendanceForm scheduledDays={halaqa.days} students={halaqa.students} />
 
             <ExamGradesCard
               students={halaqa.students.map((s) => ({
@@ -284,7 +365,7 @@ export default async function StudentsPage({
   let supervisorWorkspace: Awaited<ReturnType<typeof buildWeekWorkspace>> | null = null;
 
   if (user.role === "SUPERVISOR" && selectedHalaqa && !isArchiveView) {
-    supervisorWorkspace = await buildWeekWorkspace(selectedHalaqa);
+    supervisorWorkspace = await buildWeekWorkspace(selectedHalaqa, weekOffset);
   }
 
   return (
@@ -311,9 +392,11 @@ export default async function StudentsPage({
         <>
           {supervisorWorkspace && (
             <>
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-                <div className="mb-4">
-                  <h2 className="font-semibold text-slate-800 dark:text-slate-100">بيانات اليوم</h2>
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm space-y-4">
+                <div>
+                  <h2 className="font-semibold text-slate-800 dark:text-slate-100">
+                    {weekOffset === 0 ? "بيانات اليوم" : "بيانات أسبوع سابق"}
+                  </h2>
                   {selectedHalaqa.days.length > 0 && (
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                       أيام انعقاد الحلقة:{" "}
@@ -321,6 +404,12 @@ export default async function StudentsPage({
                     </p>
                   )}
                 </div>
+                <WeekNavigator
+                  weekOffset={weekOffset}
+                  weekDays={supervisorWorkspace.weekDays}
+                  basePath="/students"
+                  extraParams={{ archived, halaqaId }}
+                />
                 <DailyDataForm
                   halaqaId={selectedHalaqa.id}
                   students={selectedHalaqa.students}
@@ -334,12 +423,13 @@ export default async function StudentsPage({
                   weekPages={supervisorWorkspace.weekPages}
                   weekQuota={supervisorWorkspace.weekQuota}
                   weekPagesReviewed={supervisorWorkspace.weekPagesReviewed}
+                  weekOffset={weekOffset}
                 />
               </div>
 
               <ImportAttendanceForm
                 halaqaId={selectedHalaqa.id}
-                weekDays={supervisorWorkspace.weekDays}
+                scheduledDays={selectedHalaqa.days}
                 students={selectedHalaqa.students}
               />
 
